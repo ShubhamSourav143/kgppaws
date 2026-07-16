@@ -14,11 +14,11 @@ Nothing below is guessed or assumed — each is called out at the module it bloc
 
 | # | Needed | For | How to provide | Status |
 |---|---|---|---|---|
-| 1 | **GitHub repository** (new or existing empty repo) + push access | CI/CD, PR previews, code history | Repo URL, or say "create one for me" (I can `gh repo create` if the GitHub CLI is authenticated) | ❌ not provided |
+| 1 | **GitHub repository** (new or existing empty repo) + push access | CI/CD, PR previews, code history | ⚠️ **I tried and cannot do this for you**: `gh` CLI isn't installed here, and the GitHub MCP connector requires an OAuth flow that a non-interactive session can't complete. Either (a) create an empty repo and send me the URL, or (b) authorize the GitHub connector / install `gh` and run `gh auth login` in an interactive terminal. Work is committed locally meanwhile. | ❌ blocked on you |
 | 2 | **Google Cloud project** with Sheets API + Drive API enabled, plus a **service account** JSON key, with the target Spreadsheet and Drive folders shared to that service account's email as Editor | Sheets CMS sync (M2), Drive media pipeline (M3) | Share the service-account email on the Sheet/Drive folders; paste the JSON key (I'll store it only as a Vercel env var, never in the repo) | ❌ not provided |
 | 3 | **The actual Google Sheet** (new, based on GOOGLE_SHEETS_SCHEMA.md) or confirmation to create one from the schema | M2 | Share link, or say "create it for me" | ❌ not provided |
 | 4 | **The actual Google Drive folder structure** (Dog Photos, Treatment Photos, Blog Images, Videos, Documents) — can be the folder already referenced (`G:\My Drive\By Shubham\Dog photo\`) reorganized, or a fresh structure | M3 | Folder link(s) + confirmation of the convention | ⏳ one local folder seen; not yet mapped to dogs or shared via API |
-| 5 | **Supabase project** (new, on your account) — or confirmation to provision one via the connected Supabase integration | Live database (M1) — everything currently runs in demo mode without this | Project ref + API keys, or "go ahead and create one" | ❌ not provided |
+| 5 | **Supabase project** | Live database (M1) | — | ✅ **done** — provisioned `kgp-paws` (ref `unyhhkulkgznqoqalqxk`, ap-south-1, $0/mo) in your `bms` org, schema + RLS applied, seeded, wired to Vercel |
 | 6 | **Photo → animal mapping** for the 8 seed dogs (or a fresh list of real animals to replace the demo set) + which photo is the homepage hero | Real-photography experience (M3) | A simple list: "IMG-...WA0001 = Simba", etc. | ❌ not provided (asked twice, unanswered) |
 | 7 | **Vercel project access** | Already have it — deployed 2026-07-16 | — | ✅ done |
 | 8 | **Domain** `kgppaws.org` (or chosen alternative) | Custom domain, canonical QR URLs (M10) | Registrar access or confirmation to purchase | ❌ not provided |
@@ -54,12 +54,17 @@ Token-driven dark theme across the app (`app/globals.css` already centralises th
 system-preference default + manual toggle with persistence. Required by spec
 (`frontend.dark_mode`). **Needs no credentials.**
 
-### M1 — Foundations: live Supabase + GitHub — BLOCKED (deps #1, #5)
-- Provision Supabase project, apply `0001_initial_schema.sql`, run `seed.sql`.
-- Wire `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY`/`SERVICE_ROLE_KEY` into Vercel.
-- Create GitHub repo, push current tree, connect to Vercel for auto-deploy + previews.
-- Verify: demo-mode banner disappears; login/signup work against real Supabase Auth; RLS
-  policies pass a manual read/write smoke test per role.
+### M1 — Foundations: live Supabase — **TESTED & PRODUCTION VERIFIED** (2026-07-16)
+- ✅ Supabase project `kgp-paws` provisioned (ap-south-1, free tier), schema + RLS applied,
+  demo data seeded, keys wired into Vercel. Live at https://kgp-paws.vercel.app.
+- ✅ RLS verified from the `anon` role; 9 bugs found and fixed (see CHANGELOG) including a
+  privilege-escalation hole that would have let anyone self-approve an adoption application.
+- ⚠️ **GitHub still outstanding** (dep #1): the GitHub CLI isn't installed on this machine and
+  the GitHub MCP connector needs an OAuth flow that can't run in a non-interactive session.
+  Work is committed **locally** (`b4644c8`, 135 files) so nothing is lost, but there is still
+  no off-machine backup, no CI, and no PR previews. **Needs owner action.**
+- ⏭️ `SUPABASE_SERVICE_ROLE_KEY` not yet set — not needed until the first server route (M2).
+  Retrieve from Supabase dashboard → Project Settings → API when M2 starts.
 
 ### M2 — Google Sheets sync engine — BLOCKED (deps #2, #3); can start schema/engine code against a scratch Sheet in parallel with M1
 - Build `/api/sync/run`, `/api/sync/status`, `/api/sync/resolve`.

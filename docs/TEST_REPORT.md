@@ -7,6 +7,61 @@ during development. Status legend matches PRD.md.
 
 ---
 
+## 2026-07-16 — Module M1: Live Supabase (SQL-level + local + live production)
+
+### RLS verification, executed as the `anon` role (`set local role anon`)
+
+Testing as the actual anonymous PostgREST role, not as an admin assuming the policies work:
+
+| Check | Expected | Result |
+|---|---|---|
+| Public animals readable | 8 | ✅ 8 |
+| `get_report_status('PAWS-RESCUE-2026-00124')` (anonymous tracking) | returns status | ✅ `treatment_started` |
+| Anon sees `donations` rows | **0** (private table, 15 rows exist) | ✅ 0 |
+| Anon sees `rescue_reports` rows | **0** (precise lat/lng must never leak) | ✅ 0 |
+| Campaign totals visible to anon | non-zero | ❌→✅ **initially 0** — real bug, see below |
+
+### Column-grant verification (privilege escalation)
+
+| Column | Public can INSERT? | Result |
+|---|---|---|
+| `adoption_applications.status` | must be **no** (self-approval) | ❌→✅ initially **yes**, now no |
+| `adoption_applications.internal_notes` | no | ❌→✅ now no |
+| `rescue_reports.status` / `is_demo` / `linked_animal` | no | ✅ no |
+| `volunteers.status` | no (self-activation) | ✅ no |
+| `adoption_applications.motivation`, `rescue_reports.description`, `volunteers.full_name` | **yes** (legitimate submissions must still work) | ✅ yes |
+
+| `log_audit()` executable by anon | no | ✅ false — **and** audit trigger still fires (9 rows) |
+
+### Live production (https://kgp-paws.vercel.app, reading real Postgres)
+
+| Check | Result |
+|---|---|
+| QR scan `/p/t7kd2mqx` → profile via DB lookup | ✅ "You just met Simba 🐾", PAWS-KGP-DOG-0012 |
+| Donate page campaign totals | ✅ ₹18,400 of ₹30,000 (61%) — not ₹0 |
+| Login page mode | ✅ real credential form; demo role switcher correctly gone |
+| Adopt page | ✅ "8 paws found" from DB |
+| Build against live DB | ✅ 43 static pages generated |
+
+### Bugs found by this test pass (all fixed — see CHANGELOG)
+
+1. **`has_role()` declared before `user_roles`** — migration was unrunnable as written.
+2. **Privilege escalation**: anyone could submit an adoption application pre-set to
+   `approved`. My first fix (column-level `REVOKE`) was **ineffective** — Postgres ignores it
+   when a table-level grant exists. Only caught because I re-queried the grants instead of
+   trusting the migration's `{"success":true}`.
+3. **Every campaign showed ₹0 raised** to anonymous visitors (`security_invoker` view over a
+   private table).
+4. **`supporter_count` always 0** for guest/UPI donations (`count(distinct donor_id)`, NULL for guests).
+5. **`log_audit` RPC-callable** — revoke had to target `PUBLIC`, not `anon`/`authenticated`.
+6. **QR tokens would render empty in live mode** — service read a non-existent
+   `animals.qr_token` column.
+7. **Build broke once credentials existed** — `generateStaticParams` → `cookies()`.
+8. **Seed showed 153% funded** on Simba's campaign.
+9. **`.gitignore` excluded `.env.example`**.
+
+Every one of these was invisible in demo mode and would have reached users.
+
 ## 2026-07-16 — Module M-A: PWA (local production build + live production)
 
 **Method:** `npm run build && npm start` (SW registers in production builds only), then live

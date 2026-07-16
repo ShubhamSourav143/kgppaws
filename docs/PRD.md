@@ -181,9 +181,9 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 
 | Feature | Priority | Status | Tested |
 |---|---|---|---|
-| Supabase email/password auth | P0 | COMPLETED (code path; needs live Supabase project — M1) | demo-mode fallback TESTED |
+| Supabase email/password auth | P0 | COMPLETED | ✅ live — credential form active on production, demo switcher correctly disabled |
 | Two roles only: volunteer, admin | P0 | COMPLETED | manual |
-| DB-enforced authorization (RLS on every table; client guards are UX only) | P0 | COMPLETED (schema written; applied in M1) | SQL review |
+| DB-enforced authorization (RLS on every table; client guards are UX only) | P0 | TESTED | ✅ verified as the `anon` role: donations/reports invisible, privilege-escalation hole found & closed (see TEST_REPORT.md) |
 | Demo-mode role explorer (no credentials configured) | P2 | COMPLETED | ✅ manual |
 | Supabase Realtime (live dashboard updates: new reports/donations appear without refresh) | P1 | NOT STARTED | M9 |
 
@@ -212,7 +212,7 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 | Feature | Priority | Status | Tested |
 |---|---|---|---|
 | Vercel production deployment | P0 | TESTED | ✅ live 2026-07-16 |
-| Supabase project provisioned + migrations applied | P0 | BLOCKED | can self-provision via connected Supabase integration on go-ahead (M1) |
+| Supabase project provisioned + migrations applied | P0 | TESTED | ✅ `kgp-paws`, ap-south-1, RLS verified from the anon role (2026-07-16) |
 | GitHub repository + CI | P1 | IN PROGRESS | local git ready; remote pending |
 | Custom domain kgppaws.org | P1 | BLOCKED | domain purchase/DNS |
 | Environment variable management (see DEPLOYMENT.md) | P0 | COMPLETED | ✅ |

@@ -13,6 +13,72 @@ All notable changes to this project, newest first. Format loosely follows
 
 ---
 
+## 2026-07-16 — Module M1: Live Supabase backend ✅ TESTED & PRODUCTION VERIFIED
+
+The app no longer runs on demo fixtures: https://kgp-paws.vercel.app now reads
+every animal, campaign, story and QR tag from a real Postgres database.
+
+### Added
+- **Supabase project provisioned** — `kgp-paws`, region `ap-south-1` (Mumbai, lowest latency
+  to Kharagpur), free tier ($0/month, confirmed before creation). Deliberately a *separate*
+  project from the pre-existing "Shubham's Project" so KGP PAWS tables don't mix with
+  unrelated BMS work in the same org.
+- **Schema applied**: 23 tables, 15 enums, RLS on every table, audit triggers.
+- **Demo data seeded** — 8 animals, 8 QR tags, 11 medical events, 5 campaigns, 2 reports,
+  3 stories, impact metrics. Every row `is_demo = true` so real data can replace it cleanly.
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` wired into Vercel production.
+- `createStaticSupabase()` — cookie-less anon client for build-time contexts.
+
+### Fixed — schema bugs that made the migration unrunnable as written
+- **`has_role()` was declared before the `user_roles` table it queries.** It's a `language sql`
+  function, so Postgres validates the body at creation time — the migration would have failed
+  with "relation user_roles does not exist" the first time anyone ran it. Moved below the table.
+- **`set_updated_at()` had a mutable `search_path`** (Supabase advisor 0011) — a known
+  privilege-escalation vector. Pinned to `public`.
+
+### Fixed — security holes found by the Supabase advisor + verification
+- **Privilege escalation via public INSERT.** The public write policies use
+  `WITH CHECK (true)` (correct — reporting an injured animal must never require login), but
+  RLS governs *rows*, not *columns*, and Supabase grants table-level INSERT by default. A
+  crafted request could submit an adoption application already marked **`approved`**, write
+  staff-only `internal_notes`, or set a report's triage `status`. Fixed by revoking INSERT at
+  table level and granting back an explicit safe-column list.
+  A first attempt using column-level `REVOKE` was **ineffective** (Postgres ignores a
+  column-level revoke when a table-level grant exists) and was only caught by verifying the
+  actual grants afterwards rather than trusting the migration's success response.
+- **`log_audit()` was callable over `/rest/v1/rpc/`.** Revoking from `anon`/`authenticated`
+  was a no-op — Postgres grants EXECUTE to `PUBLIC` by default and those roles inherit it.
+  Revoked from `PUBLIC`; verified the audit triggers still fire afterwards.
+
+### Fixed — bugs that would have shipped broken to users
+- **Every campaign showed ₹0 raised.** `campaigns_with_totals` is `security_invoker` over the
+  private `donations` table, so an anonymous visitor aggregated across zero visible rows.
+  Totals now come from a `security definer` function returning only the aggregate — campaign
+  rows still respect RLS (flipping the whole view to definer would have leaked inactive
+  campaigns).
+- **`supporter_count` was permanently 0** for guest donations: it counted
+  `distinct donor_id`, which is NULL for guests — i.e. for the entire UPI donation model.
+  Now counts verified donations.
+- **Every QR code would have been blank in live mode.** `services/animals.ts` read
+  `row.qr_token`, a column that doesn't exist on `animals` (tokens live in `qr_tags`). The
+  flagship scan feature would have generated QR codes pointing at `/p/` with no token.
+- **The build broke as soon as credentials existed.** `generateStaticParams` called `cookies()`
+  through the Supabase server client; `cookies()` throws at build time. Demo mode had masked
+  this by returning `null` before reaching it.
+- **Seed data showed 153% funded.** Donations were cross-joined onto every campaign, so
+  Simba's ₹12,000 fund displayed ₹18,400 raised. Now per-campaign (61%/77%/48%/41%/62%).
+- **`.gitignore` excluded `.env.example`** via `.env*`, so a fresh clone had no setup template
+  despite the README pointing at it.
+
+### Verified
+Anonymous-role SQL checks: public animals readable (8); `get_report_status` works for
+anonymous tracking; donations invisible (0 rows despite 15 existing); `rescue_reports`
+invisible (precise lat/lng never exposed); campaign totals correct. Live production: QR scan
+→ Simba's profile from the database, donate page shows real totals, login shows the real
+credential form instead of the demo role switcher.
+
+---
+
 ## 2026-07-16 — Module M-A: PWA ✅ TESTED & PRODUCTION VERIFIED
 
 ### Added

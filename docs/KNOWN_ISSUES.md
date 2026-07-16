@@ -10,12 +10,13 @@ resolved — it is never silently dropped.
 
 | # | Issue | Impact | Tracked in |
 |---|---|---|---|
-| 1 | No Supabase project provisioned — app runs entirely in demo mode (localStorage writes, seed-data reads) | No real persistence; two browsers/devices never see the same data; a page refresh in incognito loses everything | TASKS.md M1 |
+| ~~1~~ | ~~No Supabase project provisioned~~ | ✅ **RESOLVED 2026-07-16** — project live, schema + RLS applied, seeded, wired to production | CHANGELOG M1 |
 | 2 | No Google Sheets/Drive credentials — Sheets CMS and Drive photo pipeline are designed (docs) but not built | Volunteers cannot yet edit content without code; site still uses illustrated placeholders, not real photos | TASKS.md M2, M3 |
 | 3 | No real dog photos mapped — asked twice (2026-07-16), no mapping received yet | Real-photography experience (P0) cannot start | TASKS.md M3, dep #6 |
 | 4 | UPI donation details (QR image, UPI ID, holder name) not provided | Donate page still shows the old demo/placeholder donation UI, not the spec'd UPI flow | TASKS.md M5, dep #11 |
 | 5 | Email + WhatsApp provider not chosen | No notifications fire on reports/donations/applications yet | TASKS.md M6, deps #9/#10 |
-| 6 | No GitHub repository connected | Deploys are manual (`vercel deploy` from local disk); no PR previews, no CI, no code history off this machine | TASKS.md M1, dep #1 |
+| 6 | **No GitHub repository connected.** Attempted 2026-07-16: `gh` CLI is not installed on this machine, and the GitHub MCP connector needs an interactive OAuth flow. Work is now committed **locally** (`b4644c8`) so history exists, but only on this laptop. | Deploys stay manual; no PR previews, no CI type-check/build gate, **no off-machine backup — a disk failure loses the project** | TASKS.md dep #1 — needs owner action |
+| 24 | **Demo data is live on the public production site.** All 8 animals, campaigns and stories on kgp-paws.vercel.app are fictional (every row `is_demo = true`). The UI labels impact figures as demo, but the animals themselves are presented as real campus dogs. | Acceptable while the site is effectively a staging preview; **must not remain true if the URL is shared publicly or the domain goes live** | Resolved by M3 (real photos + real animal data). Purge with `delete from animals where is_demo` |
 | 7 | Domain `kgppaws.org` not purchased/pointed | Site is only reachable at the `.vercel.app` URL; QR codes and canonical SEO URLs point there for now | TASKS.md M10, dep #8 |
 
 ## Architecture debt (known, scheduled)
