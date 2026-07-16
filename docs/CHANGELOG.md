@@ -13,6 +13,60 @@ All notable changes to this project, newest first. Format loosely follows
 
 ---
 
+## 2026-07-16 — Module M-B: Automated test suite ✅ TESTED
+
+45 Vitest unit tests + 17 Playwright E2E tests, all passing. Closes KNOWN_ISSUES #12
+("no automated test suite" — every regression up to this point was caught only by manual
+clicking or direct SQL). Run with `npm test` and `npm run test:e2e`.
+
+### Added
+- **Vitest** (`vitest.config.ts`) — `lib/utils.test.ts` (18 tests: formatting, percentage
+  clamping, age parsing, hash determinism), `lib/local-store.test.ts` (14 tests, jsdom
+  environment: saved animals, report/application ID sequencing, demo session round-trips),
+  `services/animal-mapper.test.ts` (13 tests — see refactor note below).
+- **Extracted `services/animal-mapper.ts`** out of `services/animals.ts`: `mapAnimalRow` moved
+  to its own module with zero Next.js/Supabase imports, specifically so it's unit-testable
+  without evaluating `next/headers` outside a request context. This is the exact function the
+  QR-token bug (M1) lived in — it now has direct regression tests: active-vs-inactive tag
+  selection, missing `qr_tags` array, medical-timeline/sightings sort order, and default
+  fallbacks for every optional column.
+- **Playwright** (`playwright.config.ts`, `e2e/*.spec.ts`) — homepage, adopt search/empty-state,
+  report submission → tracking code → tracker page, QR scan → profile (+ unknown-token →
+  scan-not-found), demo role login → admin/volunteer dashboards, unauthenticated `/admin` guard,
+  and a PWA offline test that automates the exact manual check that caught the M-A
+  service-worker bug (visit a profile, go fully offline, confirm it still renders; visit an
+  unvisited page offline, confirm the `/offline` fallback shows).
+- E2E always runs against a **forced demo-mode server** — `playwright.config.ts`'s
+  `webServer.env` overrides the two Supabase env vars for the spawned test server process only,
+  so the suite is deterministic and credential-free regardless of what's in the developer's
+  `.env.local`. (Live-mode/RLS behavior is covered separately, via direct SQL — see M1.)
+
+### Fixed
+- **Playwright's default full parallelism caused one test to silently fail to navigate** — a
+  button click landed before React had finished attaching its handler (classic hydration race
+  under resource contention), reproduced consistently in parallel and passed cleanly every time
+  under `--workers=1` on this machine. Verified the root cause empirically (isolated re-run)
+  before concluding it was contention and not a real bug, rather than guessing. Set `workers: 1`
+  with a comment explaining why and when to revisit it.
+- Six Playwright assertions used ambiguous locators for text that legitimately renders twice on
+  a page (a status value in both a summary chip and a progress stepper; a PAWS ID in both the
+  identity header and the QR tag flip-card; "Demo mode" in both the login banner and an
+  unrelated footer badge) — each is a real strict-mode catch, not a false positive; scoped with
+  `.first()` or `exact: true` as appropriate.
+- `services/animals.ts`'s `resolveQrToken` had an `(data as any)` cast (pre-existing, from M1) —
+  typed the Supabase response shape properly while the file was already open for the refactor.
+
+### Found, not fixed here (flagged separately)
+- `npm run lint` fails with **9 pre-existing errors**, none introduced by this module (confirmed
+  via `git diff HEAD` — every affected file was untouched today). All are
+  `react-hooks/set-state-in-effect`: components hydrating localStorage-backed demo state via
+  `useEffect` + `setState` on mount, a legitimate pattern that a newer, stricter lint rule now
+  flags. Plus one `react-hooks/immutability` error (`window.location.href` in `AuthCard.tsx`).
+  Flagged as a separate background task rather than folded into "add tests" scope — see
+  KNOWN_ISSUES #25.
+
+---
+
 ## 2026-07-16 — Module M1: Live Supabase backend ✅ TESTED & PRODUCTION VERIFIED
 
 The app no longer runs on demo fixtures: https://kgp-paws.vercel.app now reads

@@ -202,7 +202,7 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 | Metadata, OpenGraph, sitemap.xml, robots.txt, canonical URLs | P0 | COMPLETED | ✅ live |
 | Lighthouse audit + hardening (Perf ≥ 95, SEO/A11y/BP = 100) | P0 | NOT STARTED | M10 |
 | Google Analytics + Google Search Console | P1 | NOT STARTED | M10 — needs property/verification access |
-| Unit tests (Vitest) + integration/E2E tests (Playwright) | P0 | NOT STARTED | M-B — no suite exists today, see KNOWN_ISSUES #12 |
+| Unit tests (Vitest) + integration/E2E tests (Playwright) | P0 | TESTED | ✅ 45 unit + 17 E2E, all passing (2026-07-16) — see TEST_REPORT.md |
 | `prefers-reduced-motion` respected across all animation | P0 | COMPLETED | manual |
 | WCAG-AA contrast, landmarks, focus management, keyboard support | P0 | COMPLETED (audit pass pending M10) | manual |
 | Analytics (privacy-respecting) | P1 | NOT STARTED | M10 |

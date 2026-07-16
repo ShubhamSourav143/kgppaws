@@ -7,6 +7,60 @@ during development. Status legend matches PRD.md.
 
 ---
 
+## 2026-07-16 — Module M-B: Automated test suite
+
+**62 automated tests, all passing.** `npm test` (Vitest) and `npm run test:e2e` (Playwright).
+
+### Unit tests — Vitest, 45 tests across 3 files
+
+| File | Tests | Focus |
+|---|---|---|
+| `lib/utils.test.ts` | 18 | `formatINR` (incl. Indian lakh/crore grouping), `formatDate`, `pct` (clamping at 100 — direct regression for the M1 "153% funded" bug), `ageInYears`, `hashSeed`, `cn` |
+| `lib/local-store.test.ts` | 14 | Saved-animal toggling, report/application ID sequencing (continuing from the seed data's last code), demo session round-trips — jsdom environment for real `localStorage` |
+| `services/animal-mapper.test.ts` | 13 | **Direct regression tests for the M1 bugs**: active-vs-inactive QR tag selection, missing `qr_tags`, medical-timeline/sightings newest-first sort, default fallbacks for every optional column |
+
+All 45 passed on the first real run (11.5s). `mapAnimalRow` was extracted from `services/animals.ts`
+into `services/animal-mapper.ts` (zero Next.js imports) specifically so it could be unit-tested
+without evaluating `next/headers` outside a request context.
+
+### E2E tests — Playwright, 17 tests across 6 files, against a forced demo-mode server
+
+| File | Tests | Covers |
+|---|---|---|
+| `homepage.spec.ts` | 2 | Hero/CTAs render; header report link navigates |
+| `adopt.spec.ts` | 3 | Full list, search narrows to 1 result, no-match empty state |
+| `qr-scan.spec.ts` | 3 | Valid token → profile + scan greeting; direct visit skips greeting; unknown token → scan-not-found |
+| `report-and-track.spec.ts` | 3 | Full submit → code → tracker flow; unknown code → not-found state; seeded demo report tracks correctly |
+| `admin-dashboard.spec.ts` | 4 | Demo-mode banner present; admin/volunteer demo login → correct dashboard; unauthenticated `/admin` is challenged |
+| `pwa-offline.spec.ts` | 2 | **Automates the exact manual check that caught the M-A SW bug**: visit a profile, go fully offline, confirm it still renders from cache; visit an unvisited page offline, confirm `/offline` fallback; manifest + all icons reachable |
+
+All 17 passed (3.7 min) after two rounds of fixes:
+
+**Round 1 — 7 failures, all real findings:**
+- 6 were genuine strict-mode locator ambiguity: a value legitimately renders twice on the same
+  page (status in both a summary chip and a stepper; PAWS ID in both the header and the QR tag
+  flip-card; "Demo mode" in both the login banner and an unrelated footer badge). Fixed with
+  `.first()` / `exact: true` — not app bugs, test-locator specificity issues.
+- 1 was a **real environment finding**: the "exploring as volunteer" test's button click
+  completed but no navigation followed, landing back on `/login`. Hypothesis: React hydration
+  race under parallel-worker resource contention (button existed in the DOM before its `onClick`
+  was attached). **Verified rather than assumed** — re-ran the same spec file in isolation with
+  `--workers=1`: all 4 tests passed cleanly (3.0 min). This confirms contention, not a defect;
+  `workers: 1` is now set in `playwright.config.ts` with a comment explaining why.
+
+**Round 2 — clean run, 17/17 passed.**
+
+### Lint, run as part of this pass
+
+`npm run lint` surfaced 13 problems (9 errors, 4 warnings). Checked `git diff HEAD` against every
+flagged file first: none were touched by this module. Fixed the one in scope (an `any` cast in
+`services/animals.ts`, already open for the mapper refactor) and the one warning in my own new
+`e2e/pwa-offline.spec.ts` (unused `page` param). The remaining 9 errors are pre-existing
+`react-hooks/set-state-in-effect` findings across `SaveButton.tsx`, `Header.tsx`, `Counter.tsx`,
+`ReportTracker.tsx`, and four admin pages, plus one `react-hooks/immutability` error in
+`AuthCard.tsx` — flagged as a separate task (KNOWN_ISSUES #25) rather than fixed here, since the
+mechanical fix touches 9 files and is out of scope for "add tests."
+
 ## 2026-07-16 — Module M1: Live Supabase (SQL-level + local + live production)
 
 ### RLS verification, executed as the `anon` role (`set local role anon`)

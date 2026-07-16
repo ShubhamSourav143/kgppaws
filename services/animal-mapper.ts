@@ -1,0 +1,68 @@
+import type { Animal } from "@/types";
+
+/**
+ * Maps a raw Supabase `animals` row (with embedded photos/medical/sightings/
+ * qr_tags) to the app's Animal type.
+ *
+ * Kept in its own module, free of any Supabase/Next.js imports, so it can be
+ * unit-tested as a pure function. This is exactly where the qr_token bug
+ * lived (see docs/CHANGELOG.md, 2026-07-16): the mapper read a column that
+ * doesn't exist on `animals` because the token actually lives on the
+ * related `qr_tags` row.
+ */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export function mapAnimalRow(row: any): Animal {
+  return {
+    id: row.id,
+    pawsId: row.paws_id,
+    slug: row.slug,
+    // The token lives in qr_tags, not on animals — an animal can have several
+    // tags over time (lost tags get reissued), only one of which is active.
+    qrToken: (row.qr_tags ?? []).find((t: any) => t.active)?.token ?? "",
+    name: row.name,
+    species: row.species,
+    sex: row.sex ?? "unknown",
+    ageLabel: row.age_label ?? "Unknown age",
+    color: row.color ?? "",
+    size: row.size ?? "medium",
+    zoneId: row.zone_id ?? "main-building",
+    tagline: row.tagline ?? "",
+    personality: row.personality ?? [],
+    bio: row.bio ?? "",
+    friendliness: row.friendliness ?? "cautious",
+    vaccinated: row.vaccinated ?? false,
+    sterilized: row.sterilized ?? false,
+    healthStatus: row.health_status ?? "healthy",
+    healthNote: row.health_note ?? "",
+    lastHealthUpdate: row.last_health_update ?? row.updated_at ?? "",
+    adoption: row.adoption_status ?? "not_available",
+    goodWithPeople: row.good_with_people ?? false,
+    goodWithAnimals: row.good_with_animals ?? false,
+    specialCare: row.special_care ?? false,
+    emergencyNote: row.emergency_note ?? undefined,
+    portrait: row.portrait ?? {
+      from: "#E7D6BC", to: "#B08968", coat: "#A9744C", coatDark: "#7C5233",
+      muzzle: "#F4EADB", ear: "floppy",
+    },
+    photos: (row.animal_photos ?? []).map((p: any) => ({
+      id: p.id, caption: p.caption ?? "", date: p.taken_on ?? p.created_at ?? "",
+    })),
+    // Sorted here rather than relying on PostgREST embedded ordering, so the
+    // timeline reads newest-first regardless of insertion order.
+    medicalTimeline: (row.animal_medical_events ?? [])
+      .map((e: any) => ({
+        id: e.id, date: e.event_date, type: e.event_type, title: e.title, note: e.public_note ?? undefined,
+      }))
+      .sort((a: any, b: any) => b.date.localeCompare(a.date)),
+    sightings: (row.animal_sightings ?? [])
+      .map((s: any) => ({
+        id: s.id, date: s.seen_on, zoneId: s.zone_id, note: s.public_note ?? "",
+      }))
+      .sort((a: any, b: any) => b.date.localeCompare(a.date)),
+    demo: false,
+  };
+}
+
+export const PUBLIC_ANIMAL_SELECT =
+  "*, animal_photos(*), animal_medical_events(*), animal_sightings(*), qr_tags(token, active)";

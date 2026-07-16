@@ -43,11 +43,27 @@ authenticated routes), offline shell, brand-derived icons. Chosen as the first m
 specifically because it needs **zero external credentials** — real progress while the
 connector checklist is outstanding. Live on https://kgp-paws.vercel.app.
 
-### M-B — Automated test suite — NOT STARTED (unblocked, ready to start)
-Vitest (unit, for `lib/*`) + Playwright (E2E, mirroring the manual flows already recorded in
-TEST_REPORT.md: report→track, adopt search, QR scan→profile, offline). Required by the spec
-(`testing.unit_tests`, `testing.integration_tests`) and closes KNOWN_ISSUES #12. **Needs no
-credentials** — can start immediately on approval.
+### M-B — Automated test suite — **TESTED** (2026-07-16)
+Vitest (45 unit tests: `lib/utils.ts`, `lib/local-store.ts`, and a new `services/animal-mapper.ts`
+— the exact module the QR-token bug lived in, now with regression tests for it) + Playwright
+(17 E2E tests: homepage, adopt search, report submit→track, QR scan→profile, PWA offline —
+automating the identical manual check that caught the SW-registration bug in M-A). Closes
+KNOWN_ISSUES #12. Run with `npm test` / `npm run test:e2e`.
+
+- Extracted `mapAnimalRow` out of `services/animals.ts` into its own pure module
+  (`services/animal-mapper.ts`, zero Next.js imports) specifically so it's unit-testable without
+  fighting `next/headers` in a non-Next test runner.
+- E2E runs against a forced demo-mode server (`playwright.config.ts` overrides the two Supabase
+  env vars for the spawned test server only) regardless of the live credentials in the
+  developer's `.env.local` — deterministic, credential-free, safe before CI secrets exist.
+- **Found and fixed a real test-environment issue, not an app bug:** running the E2E suite fully
+  parallel against a single `next start` process on this machine caused one test's button click
+  to land before React had attached its handler (button existed in the DOM; hydration hadn't
+  finished). Reproduced consistently under parallelism, passed cleanly every time serialized.
+  Set `workers: 1` with a comment explaining why — revisit once a real CI runner exists.
+- **Found 9 pre-existing lint errors** while wiring this up (`npm run lint`, not previously run
+  in this depth) — none introduced by M-B. Flagged as a separate task rather than fixed inline;
+  see KNOWN_ISSUES #25.
 
 ### M-C — Dark mode — NOT STARTED (unblocked, ready to start)
 Token-driven dark theme across the app (`app/globals.css` already centralises the palette),
