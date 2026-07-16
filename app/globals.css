@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+/* ————— KGP PAWS design tokens ————— */
+
+@theme inline {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+}
+
+@theme {
+  /* Earthy premium palette */
+  --color-forest: #173f35;
+  --color-forest-deep: #0e2b23;
+  --color-forest-bright: #2e6b56;
+  --color-mist: #e7eee8;
+  --color-cream: #f7f1e7;
+  --color-parchment: #fcf8f0;
+  --color-sand: #dcc9a3;
+  --color-sand-light: #efe6d2;
+  --color-terracotta: #c96745;
+  --color-terracotta-deep: #a8502f;
+  --color-clay: #f1ddcc;
+  --color-charcoal: #202421;
+  --color-moss: #5b6a5d;
+  --color-line: #e3d9c5;
+
+  --shadow-soft: 0 2px 24px -8px rgb(32 36 33 / 0.14);
+  --shadow-lift: 0 16px 44px -14px rgb(32 36 33 / 0.25);
+  --shadow-glow: 0 0 0 1px rgb(23 63 53 / 0.06), 0 20px 60px -20px rgb(23 63 53 / 0.35);
+}
+
+/* ————— Base ————— */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-terracotta);
+  color: var(--color-parchment);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+/* ————— Utilities ————— */
+
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: 1.25rem;
+  @media (min-width: 640px) { padding-inline: 2rem; }
+  @media (min-width: 1024px) { padding-inline: 3rem; }
+}
+
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* soft grain texture for illustrated surfaces */
+@utility grain {
+  position: relative;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: soft-light;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+/* ————— Idle animation keyframes (hero & microinteractions) ————— */
+
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1) scaleX(1); }
+  50% { transform: scaleY(1.018) scaleX(1.006); }
+}
+@keyframes blink {
+  0%, 94%, 100% { transform: scaleY(1); }
+  96%, 98% { transform: scaleY(0.06); }
+}
+@keyframes ear-twitch {
+  0%, 91%, 100% { transform: rotate(0deg); }
+  93% { transform: rotate(-7deg); }
+  95% { transform: rotate(2deg); }
+}
+@keyframes tail-wag {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(9deg); }
+}
+@keyframes head-tilt {
+  0%, 86%, 100% { transform: rotate(0deg); }
+  90%, 94% { transform: rotate(2.5deg); }
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes tag-swing {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3.5deg); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.anim-breathe { animation: breathe 4.2s ease-in-out infinite; transform-origin: 50% 85%; }
+.anim-blink { animation: blink 5.5s ease-in-out infinite; transform-origin: center 60%; }
+.anim-ear { animation: ear-twitch 7s ease-in-out infinite; }
+.anim-head { animation: head-tilt 9s ease-in-out infinite; transform-origin: 50% 80%; }
+.anim-tail { animation: tail-wag 1.6s ease-in-out infinite; }
+.anim-float { animation: float-y 5s ease-in-out infinite; }
+.anim-swing { animation: tag-swing 3.2s ease-in-out infinite; transform-origin: 50% 0%; }
+.anim-pulse-soft { animation: pulse-soft 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .anim-breathe, .anim-blink, .anim-ear, .anim-head,
+  .anim-tail, .anim-float, .anim-swing, .anim-pulse-soft {
+    animation: none;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 3D flip helpers for the QR identity tag */
+.preserve-3d { transform-style: preserve-3d; }
+.backface-hidden { backface-visibility: hidden; }
+.perspective-1000 { perspective: 1000px; }

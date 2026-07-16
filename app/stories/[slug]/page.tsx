@@ -1,0 +1,225 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Camera, Clock, Heart } from "lucide-react";
+import { getStory, listStories } from "@/services/stories";
+import { getAnimal } from "@/services/animals";
+import { AnimalCard } from "@/components/animals/AnimalCard";
+import { StoryCard } from "@/components/stories/StoryCard";
+import { Reveal } from "@/components/motion/Reveal";
+import { ButtonLink } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
+import { STORY_CATEGORY_LABELS } from "@/lib/demo/stories";
+import { formatDate } from "@/lib/utils";
+import type { StoryBlock } from "@/types";
+
+export async function generateStaticParams() {
+  const stories = await listStories();
+  return stories.map((s) => ({ slug: s.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const story = await getStory(slug);
+  if (!story) return { title: "Story not found" };
+  return {
+    title: story.title,
+    description: story.excerpt,
+    alternates: { canonical: `/stories/${story.slug}` },
+    openGraph: {
+      title: story.title,
+      description: story.excerpt,
+      type: "article",
+      publishedTime: story.publishedAt,
+    },
+  };
+}
+
+function Block({ block }: { block: StoryBlock }) {
+  switch (block.type) {
+    case "h2":
+      return (
+        <h2 className="mt-12 font-display text-3xl font-bold text-forest-deep">
+          {block.text}
+        </h2>
+      );
+    case "quote":
+      return (
+        <figure className="my-10 border-l-4 border-terracotta pl-6">
+          <blockquote className="font-display text-2xl font-medium italic leading-snug text-forest-deep">
+            “{block.text}”
+          </blockquote>
+          {block.by && (
+            <figcaption className="mt-3 text-sm font-bold text-moss">
+              — {block.by}
+            </figcaption>
+          )}
+        </figure>
+      );
+    case "image":
+      return (
+        <Reveal>
+          <figure className="my-10">
+            <div
+              className="grain grid aspect-[16/9] place-items-center rounded-3xl shadow-soft"
+              style={{
+                background: `linear-gradient(150deg, ${block.palette[0]}, ${block.palette[1]})`,
+              }}
+            >
+              <Camera className="h-9 w-9 text-parchment/70" aria-hidden="true" />
+            </div>
+            <figcaption className="mt-3 text-center text-sm text-moss">
+              {block.caption}
+            </figcaption>
+          </figure>
+        </Reveal>
+      );
+    case "timeline":
+      return (
+        <ol className="my-10 space-y-4 rounded-3xl border border-line bg-parchment p-6 sm:p-8">
+          {block.items.map((item) => (
+            <li key={item.date + item.text} className="flex gap-4">
+              <span className="w-16 shrink-0 pt-0.5 text-xs font-black uppercase tracking-wide text-terracotta-deep">
+                {item.date}
+              </span>
+              <span className="border-l-2 border-line pl-4 text-sm leading-relaxed text-charcoal/85">
+                {item.text}
+              </span>
+            </li>
+          ))}
+        </ol>
+      );
+    default:
+      return (
+        <p className="mt-6 text-lg leading-[1.85] text-charcoal/85">
+          {block.text}
+        </p>
+      );
+  }
+}
+
+export default async function StoryPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const story = await getStory(slug);
+  if (!story) notFound();
+
+  const [animal, allStories] = await Promise.all([
+    story.animalSlug ? getAnimal(story.animalSlug) : Promise.resolve(undefined),
+    listStories(),
+  ]);
+  const related = allStories.filter((s) => s.slug !== story.slug).slice(0, 2);
+
+  return (
+    <article>
+      {/* cinematic hero */}
+      <header
+        className="grain relative overflow-hidden text-cream"
+        style={{
+          background: `linear-gradient(160deg, ${story.heroPalette[0]}, ${story.heroPalette[1]})`,
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/50 to-transparent" aria-hidden="true" />
+        <div className="container-page relative flex min-h-[52vh] flex-col justify-end py-14">
+          <div className="flex flex-wrap items-center gap-3">
+            <Chip tone="sand">{STORY_CATEGORY_LABELS[story.category]}</Chip>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-cream/85">
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              {story.readMinutes} min read
+            </span>
+          </div>
+          <h1 className="mt-5 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] sm:text-5xl lg:text-6xl">
+            {story.title}
+          </h1>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-cream/85">
+            {story.excerpt}
+          </p>
+          <p className="mt-5 text-sm font-semibold text-cream/70">
+            {story.author} · {formatDate(story.publishedAt)}
+          </p>
+        </div>
+      </header>
+
+      {/* body */}
+      <div className="container-page grid gap-12 py-14 lg:grid-cols-[minmax(0,44rem)_1fr]">
+        <div className="min-w-0">
+          {story.blocks.map((block, i) => (
+            <Block key={i} block={block} />
+          ))}
+
+          {/* contextual CTA */}
+          <aside className="mt-14 rounded-3xl bg-forest p-8 text-center text-cream">
+            <Heart className="mx-auto h-7 w-7 text-sand" aria-hidden="true" />
+            {animal &&
+            (animal.adoption === "available" ||
+              animal.adoption === "foster_needed") ? (
+              <>
+                <p className="mt-3 font-display text-2xl font-bold">
+                  {animal.name}&apos;s next chapter could be yours to write.
+                </p>
+                <div className="mt-5 flex flex-wrap justify-center gap-3">
+                  <ButtonLink href={`/adopt/apply/${animal.slug}`} variant="light" size="lg">
+                    {animal.adoption === "available" ? `Adopt ${animal.name}` : `Foster ${animal.name}`}
+                  </ButtonLink>
+                  <ButtonLink href="/donate" variant="accent" size="lg">
+                    Fund the next rescue
+                  </ButtonLink>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 font-display text-2xl font-bold">
+                  Stories like this one run on support like yours.
+                </p>
+                <div className="mt-5 flex flex-wrap justify-center gap-3">
+                  <ButtonLink href="/donate" variant="light" size="lg">
+                    Donate
+                  </ButtonLink>
+                  <ButtonLink href="/volunteer" variant="accent" size="lg">
+                    Volunteer
+                  </ButtonLink>
+                </div>
+              </>
+            )}
+          </aside>
+        </div>
+
+        {/* sidebar */}
+        <aside className="space-y-8 lg:sticky lg:top-24 lg:self-start">
+          {animal && (
+            <div>
+              <h2 className="eyebrow mb-4 text-terracotta-deep">
+                The paw in this story
+              </h2>
+              <AnimalCard animal={animal} />
+            </div>
+          )}
+          <div>
+            <h2 className="eyebrow mb-4 text-terracotta-deep">Keep reading</h2>
+            <div className="space-y-4">
+              {related.map((s) => (
+                <StoryCard key={s.slug} story={s} />
+              ))}
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div className="border-t border-line bg-parchment py-10 text-center">
+        <Link
+          href="/stories"
+          className="text-sm font-bold text-forest underline-offset-4 hover:underline"
+        >
+          ← All stories
+        </Link>
+      </div>
+    </article>
+  );
+}
