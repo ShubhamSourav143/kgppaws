@@ -2,23 +2,23 @@
   "crons": [
     {
       "path": "/api/sync/enqueue-all",
-      "schedule": "0 * * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/sync/worker",
-      "schedule": "*/5 * * * *"
+      "schedule": "10 2 * * *"
     },
     {
       "path": "/api/sync/housekeeping",
-      "schedule": "*/10 * * * *"
+      "schedule": "20 2 * * *"
     },
     {
       "path": "/api/media/ingest",
-      "schedule": "*/15 * * * *"
+      "schedule": "30 2 * * *"
     },
     {
       "path": "/api/notify/dispatch",
-      "schedule": "* * * * *"
+      "schedule": "40 2 * * *"
     }
   ]
 }
