@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Mail, Siren } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { SITE, isSupabaseConfigured } from "@/lib/config";
+import type { FooterItem } from "@/services/content";
 
 function InstagramIcon({ className }: { className?: string }) {
   return (
@@ -29,26 +30,52 @@ function XIcon({ className }: { className?: string }) {
   );
 }
 
-const EXPLORE = [
-  { href: "/adopt", label: "Adopt a Paw" },
-  { href: "/stories", label: "Stories" },
-  { href: "/map", label: "Campus Paws Map" },
-  { href: "/about", label: "About KGP PAWS" },
-];
+function iconFor(name: string | null | undefined, className: string) {
+  switch ((name ?? "").toLowerCase()) {
+    case "instagram":
+      return <InstagramIcon className={className} />;
+    case "facebook":
+      return <FacebookIcon className={className} />;
+    case "x":
+    case "twitter":
+      return <XIcon className={className} />;
+    default:
+      return <InstagramIcon className={className} />;
+  }
+}
 
-const ACT = [
-  { href: "/report", label: "Report an Animal" },
-  { href: "/donate", label: "Donate" },
-  { href: "/volunteer", label: "Volunteer" },
-  { href: "/signup", label: "Create an Account" },
-];
 
 const LEGAL = [
   { href: "/about#privacy", label: "Privacy Policy" },
   { href: "/about#animal-data", label: "Animal Data Policy" },
 ];
 
-export function Footer() {
+export interface FooterSections {
+  socialLinks: FooterItem[];
+  quickLinks: FooterItem[];
+  contacts: FooterItem[];
+  copyright: string | null;
+  newsletterBlurb?: string | null;
+}
+
+
+export function Footer({
+  sections,
+  emergencyEmail,
+  emergencyPhone,
+}: {
+  sections?: FooterSections;
+  emergencyEmail?: string | null;
+  emergencyPhone?: string | null;
+} = {}) {
+  const socials = (sections?.socialLinks || []).map((s) => ({ label: s.label ?? "", url: s.url ?? "#", icon: s.icon }));
+  const quickLinks = (sections?.quickLinks || []).map((q) => ({ href: q.url ?? "#", label: q.label ?? "" }));
+  const acts = (sections?.contacts || []).map((c) => ({ href: c.url ?? "#", label: c.label ?? "" }));
+
+  const copyright = sections?.copyright ?? `© ${new Date().getFullYear()} KGP PAWS`;
+  const newsletterBlurb = sections?.newsletterBlurb;
+  const email = emergencyEmail ?? SITE.email;
+
   return (
     <footer className="bg-forest-deep text-cream">
       <div className="container-page grid gap-10 py-14 md:grid-cols-2 md:py-16 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
@@ -59,34 +86,23 @@ export function Footer() {
             and a digital identity for every paw on campus.
           </p>
           <div className="flex gap-3 pt-1">
-            <a
-              href={SITE.social.instagram}
-              className="grid h-10 w-10 place-items-center rounded-full border border-cream/20 transition-colors hover:bg-cream/10"
-              aria-label="KGP PAWS on Instagram"
-            >
-              <InstagramIcon className="h-4 w-4" />
-            </a>
-            <a
-              href={SITE.social.facebook}
-              className="grid h-10 w-10 place-items-center rounded-full border border-cream/20 transition-colors hover:bg-cream/10"
-              aria-label="KGP PAWS on Facebook"
-            >
-              <FacebookIcon className="h-4 w-4" />
-            </a>
-            <a
-              href={SITE.social.twitter}
-              className="grid h-10 w-10 place-items-center rounded-full border border-cream/20 transition-colors hover:bg-cream/10"
-              aria-label="KGP PAWS on X"
-            >
-              <XIcon className="h-4 w-4" />
-            </a>
+            {socials.map((s) => (
+              <a
+                key={s.label}
+                href={s.url}
+                className="grid h-10 w-10 place-items-center rounded-full border border-cream/20 transition-colors hover:bg-cream/10"
+                aria-label={`KGP PAWS on ${s.label}`}
+              >
+                {iconFor(s.icon, "h-4 w-4")}
+              </a>
+            ))}
           </div>
         </div>
 
         <nav aria-label="Explore">
           <h2 className="eyebrow mb-4 text-sand">Explore</h2>
           <ul className="space-y-2.5">
-            {EXPLORE.map((l) => (
+            {quickLinks.map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="text-sm text-cream/85 transition-colors hover:text-cream">
                   {l.label}
@@ -99,7 +115,7 @@ export function Footer() {
         <nav aria-label="Take action">
           <h2 className="eyebrow mb-4 text-sand">Take Action</h2>
           <ul className="space-y-2.5">
-            {ACT.map((l) => (
+            {acts.map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="text-sm text-cream/85 transition-colors hover:text-cream">
                   {l.label}
@@ -120,10 +136,17 @@ export function Footer() {
           </Link>
           <p className="flex items-center gap-2 text-sm text-cream/85">
             <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <a href={`mailto:${SITE.email}`} className="hover:text-cream">
-              {SITE.email}
+            <a href={`mailto:${email}`} className="hover:text-cream">
+              {email}
             </a>
           </p>
+          {emergencyPhone ? (
+            <p className="text-sm text-cream/85">
+              <a href={`tel:${emergencyPhone}`} className="hover:text-cream">
+                {emergencyPhone}
+              </a>
+            </p>
+          ) : null}
           <ul className="space-y-2 pt-2">
             {LEGAL.map((l) => (
               <li key={l.href}>
@@ -139,10 +162,10 @@ export function Footer() {
       <div className="border-t border-cream/10">
         <div className="container-page flex flex-col items-center gap-3 py-6 text-center md:flex-row md:justify-between md:text-left">
           <p className="font-display text-sm italic text-sand">
-            “Made with compassion for every paw that calls Kharagpur home.”
+            &ldquo;{newsletterBlurb}&rdquo;
           </p>
           <p className="text-xs text-cream/50">
-            © {new Date().getFullYear()} KGP PAWS
+            {copyright}
             {!isSupabaseConfigured && (
               <span className="ml-2 rounded-full border border-cream/20 px-2 py-0.5">
                 Demo mode — sample data

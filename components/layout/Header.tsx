@@ -9,14 +9,12 @@ import { Logo } from "@/components/brand/Logo";
 import { useSession } from "@/hooks/use-demo-session";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/adopt", label: "Adopt" },
-  { href: "/stories", label: "Stories" },
-  { href: "/map", label: "Paws Map" },
-  { href: "/donate", label: "Donate" },
-  { href: "/about", label: "About" },
-  { href: "/volunteer", label: "Volunteer" },
-];
+
+export interface HeaderNavItem {
+  href: string;
+  label: string;
+  openInNewTab?: boolean;
+}
 
 function Squiggle({ className }: { className?: string }) {
   return (
@@ -59,7 +57,8 @@ function NavLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-export function Header() {
+export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
+  const NAV = items || [];
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -101,7 +100,7 @@ export function Header() {
 
         <nav aria-label="Primary" className="hidden items-center gap-5 lg:flex xl:gap-7">
           {NAV.map((item) => (
-            <NavLink key={item.href} {...item} />
+            <NavLink key={item.href} href={item.href} label={item.label} />
           ))}
         </nav>
 

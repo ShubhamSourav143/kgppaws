@@ -7,9 +7,10 @@ import { Reveal } from "@/components/motion/Reveal";
 import { SectionHeading } from "@/components/ui/Section";
 import { ButtonLink } from "@/components/ui/Button";
 import type { Animal } from "@/types";
+import type { ContentSectionRow } from "@/services/content";
 
 /** Horizontal snap carousel of animal cards. */
-export function MeetThePaws({ animals }: { animals: Animal[] }) {
+export function MeetThePaws({ animals, cms }: { animals: Animal[], cms?: ContentSectionRow }) {
   const trackRef = useRef<HTMLUListElement>(null);
 
   const scrollBy = (dir: 1 | -1) => {
@@ -21,11 +22,13 @@ export function MeetThePaws({ animals }: { animals: Animal[] }) {
       <div className="container-page">
         <Reveal>
           <div className="flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading
-              eyebrow="Meet the Paws"
-              title="The residents, in person."
-              sub="Every card is a real profile — health record, personality, and all."
-            />
+            <div className="max-w-2xl">
+              <SectionHeading
+                eyebrow={cms?.subtitle ?? undefined}
+                title={cms?.title ?? ""}
+                sub={cms?.body ?? undefined}
+              />
+            </div>
             <div className="hidden gap-2 md:flex">
               <button
                 type="button"

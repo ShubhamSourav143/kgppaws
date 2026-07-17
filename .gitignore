@@ -51,3 +51,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Local npm cache redirect target (workaround for a full C: drive on this
+# machine — see docs/KNOWN_ISSUES.md #26). Never part of the app.
+/Downloads.npm-cache-e/

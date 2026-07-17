@@ -34,6 +34,9 @@ export async function listCampaigns(): Promise<DonationCampaign[]> {
       .from("campaigns_with_totals")
       .select("*, campaign_expenses(*), campaign_updates(*)")
       .eq("active", true);
+    // Intentionally NOT gated on `data.length > 0` — see services/animals.ts
+    // for why: a real, legitimately empty result must never fall back to
+    // fictional demo campaigns on a connected production database.
     if (!error && data) return data.map(mapCampaignRow);
   }
   return DEMO_CAMPAIGNS;

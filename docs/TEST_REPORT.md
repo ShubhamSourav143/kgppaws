@@ -1,9 +1,118 @@
 # KGP PAWS — Test Report
 
-Living document. Last updated **2026-07-17**. Records what was actually verified, how, and
+Living document. Last updated **2026-07-18**. Records what was actually verified, how, and
 when — not just "should work." `npm test` (Vitest) and `npm run test:e2e` (Playwright) cover
 the demo-mode core flows (see Module M-B below); everything else here is manual/direct-SQL
 verification performed during development. Status legend matches PRD.md.
+
+---
+
+## 2026-07-18 — Production-readiness review: verify claims against code, not documentation
+
+A full-repository review requested explicitly to distrust prior-session documentation and
+verify everything against actual running code. Two other work streams had landed since the
+last recorded TEST_REPORT entry — this session's own M-CMS-1 rollout, and a separate agent
+session ("Antigravity," see `docs/ANTIGRAVITY_WORK.md`) that migrated content off hardcoded
+strings — and both were checked, not trusted.
+
+### Ground-truth commands, run directly rather than inferred from docs
+
+| Command | Result |
+|---|---|
+| `npm run build` (before fixes) | ✅ 61 routes, clean TypeScript — but only **3 routes static** (`/_not-found`, `/manifest.webmanifest`, `/robots.txt`); everything else forced dynamic, a real regression caught below |
+| `npm run lint` | ✅ 0 errors, 3 warnings (see below) |
+| `npm test` | ✅ 45 passed, 5 skipped (1 whole file) — see below for why the skip is correct |
+| `npm run build` (after fixes) | ✅ 61 routes, clean TypeScript, **19 routes static** — confirms the rendering fix actually worked, not just compiled |
+
+### Real bugs found by direct code inspection (not by trusting ANTIGRAVITY_WORK.md's "verified" claims)
+
+**1. Fictional demo data could have appeared on a live production database.**
+`services/animals.ts`, `campaigns.ts`, `stories.ts` had all been changed from
+`if (!error && data) return data.map(...)` to `if (!error && data && data.length > 0) return
+data.map(...)`. Traced the consequence: a legitimately empty result from a *connected* Supabase
+project (e.g., after the demo-row purge that KNOWN_ISSUES #24 explicitly plans for launch) would
+silently render `DEMO_ANIMALS`/`DEMO_CAMPAIGNS`/`DEMO_STORIES` — fictional dogs and campaigns —
+as if they were real, on the actual production site. Confirmed the pattern's origin (correctly
+copied from `services/content.ts`, where it's the *right* behavior for CMS marketing copy, then
+incorrectly reapplied to core domain data). Grepped the whole repo for the same `.length > 0`
+pattern to confirm no other instance existed outside `services/content.ts` (where it belongs).
+Fixed: reverted the three files to the original check.
+
+**2. Every route in the app had silently lost static rendering.**
+Not something a docs review would catch — required actually running `npm run build` and reading
+the route table, which showed `ƒ` (dynamic) next to routes with zero personalized content
+(`/faq`, `/offline`, `/login`, `/scan-not-found`, the entire `/about` and `/admin/*` tree).
+Traced to `app/layout.tsx`'s new `generateMetadata()` and `components/layout/SiteChrome.tsx`
+(both added this CMS-migration pass) calling `createServerSupabase()`, which invokes Next's
+`cookies()` unconditionally — a dynamic API that forces the whole route dynamic regardless of
+whether the data it fetches is actually personalized. Confirmed `content_*` tables are fully
+public-read (checked their RLS policies) and confirmed a purpose-built cookie-less client
+(`createStaticSupabase()`) already existed in the codebase for exactly this case. Switched
+`services/content.ts` to it; re-ran `npm run build` to confirm the fix actually worked (static
+routes 3 → 19) rather than assuming the change was sufficient. Separately confirmed `/admin/*`'s
+static-ness is **not** a security regression: its authorization is enforced client-side
+(`RequireRole` in `AdminShell.tsx`) plus Postgres RLS at the data layer, and `app/admin/page.tsx`
+reads exclusively from demo/localStorage data today (a pre-existing, documented gap, not
+something this session touched) — so there is no live data exposed by the static shell.
+
+**3. Migration `0011_notification_outbox` had never actually applied to the live database.**
+`ANTIGRAVITY_WORK.md`/the prior session's own narration implied the sync/notification
+infrastructure was complete. Cross-checked against the live Supabase project via direct schema
+query (`select count(*) from information_schema.tables where table_name='notification_outbox'`)
+rather than trusting the claim — result was `0`. Traced through the actual tool-call history: a
+prior attempt to apply this migration hit a "classifier temporarily unavailable" error twice,
+and the session moved on without confirming success or retrying again. Re-applied the migration
+for real this session; re-verified via the same schema query (now `1`) plus RLS-policy presence.
+Until this was caught, `/api/notify/dispatch` would have returned HTTP 500 in production, and
+`/api/reports`/`/api/adopt/apply`/`/api/donate/confirm` would have silently failed to queue any
+notification (their `.insert()` calls don't check the returned `error`).
+
+**4. `notification_outbox`'s send functions are empty stubs, not "credential-gated" code.**
+Read the actual function bodies (`sendEmailStub`/`sendWhatsAppStub` in
+`/api/notify/dispatch/route.ts`) rather than assuming "stub" meant "works once credentials
+exist." Confirmed they only `void` their arguments — genuinely do nothing. This means setting
+`EMAIL_PROVIDER_API_KEY`/`WHATSAPP_PROVIDER_TOKEN` alone will make the outbox mark every row
+`sent` without any message actually being transmitted, since the stub "succeeds" trivially.
+Documented as a trap in KNOWN_ISSUES #5 rather than left implicit.
+
+**5. Reverse sync (M-CMS-5) is a silent no-op.**
+Grepped `lib/sync/tabs/` for `applyDbToSheets` and for handler registrations matching `Reports`
+/ `Adoption Applications` / `Donation Confirmations` — zero matches for all three. The DB
+triggers (migration 0009, confirmed live) correctly enqueue a job on every insert/update; the
+worker's no-handler path (by design, from M-CMS-1) marks the job `succeeded` with a
+`no_handler_registered` note rather than failing loudly. Net effect: data saves correctly to
+Supabase, nothing ever reaches the Sheet, and the job history shows false-positive
+"succeeded" jobs. Documented as KNOWN_ISSUES #31 with the exact scope of the fix needed.
+
+### Confirmed correct (checked, not assumed)
+
+- `npm run lint`'s 0-errors result is real, not a suppressed rule: diffed `eslint.config.mjs`
+  against its prior state (unchanged) and grepped `SaveButton.tsx` for the `useEffect`+`setState`
+  pattern KNOWN_ISSUES #25 originally described (not present — genuinely fixed at some point,
+  just never reflected in the doc). Closed #25 as resolved rather than leaving it stale.
+- `npm test`'s 5 skipped tests (`lib/sync/queue.test.ts`) are correctly gated behind
+  `SUPABASE_SERVICE_ROLE_KEY` presence via `describe.runIf` — confirmed the env var is genuinely
+  absent from `.env.local` (checked variable *names* only, never read a secret value), so the
+  skip is the intended, correct behavior for this environment, not a masked failure.
+- `app/volunteer/page.tsx`'s CMS wiring (`getHelpContent()` → `DEMO_HELP_CONTENT` fallback) is
+  legitimate marketing-copy fallback, not domain-data fallback — read the full diff and the
+  demo-content source to confirm this doesn't share the animals.ts/campaigns.ts/stories.ts bug.
+- Migrations 0006–0010 (everything except the already-covered 0011 gap) were live-confirmed via
+  direct schema queries: `tab_config` (18 rows), `sync_jobs`, `content_audit_log`, 16 staging
+  tables, `donation_confirmations`, `animal_photos.blurhash`, the `tr_rescue_reports_sync`
+  trigger and its function, and `next_animal_public_id`'s `search_path=public` hardening
+  (migration 0007) all present and correct.
+- `vercel.json`'s 5 cron schedules reference routes that all exist and build successfully
+  (`enqueue-all`, `worker`, `housekeeping`, `media/ingest`, `notify/dispatch`).
+
+### Housekeeping fixed alongside the review
+- `Downloads.npm-cache-e/` (a 49 MB local npm-cache redirect target, workaround for a full `C:`
+  drive — KNOWN_ISSUES #26) was untracked but not gitignored; would have been committed by a
+  broad `git add -A`. Added to `.gitignore` before any commit this session.
+- `.env.example` was missing `EMAIL_PROVIDER_API_KEY`/`WHATSAPP_PROVIDER_TOKEN`, both referenced
+  by `/api/notify/dispatch`. Added with explanatory comments.
+- Consolidated two separate `import ... from "@/lib/demo/content"` statements in
+  `services/content.ts` into one (harmless due to import hoisting, but untidy).
 
 ---
 

@@ -3,9 +3,10 @@ import { Reveal } from "@/components/motion/Reveal";
 import { SectionHeading, DemoNotice } from "@/components/ui/Section";
 import { formatDate } from "@/lib/utils";
 import type { ImpactMetrics } from "@/types";
+import type { ContentSectionRow } from "@/services/content";
 
 /** Live impact — values come from admin-editable configuration, never hardcoded. */
-export function Impact({ metrics }: { metrics: ImpactMetrics }) {
+export function Impact({ metrics, cms }: { metrics: ImpactMetrics, cms?: ContentSectionRow }) {
   const items = [
     { label: "Campus dogs supported", value: metrics.dogsSupported, suffix: "+" },
     { label: "Cats supported", value: metrics.catsSupported, suffix: "+" },
@@ -19,11 +20,12 @@ export function Impact({ metrics }: { metrics: ImpactMetrics }) {
     <section className="bg-cream py-20 sm:py-24" aria-labelledby="impact-h">
       <div className="container-page">
         <Reveal>
-          <SectionHeading
-            eyebrow="Live Impact"
-            title="Care you can count."
-            align="center"
-          />
+          <header className="mx-auto max-w-2xl text-center">
+            <SectionHeading
+              eyebrow={cms?.subtitle ?? undefined}
+              title={cms?.title ?? ""}
+            />
+          </header>
         </Reveal>
         <div className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3">
           {items.map((item, i) => (

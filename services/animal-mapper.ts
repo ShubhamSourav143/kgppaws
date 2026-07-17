@@ -59,11 +59,17 @@ export function mapAnimalRow(row: any): Animal {
       })),
     // Sorted here rather than relying on PostgREST embedded ordering, so the
     // timeline reads newest-first regardless of insertion order.
-    medicalTimeline: (row.animal_medical_events ?? [])
-      .map((e: any) => ({
+    medicalTimeline: [
+      ...(row.animal_medical_events ?? []).map((e: any) => ({
         id: e.id, date: e.event_date, type: e.event_type, title: e.title, note: e.public_note ?? undefined,
+      })),
+      ...(row.animal_vaccinations ?? []).map((v: any) => ({
+        id: v.id, date: v.date_given, type: "vaccination", title: `Vaccination: ${v.vaccine}`, note: v.notes ?? undefined,
+      })),
+      ...(row.animal_sterilizations ?? []).map((s: any) => ({
+        id: s.id, date: s.procedure_date, type: "sterilization", title: "Sterilization", note: s.notes ?? undefined,
       }))
-      .sort((a: any, b: any) => b.date.localeCompare(a.date)),
+    ].sort((a: any, b: any) => b.date.localeCompare(a.date)),
     sightings: (row.animal_sightings ?? [])
       .map((s: any) => ({
         id: s.id, date: s.seen_on, zoneId: s.zone_id, note: s.public_note ?? "",
@@ -74,4 +80,4 @@ export function mapAnimalRow(row: any): Animal {
 }
 
 export const PUBLIC_ANIMAL_SELECT =
-  "*, animal_photos(*), animal_medical_events(*), animal_sightings(*), qr_tags(token, active)";
+  "*, animal_photos(*), animal_medical_events(*), animal_vaccinations(*), animal_sterilizations(*), animal_sightings(*), qr_tags(token, active)";

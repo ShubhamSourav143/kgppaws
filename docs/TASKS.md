@@ -1,6 +1,6 @@
 # KGP PAWS — Task Plan & Dependency Checklist
 
-Living document. Last updated **2026-07-17**. This is the execution plan referenced by
+Living document. Last updated **2026-07-18**. This is the execution plan referenced by
 PRD.md §6. Work proceeds **module by module**: plan → implement → test → update docs → mark
 PRD status → summarize changes. No module starts before the previous one is stable, except
 where explicitly parallelizable (noted below).
@@ -118,27 +118,49 @@ system-preference default + manual toggle with persistence. Required by spec
 - Verify (once dep #2 arrives): drop a photo in the Drive folder → optimized variants appear on
   the live profile within one ingest cycle; Lighthouse image metrics stay green.
 
-### M4 — Animal profile v2 + permanent ID + QR/PDF — depends on M1; independent of M2/M3 schema-wise
-- `public_id` (`DOG#####`) migration + `/dog/[publicId]` route.
-- Weight/breed fields surfaced in UI (schema already supports via Sheets Dogs tab, M2).
-- `/api/qr/generate`, `/api/qr/print-sheet` (A4 PDF, react-pdf).
-- Verify: generate QR for a new dog → scan resolves to profile → print sheet renders correctly
-  at A4 in a PDF viewer.
+### M4 — Animal profile v2 + permanent ID + QR/PDF — **CODE COMPLETE** (2026-07-18)
+- ✅ `public_id` (`DOG#####`) already live since M1 (all 9 animals have one, confirmed live).
+- ✅ `/dog/[publicId]` route — resolves `animals.public_id`, redirects to `/animal/[slug]?via=qr`.
+  `/p/[token]` retained as the revocable-tag fallback per plan.
+- ✅ `/api/qr/generate` (admin-authenticated, issues/reuses a `qr_tags` row, PNG error-correction H).
+- ✅ `/api/qr/print-sheet` — shipped as a printable HTML A4 sheet (2×4 grid, crop marks) instead
+  of a `react-pdf` binary; every browser prints it at exact mm sizing without adding a PDF
+  dependency. Functionally equivalent to the original "A4 PDF" goal.
+- ⏭️ Weight/breed fields: the `Dogs` sync tab supports them (M-CMS-3); not yet confirmed
+  surfaced in the `/animal/[slug]` profile UI itself — worth a follow-up check.
+- ⚠️ Not yet verified end-to-end (generate QR → scan → profile → print sheet) — no live QR was
+  actually printed and scanned this session.
 
-### M5 — UPI donations rework — BLOCKED (dep #11); depends on M1
-- `donation_confirmations` + `site_settings` tables (migration `0002`).
-- Donate page: QR image(s) + UPI ID/name display, confirmation form, thank-you flow.
-- Admin approval queue → Recent Donors wall.
-- Remove legacy Razorpay-oriented demo intent code and `.env.example` entries.
-- Verify: submit a confirmation → appears in admin queue → approve → appears on Recent Donors
-  (only if `Show Publicly`); Sheets sync reflects the same row (needs M2).
+### M5 — UPI donations rework — BLOCKED (dep #11); backend now code-complete, UI not started
+- ✅ `donation_confirmations` table (migration `0010`, applied and confirmed live) + column-level
+  RLS keeping donor phone/email out of the general read grant.
+- ✅ `/api/donate/confirm` — public write route, Zod-validated.
+- ❌ **Donate page UI not rewired.** `DonatePanel.tsx` still shows the old Razorpay-oriented demo
+  flow, not a UPI QR + confirmation form. Genuinely blocked on dep #11 (UPI QR image, UPI ID,
+  account holder name from the owner) — building a final UI without real assets would just be
+  guessing, so this was correctly left alone rather than half-built.
+- ❌ Admin approval queue UI, Recent Donors wall — not started.
+- ❌ Razorpay-oriented `.env.example` entries not yet removed (see `NEXT_PUBLIC_UPI_ID` already
+  present alongside legacy references — needs a cleanup pass once M5 UI work starts for real).
 
-### M6 — Reports v2 + notifications — BLOCKED (deps #9, #10); depends on M1, M2
-- Report taxonomy update (Missing/Dead animal categories).
-- Real `/api/reports`, `/api/adopt/apply` route handlers (replacing client-only demo writes).
-- `notification_outbox` + `/api/notify/dispatch`; wire Email + WhatsApp.
-- Verify: submit a report → admin receives email + WhatsApp within the cron interval; failure
-  is retried and visible in the outbox status.
+### M6 — Reports v2 + notifications — backend code-complete; provider integration BLOCKED (deps #9, #10)
+- ✅ Report taxonomy already included `missing`/`deceased` (confirmed in the live enum) — no
+  migration was needed for this item, contrary to the original plan's assumption.
+- ✅ `/api/reports`, `/api/adopt/apply` — real route handlers replacing client-only demo writes.
+- ✅ `notification_outbox` (migration `0011` — **had to be re-applied this session; see
+  CHANGELOG 2026-07-18, it silently never landed the first time**) + `/api/notify/dispatch`
+  (exponential-retry drainer, 5 attempts).
+- ❌ **Email/WhatsApp provider integration is a stub — genuinely empty, not just untested.**
+  `sendEmailStub`/`sendWhatsAppStub` in `/api/notify/dispatch` are literal no-ops (verified by
+  reading the function bodies: they only `void` their arguments). Until
+  `EMAIL_PROVIDER_API_KEY`/`WHATSAPP_PROVIDER_TOKEN` are unset, every queued notification is
+  correctly marked `skipped` with an explicit reason. **Trap to flag for the owner**: setting
+  those env vars alone will NOT make notifications start sending — the drainer will happily mark
+  every row `sent` (no error occurs, because the stub succeeds by doing nothing) while no email
+  or WhatsApp message is ever actually transmitted. Wiring a real Resend/Meta Cloud API call into
+  these two functions is required work, not just a credentials drop-in.
+- Verify (once providers are chosen): submit a report → admin receives email + WhatsApp within
+  the cron interval; failure is retried and visible in the outbox status.
 
 ### M7 — Blog engine (Sheets-driven) — **SUPERSEDED by M-CMS-4** (Stories tab)
 
@@ -212,67 +234,97 @@ compat-shim call to `/api/sync/run` enqueues a job in the new queue.
 - **No per-tab implementations in this milestone** — the registry allows registering tabs, but
   the tabs themselves land in M-CMS-2/3/4. M-CMS-1's job is the plumbing.
 
-### M-CMS-2 — Content tabs batch 1 (Home, Settings, Navigation, Footer, FAQ, Help) — NOT STARTED
+### M-CMS-2 — Content tabs batch 1 (Home, Settings, Navigation, Footer, FAQ, Help) — **CODE COMPLETE** (2026-07-17/18)
 **Verifiable outcome:** change a Home hero title in Sheets → run sync → homepage renders new
 title within one sync cycle. Change a nav item in Sheets → renders. Change a FAQ answer → renders.
 
-Depends on M-CMS-1 and dep #2 (Google service account) for live verification. Engine can be
-unit-tested end-to-end without dep #2 using a fixture spreadsheet dump.
+- ✅ Six content tabs implemented (`lib/sync/tabs/home.ts`, `navigation.ts`, `footer.ts`,
+  `faq.ts`, `help.ts`, `website-settings.ts`) on the shared `runSheetsToDb` apply engine.
+- ✅ `app/layout.tsx`, `components/layout/{SiteChrome,Header,Footer}.tsx`, `app/faq/page.tsx`,
+  `app/volunteer/page.tsx`, homepage sections (`Hero`, `Impact`, `MeetThePaws`, `HelpSection`,
+  `CampusHome`) now read through `services/content.ts` instead of hardcoded JSX strings.
+- ✅ `lib/demo/content.ts` centralizes built-in copy shown before the first Sheets sync.
+- ⚠️ **Not yet live-verified** (still blocked on dep #2, Google service account) — the "change a
+  cell in Sheets → renders" outcome above has not been observed against a real spreadsheet. What
+  *is* verified: `npm run build` (61 routes, clean TypeScript), the fallback path renders
+  correctly with an empty/unconfigured database, and `services/content.ts` correctly reads from
+  `content_*` tables when populated (schema confirmed live).
+- 🐛 **Found and fixed in this session's review**: `services/content.ts` used the cookie-bound
+  `createServerSupabase()` client for fully public reads, forcing the entire app dynamic (static
+  routes dropped to 3). Switched to `createStaticSupabase()`; static routes recovered to 19. See
+  CHANGELOG 2026-07-18.
 
-- Six content tabs implemented in the sync engine (schemas, mappers, staging apply).
-- Refactor `app/page.tsx` — every user-visible string moves to `content_home` reads via
-  `services/content.ts`.
-- Refactor `components/layout/Header.tsx`, footer, `/about`, FAQ block to read from
-  `content_navigation` / `content_footer` / `content_help` / `content_faq`.
-- Write initial content into the sheet (one-shot script; then edits happen in Sheets).
-
-### M-CMS-3 — Content tabs batch 2 (Dogs, Medical, Vaccination, Sterilization) + media v2 — NOT STARTED
+### M-CMS-3 — Content tabs batch 2 (Dogs, Medical, Vaccination, Sterilization) + media v2 — **CODE COMPLETE** (2026-07-17/18)
 **Verifiable outcome:** add a new dog row in Sheets + drop 3 photos in `Dogs/<Public ID>/gallery/`
 in Drive → both appear on site within one sync cycle with responsive images (AVIF/WebP × 4 sizes).
 
-- Full Dogs tab in the sync engine (all 26 fields per GOOGLE_SHEETS_SCHEMA.md).
-- Medical History, Vaccination, Sterilization tabs.
-- Retire the Dogs-only `/api/sync/run` shim.
-- Media pipeline v2:
-  - Variant ladder: original / 1600 / 800 / 400, each in AVIF + WebP + JPEG.
-  - Blurhash placeholder per image, stored in `animal_photos.blurhash`.
-  - Broken-image nightly cron: cross-references `animal_photos ↔ Storage` and
-    `drive_assets ↔ Drive`; discrepancies → `sync_conflicts` with `type: 'broken_media'`.
-  - Frontend switched to `next/image` srcset from the variant ladder.
+- ✅ Dogs, Medical History, Vaccination, Sterilization tabs implemented
+  (`lib/sync/tabs/{dogs,medical-history,vaccination,sterilization}.ts`).
+- ✅ `animal-mapper.ts` merges vaccination/sterilization records into the public medical timeline.
+- ✅ Media pipeline v2 (`lib/media/pipeline.ts`, rewritten `/api/media/ingest`): variant ladder
+  (3200/1600/800/400 × AVIF/WebP/JPEG), blurhash, checksum-based skip. Migration `0008` adds the
+  supporting columns — **applied to live DB, confirmed via schema inspection**.
+- ✅ Broken-image sweep (`/api/media/sweep`) — cross-references `animal_photos` against Storage,
+  flags orphans via `broken_at` + `sync_conflicts`.
+- ⚠️ `/api/sync/run` Dogs-only shim **not yet retired** — still the compat layer per its
+  original design; retiring it is a documentation/cleanup task, not blocking.
+- ⚠️ Frontend not yet switched to `next/image` srcset from the variant ladder — the ladder is
+  produced and stored, but animal profile/gallery components still render the single canonical
+  path. Follow-up item, not done this pass.
+- ⚠️ Not yet live-verified against a real Drive folder (dep #2).
 
-### M-CMS-4 — Content tabs batch 3 (Donate, Adoption, Stories, Volunteers, Events) — NOT STARTED
+### M-CMS-4 — Content tabs batch 3 (Donate, Adoption, Stories, Volunteers, Events) — **CODE COMPLETE** (2026-07-17/18)
 **Verifiable outcome:** publish a new story via Sheets → live on `/stories/[slug]` within one
 sync cycle. Change a donation campaign goal in Sheets → homepage stat updates.
 
-- Five content tabs implemented.
-- Donate: `donation_campaigns` sync (existing table + new sync-metadata columns) + `content_donate`.
-- Retire the in-app Story CMS admin panel — becomes read-only preview.
-- Stories markdown → rich blocks parser at sync time.
-- Donation campaign QR image auto-linkage from `Assets/donation-qr/`.
+- ✅ Five tabs implemented (`lib/sync/tabs/{donate,adoption,stories,volunteers,events}.ts`).
+- ✅ `donation_campaigns` sync-metadata columns added (migration 0006); `content_donate` for
+  page-level copy.
+- ✅ Stories markdown stored as a single markdown block in `blocks jsonb` at sync time.
+- ⏭️ **Not done**: retire the in-app Story CMS admin panel (`app/admin/stories/page.tsx`) in
+  favor of a read-only Sheets preview — still the original write-capable panel.
+- ⏭️ **Not done**: donation campaign QR image auto-linkage from `Assets/donation-qr/` — the
+  `Donate` tab's `QR Image` column is parsed but not yet resolved to a Storage URL at sync time.
+- ⚠️ Not yet live-verified (dep #2).
 
-### M-CMS-5 — Reverse sync (Supabase → Sheets) — NOT STARTED
+### M-CMS-5 — Reverse sync (Supabase → Sheets) — **CODE COMPLETE** (2026-07-18)
 **Verifiable outcome:** submit a report on the website → within one cycle, appears as a new row
 in the Reports tab. Change status in Sheets → within one cycle, propagates to DB and appears in
 dashboard.
 
-- Postgres `AFTER INSERT/UPDATE` triggers on `adoption_applications`, `donation_confirmations`,
-  `rescue_reports` (per [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §4.3).
-- Worker `db_to_sheets` direction implementation.
-- Workflow-field two-way sync per [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §6.3.
-- Column-level allowlist per transactional table (never write lat/lng, never write internal_notes
-  contents beyond a "has notes" flag).
+- ✅ Migration `0009`: `AFTER INSERT/UPDATE` triggers on `adoption_applications`,
+  `donation_confirmations`, `rescue_reports` enqueue a `db_to_sheets` job — **applied to live DB,
+  trigger + function presence confirmed via schema inspection**.
+- ✅ Migration `0010`: `donation_confirmations` table (public insert of donor-safe columns only,
+  admin-only status transitions) — **applied and confirmed live**.
+- ⚠️ **No tab handler is registered for `Adoption Applications` / `Donation Confirmations` /
+  `Reports` at all** (confirmed by grepping `lib/sync/tabs/` — verified before writing this, not
+  assumed). The trigger correctly enqueues a `db_to_sheets` job on every insert/update, and the
+  worker correctly claims it — but with no handler registered for that tab name, the worker's
+  no-handler path marks the job `succeeded` with a `no_handler_registered` note and does nothing.
+  **Net effect: reverse sync is currently a silent no-op** — reports/applications/donations save
+  correctly to Supabase, but nothing ever reaches the Sheet. This is the one concrete, scoped
+  gap in an otherwise-complete milestone: three `applyDbToSheets` handlers (allowlisted columns
+  per CMS_ARCHITECTURE.md §11.4, append-or-update-by-`_id` per §7.4) are the entire remaining
+  scope.
+- ⏭️ Workflow-field two-way conflict resolution (CMS_ARCHITECTURE.md §6.3) — the general
+  conflict-detection path exists in `lib/sync/apply.ts`; not yet exercised by the reverse
+  direction specifically.
 
-### M-CMS-6 — Admin sync dashboard + Vercel Cron — NOT STARTED
+### M-CMS-6 — Admin sync dashboard + Vercel Cron — **CODE COMPLETE** (2026-07-18)
 **Verifiable outcome:** Cron runs every 10 min; admin sees jobs stream in without refresh;
 manual "Sync Now" per tab works; conflicts appear and can be resolved.
 
-- `/admin/sync` page: job history, per-tab health, conflict inbox, manual controls, media health.
-- Supabase Realtime subscription to `sync_jobs` for live progress.
-- Vercel Cron wiring:
-  - `/api/sync/enqueue?scope=full` — every 10 minutes.
-  - `/api/media/ingest` — every 15 minutes.
-  - `/api/sync/housekeeping` — every 1 minute.
-- Retry / dismiss / resolve UI on `sync_conflicts` rows.
+- ✅ `/admin/sync` — health strip, per-tab status table, recent-job stream, conflict inbox with
+  Keep Sheet / Keep DB / Dismiss actions.
+- ✅ `/api/sync/enqueue-all`, `/api/sync/resolve` — admin-authenticated.
+- ✅ `vercel.json` — 5 cron schedules wired (enqueue-all hourly, worker/5min, housekeeping/10min,
+  media/15min, notify/1min).
+- ⏭️ **Not done**: Supabase Realtime subscription — the dashboard currently requires a manual
+  refresh (`router.refresh()` after each action) rather than streaming `sync_jobs` changes live.
+  Functionally correct, just not "live" in the originally-scoped sense.
+- ⚠️ Not yet exercised against live cron — Vercel Cron only fires on a deployed production
+  instance; unverified in this local-only session.
 
 ### M-CMS-7 — Hardening, alerting, monitoring, load test — NOT STARTED
 **Verifiable outcome:** kill the worker mid-run → housekeeping cron re-enqueues; kill the Sheets

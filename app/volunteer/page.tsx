@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { VolunteerForm } from "@/components/volunteer/VolunteerForm";
+import { getHelpContent } from "@/services/content";
+
+import type { LucideIcon } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Volunteer",
@@ -19,29 +22,33 @@ export const metadata: Metadata = {
   alternates: { canonical: "/volunteer" },
 };
 
-const ROLES = [
-  { icon: Soup, title: "Feeding", text: "Join a route. Dogs will know your cycle's sound within a week." },
-  { icon: Siren, title: "Rescue response", text: "First assessment and coordination when reports come in." },
-  { icon: Bike, title: "Animal transport", text: "Vet runs and camp-day logistics — a two-wheeler is a superpower." },
-  { icon: Camera, title: "Photography", text: "Profile portraits and recovery documentation for every paw." },
-  { icon: Megaphone, title: "Social media", text: "Tell the stories that find adopters and donors." },
-  { icon: MonitorSmartphone, title: "Website & tech", text: "This platform is student-built. Ship the next feature." },
-  { icon: Coins, title: "Fundraising", text: "Campaigns, campus drives, and donor transparency reports." },
-  { icon: Home, title: "Adoption coordination", text: "Applications, meet-and-greets, and follow-up visits." },
-];
+const ICON_MAP: Record<string, LucideIcon> = {
+  soup: Soup,
+  siren: Siren,
+  bike: Bike,
+  camera: Camera,
+  megaphone: Megaphone,
+  "monitor-smartphone": MonitorSmartphone,
+  coins: Coins,
+  home: Home,
+};
 
-export default function VolunteerPage() {
+export default async function VolunteerPage() {
+  const content = await getHelpContent();
+  const intro = content.find(c => c.section === "intro");
+  const rolesContent = content.find(c => c.section === "volunteer_opportunities");
+
+  const roles = (rolesContent?.data?.opportunities as Array<{ icon: string, role: string, description: string }>) ?? [];
+
   return (
     <div className="container-page py-10 sm:py-14">
       <header className="max-w-2xl">
         <p className="eyebrow mb-3 text-terracotta-deep">Volunteer</p>
         <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] text-forest-deep sm:text-5xl lg:text-6xl">
-          The pack runs on people like&nbsp;you.
+          {intro?.title}
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-moss">
-          No experience needed — just reliability and a soft spot for wet
-          noses. Tell us what you&apos;re good at; we&apos;ll find where it
-          helps most.
+          {intro?.body}
         </p>
       </header>
 
@@ -52,21 +59,24 @@ export default function VolunteerPage() {
             Volunteer roles
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            {ROLES.map((r, i) => (
-              <Reveal key={r.title} delay={Math.min(i * 0.06, 0.3)} className="h-full">
-                <div className="flex h-full gap-4 rounded-3xl border border-line bg-parchment p-5">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-mist text-forest">
-                    <r.icon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <h3 className="font-display text-lg font-bold text-forest-deep">
-                      {r.title}
-                    </h3>
-                    <p className="mt-1 text-sm leading-relaxed text-moss">{r.text}</p>
+            {roles.map((r, i) => {
+              const Icon = ICON_MAP[r.icon] ?? Soup;
+              return (
+                <Reveal key={r.role} delay={Math.min(i * 0.06, 0.3)} className="h-full">
+                  <div className="flex h-full gap-4 rounded-3xl border border-line bg-parchment p-5">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-mist text-forest">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-forest-deep">
+                        {r.role}
+                      </h3>
+                      <p className="mt-1 text-sm leading-relaxed text-moss">{r.description}</p>
+                    </div>
                   </div>
-                </div>
-              </Reveal>
-            ))}
+                </Reveal>
+              );
+            })}
           </div>
 
           <Reveal delay={0.2}>

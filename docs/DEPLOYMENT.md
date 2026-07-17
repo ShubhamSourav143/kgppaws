@@ -65,13 +65,15 @@ matches `lib/supabase/`, which the app imports (this broke the first deploy atte
 3. `supabase db push` applies pending migrations to the linked Supabase project as a separate,
    explicit step (schema changes are never silently applied by the app).
 
-## 6. Cron jobs (Vercel Cron — configured in `vercel.json`, added in M2/M3/M6)
+## 6. Cron jobs (Vercel Cron — configured in `vercel.json`)
 
 | Job | Schedule | Route |
 |---|---|---|
-| Sheets ⇄ Supabase sync | `*/5 * * * *` | `POST /api/sync/run` |
-| Drive media ingest | `*/15 * * * *` | `POST /api/media/ingest` |
-| Notification outbox drain | `* * * * *` | `POST /api/notify/dispatch` |
+| Master Full-Sync Enqueue | `0 * * * *` (Hourly) | `POST /api/sync/enqueue-all` |
+| Sync Worker Dispatch | `*/5 * * * *` (Every 5m) | `POST /api/sync/worker` |
+| Housekeeping Sweep | `*/10 * * * *` (Every 10m) | `POST /api/sync/housekeeping` |
+| Drive media ingest | `*/15 * * * *` (Every 15m)| `POST /api/media/ingest` |
+| Notification outbox drain | `* * * * *` (Every 1m) | `POST /api/notify/dispatch` |
 
 All cron routes require the `x-cron-secret` header to match `CRON_SECRET` — never public.
 

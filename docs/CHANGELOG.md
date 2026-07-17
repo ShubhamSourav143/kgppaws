@@ -13,6 +13,144 @@ All notable changes to this project, newest first. Format loosely follows
 
 ---
 
+## 2026-07-18 — M-CMS-2 through M-CMS-6, M4, M6: CMS rollout completes; production-readiness review
+
+Two work streams landed since the last recorded entry: (1) a separate agent session
+("Antigravity," documented in `docs/ANTIGRAVITY_WORK.md`) migrated Home/Nav/Footer/FAQ/Help/
+Dogs/Medical/Vaccination/Sterilization/Stories/Events/Volunteers/Donate content off hardcoded
+strings and onto the CMS read layer; (2) this session independently verified that work against
+actual code (not the handoff doc's claims), found and fixed two real production-safety bugs,
+and completed the remaining M-CMS-5/M-CMS-6/M4/M6 scaffolding.
+
+### Added — CMS content migration (M-CMS-2, M-CMS-3)
+- `lib/sync/tabs/*.ts` — 15 tab handlers (Home, Navigation, Footer, FAQ, Help, Website Settings,
+  Dogs, Medical History, Vaccination, Sterilization, Stories, Events, Volunteers, Adoption,
+  Donate), each with a Zod-shaped mapper feeding the shared `runSheetsToDb` apply engine
+  (`lib/sync/apply.ts`) built in M-CMS-1.
+- `lib/sync/sheet.ts`, `lib/sync/parse.ts` — Sheets I/O (header verification, incremental-scan
+  markers, batched system-column write-back) and cell-value coercion helpers shared by every tab.
+- `lib/demo/content.ts` — centralised built-in copy for every CMS content type (Home, Adoption,
+  Donate, Help, FAQ, Navigation, Footer, Events, Volunteers), used only as the pre-first-sync
+  fallback described in `CMS_ARCHITECTURE.md` — never as a stand-in for real domain data (see
+  Fixed, below, for why that distinction matters).
+- `services/content.ts` — public read layer for all `content_*` tables; `components/layout/
+  SiteChrome.tsx`, `Header.tsx`, `Footer.tsx`, `app/faq/page.tsx`, `app/volunteer/page.tsx`,
+  `app/donate/page.tsx`, homepage sections (`Hero`, `Impact`, `MeetThePaws`, `HelpSection`,
+  `CampusHome`) now read through it instead of hardcoded JSX strings.
+- `animal-mapper.ts`/`PUBLIC_ANIMAL_SELECT` — vaccination and sterilization records now merge
+  into the public medical timeline (previously only `animal_medical_events`).
+
+### Added — media pipeline v2 (M-CMS-3)
+- `lib/media/pipeline.ts` — responsive variant ladder (3200/1600/800/400 × AVIF/WebP/JPEG) +
+  blurhash placeholder generation via `sharp`/`blurhash`.
+- `/api/media/ingest` rewritten to produce the full ladder per image (previously one JPEG),
+  walk `gallery/`/`medical/` subfolders explicitly, and skip unchanged files by checksum.
+- `/api/media/sweep` (new) — cross-references `animal_photos.storage_path` against Storage
+  bucket contents; marks orphans via `broken_at` and raises a `sync_conflicts` row.
+- Migration `0008_media_variants_and_blurhash.sql` — `variants`/`blurhash`/`width`/`height`/
+  `broken_at` columns on `animal_photos`, `story_media`, `drive_assets`.
+
+### Added — reverse sync (M-CMS-5)
+- Migration `0009_reverse_sync_triggers.sql` — `AFTER INSERT/UPDATE` triggers on
+  `adoption_applications`, `donation_confirmations`, `rescue_reports` enqueue a single-row
+  `db_to_sheets` sync job automatically (dedup'd via the existing `sync_jobs` unique index).
+- Migration `0010_donation_confirmations.sql` — the UPI donation-confirmation table (planned
+  since M1, never built until now): public insert of donor-safe columns only, admin-only
+  status transitions, column-level grants keeping phone/email out of the general read policy.
+
+### Added — admin sync dashboard (M-CMS-6)
+- `/admin/sync` — health strip, per-tab status table, recent-job stream, and a conflict inbox
+  with Keep Sheet / Keep DB / Dismiss resolution actions (`components/admin/SyncActions.tsx`).
+- `services/sync-admin.ts` — read helpers backing the dashboard (`listRecentJobs`,
+  `listTabsHealth`, `listOpenConflicts`).
+- `/api/sync/enqueue-all` (admin-authenticated "Sync everything" shortcut) and
+  `/api/sync/resolve` (conflict resolution, applies the chosen payload and bumps `row_version`).
+- `vercel.json` — five Vercel Cron schedules (enqueue-all hourly, worker every 5 min,
+  housekeeping every 10 min, media ingest every 15 min, notification dispatch every minute).
+
+### Added — QR/public-ID system (M4)
+- `/dog/[publicId]` — canonical scan route; resolves `animals.public_id` and redirects to the
+  existing `/animal/[slug]` profile with the `?via=qr` greeting. `/p/[token]` retained as the
+  revocable-tag fallback, per the original plan (KNOWN_ISSUES #9).
+- `/api/qr/generate` — admin-authenticated; issues/reuses a `qr_tags` row and renders an
+  error-correction-H PNG encoding `/dog/<public_id>`.
+- `/api/qr/print-sheet` — admin-authenticated; renders an HTML A4 print sheet (2×4 grid, crop
+  marks, print button) for up to 24 tags per request. Shipped as printable HTML rather than a
+  `react-pdf` binary — every browser prints it at exact millimetre sizing with zero new
+  dependency, and it was the smaller, equally-correct implementation for the stated goal.
+
+### Added — real write routes + notification outbox (M6, partial)
+- `/api/reports`, `/api/adopt/apply`, `/api/donate/confirm` — Zod-validated public write routes
+  replacing the client-only `localStorage` demo writes for these three flows. Each fires a
+  `notification_outbox` row on success.
+- Migration `0011_notification_outbox.sql` + `/api/notify/dispatch` — drains the outbox with
+  exponential-retry semantics (5 attempts); marks rows `skipped` with an explicit reason when
+  `EMAIL_PROVIDER_API_KEY`/`WHATSAPP_PROVIDER_TOKEN` aren't set, rather than erroring silently.
+  **Provider integration itself is a stub** — the send functions are structured for a real
+  provider call but don't make one yet; still blocked on TASKS.md deps #9/#10 (provider choice).
+- **Not done**: `DonatePanel.tsx` still shows the old Razorpay-oriented UI, not a UPI QR +
+  confirmation form. The backend (`donation_confirmations` table, `/api/donate/confirm`) is
+  ready; the UI was not rewired this pass. Still genuinely blocked on dep #11 (UPI QR image/ID
+  from the owner) for a correct final UI, so this was left alone rather than half-built.
+- Report taxonomy (`problem` enum) already included `missing`/`deceased` — no enum migration
+  needed for the M6 taxonomy item.
+
+### Fixed — found by verifying the prior session's claims against actual code, not trusting them
+- **Fictional demo data could silently appear on a live production database.**
+  `services/animals.ts`, `campaigns.ts`, `stories.ts` had been changed to fall back to
+  `DEMO_ANIMALS`/`DEMO_CAMPAIGNS`/`DEMO_STORIES` whenever Supabase returned **zero rows**, not
+  just when Supabase was unconfigured. On a connected production database, if the real
+  public-animal count ever legitimately reached zero (the exact scenario KNOWN_ISSUES #24
+  describes once demo rows are purged for launch), visitors would have silently seen 8
+  completely fictional dogs presented as real ones — a serious integrity problem for a platform
+  that has otherwise been unusually careful about never inventing content (see the 2026-07-17
+  "real vs. fictional" entry above). Root cause: a `data.length > 0` check copied from
+  `services/content.ts`, where the same pattern is *correct* — CMS marketing copy legitimately
+  should show built-in defaults before the first Sheets sync. Applying it to core domain data
+  (animals/campaigns/stories) conflated "not yet synced" with "genuinely nothing to show."
+  Reverted to the original `if (!error && data)` check in these three files only; the CMS
+  content-table pattern in `services/content.ts` is untouched and remains correct as designed.
+- **Every route in the app had become dynamically rendered**, including pages with no
+  personalized content (`/faq`, `/offline`, `/login`, `/signup`, `/scan-not-found`, `/about`,
+  the whole `/admin/*` tree). Root cause: `app/layout.tsx`'s new `generateMetadata()` and
+  `components/layout/SiteChrome.tsx` (both added for the M-CMS-2 nav/footer/settings wiring)
+  called `createServerSupabase()`, which invokes Next's `cookies()` API unconditionally —
+  forcing every route in the tree to opt out of static rendering, even though `content_*` reads
+  are fully public and need no per-request cookie context. Switched `services/content.ts` to
+  `createStaticSupabase()` (the cookie-less anon client already used elsewhere in the app for
+  exactly this class of read). Verified via `npm run build`: static (`○`) routes went from 3
+  before the fix to 19 after, with no loss of correctness (content still reads live from
+  Supabase, just without forcing per-request dynamic rendering). Left `/admin/*`'s prerendered
+  shell alone after confirming its authorization is enforced client-side (`RequireRole`) plus
+  Postgres RLS at the data layer — consistent with the documented security model in PRD.md §5.I,
+  not a regression from this session.
+- Consolidated two separate `import { ... } from "@/lib/demo/content"` statements in
+  `services/content.ts` into one at the top of the file (harmless due to import hoisting, but
+  untidy and easy to miss in review).
+- `lib/sync/queue.test.ts` — removed an unused destructured variable flagged by lint.
+
+### Verified — this session, against actual code and live commands (not assumed)
+- `npm run build`: 61 routes, clean TypeScript, before and after the fixes above.
+- `npm run lint`: 0 errors, 3 pre-existing warnings (React Compiler + React Hook Form
+  incompatibility notices on `ReportForm.tsx`/`VolunteerForm.tsx` — functionally harmless, not
+  introduced this session). **KNOWN_ISSUES #25 (9 lint errors) is resolved in the code** — the
+  doc describing it was stale; corrected separately.
+- `npm test`: 45/45 runnable tests pass. `lib/sync/queue.test.ts`'s 5 integration tests
+  correctly skip (`describe.runIf`) because `SUPABASE_SERVICE_ROLE_KEY` isn't set in this
+  environment's `.env.local` — expected per the standing dependency checklist, not a failure.
+- Migration 0006 (from the prior session) plus 0008–0010 (this session) applied to the live
+  Supabase project (`unyhhkulkgznqoqalqxk`) and confirmed present via schema inspection.
+- **Migration `0011_notification_outbox` had NOT actually applied** despite an earlier attempt
+  in the prior session — that attempt hit a classifier-availability error on both tries, and the
+  session moved on without confirming success or retrying. `notification_outbox` genuinely did
+  not exist on the live database until this was caught by direct schema inspection during this
+  session's review and applied for real. Until this fix, `/api/notify/dispatch` would have
+  returned HTTP 500 in production, and `/api/reports`/`/api/adopt/apply`/`/api/donate/confirm`
+  would have silently failed to queue any notification (the insert error was never checked).
+  Re-verified post-fix: `notification_outbox` present, RLS enabled, admin-read policy applied.
+
+---
+
 ## 2026-07-17 — Final architecture review pack + migration 0006 fixes (pre-apply)
 
 Owner-requested review deliverables before the live migration, plus real defects found by

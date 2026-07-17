@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 import { SITE } from "@/lib/config";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ReportFab } from "@/components/layout/ReportFab";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
+import { getSettings } from "@/services/content";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -20,43 +20,51 @@ const fraunces = Fraunces({
   axes: ["opsz", "SOFT", "WONK"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE.url),
-  title: {
-    default: "KGP PAWS — Every Paw Has a Story",
-    template: "%s · KGP PAWS",
-  },
-  description: SITE.description,
-  keywords: [
-    "animal welfare",
-    "IIT Kharagpur",
-    "adopt a dog",
-    "adopt a cat",
-    "campus animals",
-    "animal rescue India",
-  ],
-  openGraph: {
-    type: "website",
-    siteName: SITE.name,
-    title: "KGP PAWS — Every Paw Has a Story",
-    description: SITE.description,
-    url: SITE.url,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "KGP PAWS — Every Paw Has a Story",
-    description: SITE.description,
-  },
-  alternates: { canonical: "/" },
-  appleWebApp: {
-    capable: true,
-    title: "KGP PAWS",
-    statusBarStyle: "default",
-  },
-  icons: {
-    apple: "/icons/apple-touch-icon.png",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSettings();
+  
+  const siteName = (settings["site_name"] as string) || SITE.name;
+  const description = (settings["seo_default_description"] as string) || SITE.description;
+  const title = (settings["seo_default_title"] as string) || "KGP PAWS — Every Paw Has a Story";
+
+  return {
+    metadataBase: new URL(SITE.url),
+    title: {
+      default: title,
+      template: `%s · ${siteName}`,
+    },
+    description,
+    keywords: [
+      "animal welfare",
+      "IIT Kharagpur",
+      "adopt a dog",
+      "adopt a cat",
+      "campus animals",
+      "animal rescue India",
+    ],
+    openGraph: {
+      type: "website",
+      siteName,
+      title,
+      description,
+      url: SITE.url,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+    alternates: { canonical: "/" },
+    appleWebApp: {
+      capable: true,
+      title: siteName,
+      statusBarStyle: "default",
+    },
+    icons: {
+      apple: "/icons/apple-touch-icon.png",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#173F35",
@@ -82,11 +90,11 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <Header />
-        <main id="main-content" className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        <SiteChrome>
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
+        </SiteChrome>
         <ReportFab />
         <ServiceWorker />
       </body>

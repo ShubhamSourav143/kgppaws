@@ -12,6 +12,7 @@ import {
 } from "framer-motion";
 import { ChevronDown, QrCode, Siren } from "lucide-react";
 import { ButtonLink } from "@/components/ui/Button";
+import type { ContentSectionRow } from "@/services/content";
 
 /* ————————————————————————————————————————————————————————————————
    Illustrated campus dog scene.
@@ -204,7 +205,7 @@ function DogScene({
    tag · phase 3: “One Scan. Their Entire Story.” takes over.
    ———————————————————————————————————————————————————————————————— */
 
-export function Hero() {
+export function Hero({ cms }: { cms?: ContentSectionRow }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
 
@@ -259,18 +260,17 @@ export function Hero() {
               Animal Welfare Society · IIT Kharagpur
             </p>
             <h1 className="text-balance font-display text-5xl font-bold leading-[1.02] text-forest-deep sm:text-6xl xl:text-7xl">
-              Every Paw Has a&nbsp;Story.
+              {cms?.title}
             </h1>
             <p className="mt-5 font-display text-xl italic text-terracotta-deep sm:text-2xl">
-              Rescue. Heal. Protect. Remember.
+              {cms?.subtitle}
             </p>
             <p className="mt-4 max-w-md text-base leading-relaxed text-moss sm:text-lg">
-              Building a digital identity and a safer future for the animals
-              of IIT Kharagpur.
+              {cms?.body}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <ButtonLink href="/adopt" size="lg">
-                Meet Our Paws
+              <ButtonLink href={cms?.ctaUrl ?? "/adopt"} size="lg">
+                {cms?.ctaLabel}
               </ButtonLink>
               <ButtonLink href="/report" variant="accent" size="lg">
                 <Siren className="h-4 w-4" aria-hidden="true" />

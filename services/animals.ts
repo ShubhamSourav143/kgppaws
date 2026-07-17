@@ -17,6 +17,12 @@ export async function listAnimals(): Promise<Animal[]> {
       .select(PUBLIC_SELECT)
       .eq("is_public", true)
       .order("name");
+    // Note: intentionally NOT gated on `data.length > 0`. Unlike CMS content
+    // tables (services/content.ts), a legitimately empty result here means
+    // "the shelter currently lists zero public animals" — a true state that
+    // must render as "0 paws found," never silently swapped for fictional
+    // demo animals on a connected production database. Falling back to
+    // DEMO_ANIMALS is correct only when Supabase itself isn't configured.
     if (!error && data) return data.map(mapAnimalRow);
   }
   return DEMO_ANIMALS;

@@ -1,4 +1,16 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createStaticSupabase } from "@/lib/supabase/server";
+import {
+  DEMO_ADOPTION_CONTENT,
+  DEMO_DONATE_CONTENT,
+  DEMO_EVENTS,
+  DEMO_FOOTER,
+  DEMO_HELP_CONTENT,
+  DEMO_HOME_CONTENT,
+  DEMO_NAVIGATION,
+  DEMO_VOLUNTEERS,
+  type EventItem,
+  type VolunteerItem,
+} from "@/lib/demo/content";
 
 /**
  * Read layer for the Sheets-synced content tables (M-CMS-2).
@@ -77,42 +89,47 @@ function mapSectionRow(row: any): ContentSectionRow {
 async function fetchSections(
   table: "content_home" | "content_adoption" | "content_donate" | "content_help"
 ): Promise<ContentSectionRow[]> {
-  const supabase = await createServerSupabase();
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from(table)
-    .select("*")
-    .eq("is_active", true)
-    .is("archived_at", null)
-    .order("display_order", { ascending: true });
-  if (error || !data) return [];
-  return data.map(mapSectionRow);
+  const supabase = createStaticSupabase();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .eq("is_active", true)
+      .is("archived_at", null)
+      .order("display_order", { ascending: true });
+    if (!error && data && data.length > 0) return data.map(mapSectionRow);
+  }
+  return [];
 }
 
 /** Homepage sections, ordered. Empty until the Home tab syncs its first rows. */
-export function getHomeContent(): Promise<ContentSectionRow[]> {
-  return fetchSections("content_home");
+export async function getHomeContent(): Promise<ContentSectionRow[]> {
+  const data = await fetchSections("content_home");
+  return data.length > 0 ? data : DEMO_HOME_CONTENT;
 }
 
 /** Adopt-page copy sections. */
-export function getAdoptionContent(): Promise<ContentSectionRow[]> {
-  return fetchSections("content_adoption");
+export async function getAdoptionContent(): Promise<ContentSectionRow[]> {
+  const data = await fetchSections("content_adoption");
+  return data.length > 0 ? data : DEMO_ADOPTION_CONTENT;
 }
 
 /** Donate-page copy sections. */
-export function getDonateContent(): Promise<ContentSectionRow[]> {
-  return fetchSections("content_donate");
+export async function getDonateContent(): Promise<ContentSectionRow[]> {
+  const data = await fetchSections("content_donate");
+  return data.length > 0 ? data : DEMO_DONATE_CONTENT;
 }
 
 /** Help/volunteer-page sections. */
-export function getHelpContent(): Promise<ContentSectionRow[]> {
-  return fetchSections("content_help");
+export async function getHelpContent(): Promise<ContentSectionRow[]> {
+  const data = await fetchSections("content_help");
+  return data.length > 0 ? data : DEMO_HELP_CONTENT;
 }
 
 /** Visible navigation items, ordered — top-level first, children after. */
 export async function getNavigation(): Promise<NavigationItem[]> {
-  const supabase = await createServerSupabase();
-  if (!supabase) return [];
+  const supabase = createStaticSupabase();
+  if (!supabase) return DEMO_NAVIGATION;
   const { data, error } = await supabase
     .from("content_navigation")
     .select("*")
@@ -120,7 +137,7 @@ export async function getNavigation(): Promise<NavigationItem[]> {
     .eq("visible", true)
     .is("archived_at", null)
     .order("display_order", { ascending: true });
-  if (error || !data) return [];
+  if (error || !data || data.length === 0) return DEMO_NAVIGATION;
   return data.map((row) => ({
     id: row.id,
     label: row.label,
@@ -134,15 +151,15 @@ export async function getNavigation(): Promise<NavigationItem[]> {
 
 /** Footer elements, ordered within each section. */
 export async function getFooterContent(): Promise<FooterItem[]> {
-  const supabase = await createServerSupabase();
-  if (!supabase) return [];
+  const supabase = createStaticSupabase();
+  if (!supabase) return DEMO_FOOTER;
   const { data, error } = await supabase
     .from("content_footer")
     .select("*")
     .eq("is_active", true)
     .is("archived_at", null)
     .order("display_order", { ascending: true });
-  if (error || !data) return [];
+  if (error || !data || data.length === 0) return DEMO_FOOTER;
   return data.map((row) => ({
     id: row.id,
     section: row.section,
@@ -156,7 +173,7 @@ export async function getFooterContent(): Promise<FooterItem[]> {
 
 /** FAQ entries grouped by category order then display order. */
 export async function getFaq(): Promise<FaqItem[]> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("content_faq")
@@ -180,9 +197,64 @@ export async function getFaq(): Promise<FaqItem[]> {
  * back as their JS primitives, structured ones as objects.
  */
 export async function getSettings(): Promise<Record<string, unknown>> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (!supabase) return {};
   const { data, error } = await supabase.from("content_settings").select("key, value");
   if (error || !data) return {};
   return Object.fromEntries(data.map((row) => [row.key, row.value]));
+}
+
+/** Upcoming events. */
+export async function getEvents(): Promise<EventItem[]> {
+  const supabase = createStaticSupabase();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("content_events")
+      .select("*")
+      .eq("is_active", true)
+      .is("archived_at", null)
+      .order("display_order", { ascending: true });
+    if (!error && data && data.length > 0) {
+      return data.map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        type: row.type,
+        startsAt: row.starts_at,
+        endsAt: row.ends_at ?? null,
+        location: row.location ?? null,
+        description: row.description ?? null,
+        rsvpUrl: row.rsvp_url ?? null,
+        featured: row.featured ?? false,
+        displayOrder: row.display_order ?? 0,
+      }));
+    }
+  }
+  return DEMO_EVENTS;
+}
+
+/** Volunteer directory. */
+export async function getVolunteerDirectory(): Promise<VolunteerItem[]> {
+  const supabase = createStaticSupabase();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("volunteer_directory")
+      .select("*")
+      .eq("is_active", true)
+      .is("archived_at", null)
+      .order("display_order", { ascending: true });
+    if (!error && data && data.length > 0) {
+      return data.map((row) => ({
+        id: row.id,
+        name: row.name,
+        role: row.role ?? null,
+        contact: row.contact ?? null,
+        photoPath: row.photo_path ?? null,
+        responsibilities: row.responsibilities ?? [],
+        bio: row.bio ?? null,
+        displayOrder: row.display_order ?? 0,
+      }));
+    }
+  }
+  return DEMO_VOLUNTEERS;
 }

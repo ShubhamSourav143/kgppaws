@@ -35,7 +35,11 @@ export function RealFaces({ photos }: { photos: RealFacePhoto[] }) {
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    setReduce(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduce(mql.matches);
+    mql.addEventListener("change", onChange);
+    onChange();
+    return () => mql.removeEventListener("change", onChange);
   }, []);
 
   useEffect(() => {

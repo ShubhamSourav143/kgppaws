@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { listAnimals } from "@/services/animals";
+import { getAdoptionContent } from "@/services/content";
 import { AdoptExplorer } from "@/components/adopt/AdoptExplorer";
 
 export const metadata: Metadata = {
@@ -10,17 +11,22 @@ export const metadata: Metadata = {
 };
 
 export default async function AdoptPage() {
-  const animals = await listAnimals();
+  const [animals, content] = await Promise.all([
+    listAnimals(),
+    getAdoptionContent()
+  ]);
+
+  const intro = content.find(c => c.section === "intro");
+
   return (
     <div className="container-page py-10 sm:py-14">
       <header className="max-w-2xl">
         <p className="eyebrow mb-3 text-terracotta-deep">Adopt</p>
         <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] text-forest-deep sm:text-5xl lg:text-6xl">
-          Maybe Your Best Friend Is&nbsp;Waiting.
+          {intro?.title}
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-moss">
-          Every animal here is vaccinated, health-assessed, and known
-          personally by our volunteers. Filters help; so does an open mind.
+          {intro?.body}
         </p>
       </header>
       <AdoptExplorer animals={animals} />

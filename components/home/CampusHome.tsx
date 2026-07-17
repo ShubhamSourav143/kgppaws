@@ -1,33 +1,26 @@
 import { Reveal } from "@/components/motion/Reveal";
 import { AnimalPortrait } from "@/components/animals/Portrait";
 import type { Animal } from "@/types";
+import type { ContentSectionRow } from "@/services/content";
 
 /** “Our Campus. Their Home.” — large editorial statement. */
-export function CampusHome({ animals }: { animals: Animal[] }) {
+export function CampusHome({ animals, cms }: { animals: Animal[], cms?: ContentSectionRow }) {
   const [a, b] = animals;
   return (
     <section className="bg-forest py-20 text-cream sm:py-28" aria-labelledby="campushome-h">
       <div className="container-page grid items-center gap-12 lg:grid-cols-[1.2fr_1fr]">
         <Reveal>
           <div>
-            <p className="eyebrow mb-4 text-sand">Our Campus. Their Home.</p>
+            <p className="eyebrow mb-4 text-sand">{cms?.subtitle}</p>
             <h2
               id="campushome-h"
               className="text-balance font-display text-4xl font-bold leading-[1.08] sm:text-5xl"
             >
-              Before it was ours, it was theirs too.
+              {cms?.title}
             </h2>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-cream/85">
-              The animals of IIT Kharagpur share this campus with students,
-              faculty, staff and visitors — the same lanes, the same monsoons,
-              the same 2&nbsp;AM chai runs. They are not strays passing
-              through. They are residents.
-            </p>
-            <p className="mt-4 max-w-xl text-lg leading-relaxed text-cream/85">
-              KGP PAWS exists so that sharing a home means sharing its care:
-              food that arrives on time, treatment that arrives faster, and a
-              name — a real, recorded identity — for every paw on campus.
-            </p>
+            <div className="mt-6 max-w-xl text-lg leading-relaxed text-cream/85 space-y-4 whitespace-pre-line">
+              {cms?.body}
+            </div>
           </div>
         </Reveal>
         <div className="grid grid-cols-2 gap-4">

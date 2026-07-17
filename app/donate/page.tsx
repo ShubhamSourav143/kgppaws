@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ShieldCheck, ReceiptText } from "lucide-react";
 import { listCampaigns } from "@/services/campaigns";
+import { getDonateContent } from "@/services/content";
 import { CampaignCard } from "@/components/donate/CampaignCard";
 import { DonatePanel } from "@/components/donate/DonatePanel";
 import { Reveal } from "@/components/motion/Reveal";
@@ -15,22 +16,26 @@ export const metadata: Metadata = {
 };
 
 export default async function DonatePage() {
-  const campaigns = await listCampaigns();
+  const [campaigns, content] = await Promise.all([
+    listCampaigns(),
+    getDonateContent()
+  ]);
   const allExpenses = campaigns
     .flatMap((c) => c.expenses.map((e) => ({ ...e, campaign: c.title })))
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .slice(0, 8);
+
+  const intro = content.find(c => c.section === "intro");
 
   return (
     <div className="container-page py-10 sm:py-14">
       <header className="max-w-2xl">
         <p className="eyebrow mb-3 text-terracotta-deep">Donate</p>
         <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] text-forest-deep sm:text-5xl lg:text-6xl">
-          Small Help. Real&nbsp;Impact.
+          {intro?.title}
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-moss">
-          Every rupee is assigned to a campaign, and every campaign publishes
-          its expenses. You will always know where your support went.
+          {intro?.body}
         </p>
       </header>
 

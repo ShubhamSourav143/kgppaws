@@ -1,9 +1,10 @@
 import { Camera, MapPin, MessageSquareText, Siren } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
+import type { ContentSectionRow } from "@/services/content";
 
 /** “Found an Animal Who Needs Help?” — calm, high-clarity urgency. */
-export function HelpSection() {
+export function HelpSection({ cms }: { cms?: ContentSectionRow }) {
   const steps = [
     { icon: Camera, title: "Take a photo", text: "Only if it's safe to do so." },
     { icon: MapPin, title: "Share the location", text: "A campus landmark is enough." },
@@ -14,16 +15,15 @@ export function HelpSection() {
     <section className="bg-terracotta py-20 text-parchment sm:py-24" aria-labelledby="help-h">
       <div className="container-page text-center">
         <Reveal>
-          <p className="eyebrow mb-4 text-parchment/80">Help an Animal</p>
+          <p className="eyebrow mb-4 text-parchment/80">{cms?.subtitle ?? "Help an Animal"}</p>
           <h2
             id="help-h"
             className="mx-auto max-w-2xl text-balance font-display text-4xl font-bold leading-[1.08] sm:text-5xl"
           >
-            Found an Animal Who Needs&nbsp;Help?
+            {cms?.title}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-parchment/90">
-            A report takes less than sixty seconds — and it reaches the
-            volunteers closest to you.
+            {cms?.body}
           </p>
         </Reveal>
 
@@ -47,13 +47,13 @@ export function HelpSection() {
         <Reveal delay={0.3}>
           <div className="mt-10">
             <ButtonLink
-              href="/report"
+              href={cms?.ctaUrl ?? "/report"}
               variant="light"
               size="lg"
               className="!text-terracotta-deep"
             >
               <Siren className="h-5 w-5" aria-hidden="true" />
-              Report an Animal
+              {cms?.ctaLabel}
             </ButtonLink>
           </div>
         </Reveal>
