@@ -1,11 +1,15 @@
 # KGP PAWS — API Specification
 
-Living document. Last updated **2026-07-16**. All endpoints are Next.js route handlers under
+Living document. Last updated **2026-07-17**. All endpoints are Next.js route handlers under
 `app/api/*` unless noted. Public endpoints are rate-limited at the edge (see
 [DEPLOYMENT.md](DEPLOYMENT.md)). Server-only operations use the Supabase service-role key —
 **never shipped to the client**.
 
 Status column uses the same legend as PRD.md: NOT STARTED / IN PROGRESS / COMPLETED / TESTED / BLOCKED.
+
+> **CMS-first sync API (2026-07-17).** Section 6 has been restructured for the new job-queue-based
+> sync architecture defined in [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md). The legacy `/api/sync/run`
+> endpoint is kept as a compatibility shim.
 
 ---
 
@@ -80,13 +84,61 @@ when configured, demo data otherwise.
 }
 ```
 
-## 6. Google Sheets sync engine
+## 6. Sync engine (CMS-first architecture)
+
+Full design: [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §7. This section documents the API surface.
+
+### 6.1 Job-queue endpoints (M-CMS-1)
+
+| Route | Method | Auth | Status | Purpose |
+|---|---|---|---|---|
+| `POST /api/sync/enqueue` | POST | Admin session (`has_role(['admin','super_admin'])`) | NOT STARTED (M-CMS-1) | Enqueue a sync job. Body: `{ tab: string, direction: 'sheets_to_db' \| 'db_to_sheets', scope?: 'full' \| 'incremental' \| 'row', rowId?: uuid, forceFullScan?: boolean }`. Deduplicated on `(tab, direction, rowId)` — returns the existing job if one is queued/running. Returns `{ jobId: uuid, state: 'queued' \| 'already_running' }`. |
+| `POST /api/sync/worker` | POST | Cron secret (`x-cron-secret`) | NOT STARTED (M-CMS-1) | Pull the next queued job and execute it end-to-end (lock, header check, validate, stage, apply, write-back, revalidate). Idempotent and reentrant — safe to call from parallel cron functions. Returns `{ ran: boolean, jobId?: uuid, state?: string, tab?: string }`. |
+| `POST /api/sync/housekeeping` | POST | Cron secret (`x-cron-secret`) | NOT STARTED (M-CMS-1) | Scheduled every 1 minute. Marks jobs with expired heartbeats (>5min) as `failed`, re-enqueues retryable ones per §9 of CMS_ARCHITECTURE.md, deletes succeeded jobs older than 30 days. Returns `{ expired: N, retried: M, cleaned: K }`. |
+| `POST /api/sync/resolve` | POST | Admin session | NOT STARTED (M-CMS-6) | Resolve a `sync_conflicts` row. Body: `{ conflictId: uuid, resolution: 'kept_db' \| 'kept_sheet' \| 'dismissed' }`. Applies the chosen side and clears the sync-status of the underlying row. |
+
+### 6.2 Read endpoints (M-CMS-6, admin dashboard support)
+
+| Route | Method | Auth | Status | Notes |
+|---|---|---|---|---|
+| `GET /api/sync/jobs?tab=&limit=` | GET | Admin session | NOT STARTED (M-CMS-6) | Recent jobs, optionally filtered. Consumed by `/admin/sync`. |
+| `GET /api/sync/health` | GET | Admin session | NOT STARTED (M-CMS-6) | Per-tab summary: last successful sync, row count in DB vs sheet, drift flag, conflicts. |
+| `GET /api/sync/conflicts` | GET | Admin session | NOT STARTED (M-CMS-6) | Open (`resolution IS NULL`) rows from `sync_conflicts`. |
+
+### 6.3 Compatibility & deprecations
 
 | Route | Method | Status | Notes |
 |---|---|---|---|
-| `POST /api/sync/run` | POST | IN PROGRESS (M2) | **Code complete, 2026-07-17** — Sheets→Supabase for the Dogs tab only (see `app/api/sync/run/route.ts`). `x-cron-secret` header required; returns `{configured:false}` (200, not an error) when Google credentials are absent. Diffs by `sheet_row_id`, upserts `animals`, writes back generated `_id`/`public_id`, logs to `sync_log`. **Not yet bidirectional** — DB→Sheets write-back is a follow-up. Not vercel-cron-scheduled yet. **Untested against a real spreadsheet** — no credentials to test with. |
-| `GET /api/sync/status` | GET | COMPLETED (M2) | Returns the last 20 `sync_log` rows. RLS (not an app-level check) restricts this to admin/super_admin. No admin dashboard UI consumes it yet. |
-| `POST /api/sync/resolve` | POST | NOT STARTED (M2) | Deferred until sync is bidirectional — conflicts can't occur in a one-directional engine. |
+| `POST /api/sync/run` | POST | **COMPATIBILITY SHIM** from M-CMS-1 | Existing route retained. New behavior: enqueues a `Dogs`-tab full-scan job into the new queue instead of executing sync inline. `sync_log` records `triggered_by = 'compat_shim'` on every call so we can see whether any caller (external cron, script) still hits it before removal. Not deleted; awaits owner sign-off after M-CMS-3 completes. |
+| `GET /api/sync/status` | GET | KEPT (thin wrapper) from M-CMS-1 | Returns the last 20 `sync_jobs` rows in the same JSON shape it returned `sync_log` rows before, so any existing caller keeps working. Replaced by `GET /api/sync/jobs` in M-CMS-6. |
+
+**Enqueue body — full spec:**
+```jsonc
+{
+  "tab": "Dogs",
+  "direction": "sheets_to_db",   // or "db_to_sheets"
+  "scope": "incremental",         // default; other values: "full" | "row"
+  "rowId": "uuid",                // required when scope='row'
+  "forceFullScan": false          // admin-only escape hatch; forces mode='full' regardless of scope
+}
+```
+
+**Response — 202 Accepted:**
+```jsonc
+{
+  "jobId": "uuid",
+  "state": "queued" | "already_running",
+  "tab": "Dogs",
+  "direction": "sheets_to_db",
+  "enqueuedAt": "2026-07-17T…Z"
+}
+```
+
+**Errors:**
+- 400 — `{ "error": "unknown tab", "tab": "..." }` — tab not in `tab_config`.
+- 400 — `{ "error": "direction not allowed for tab", "tab": "Dogs", "direction": "db_to_sheets" }` — a `sheets_to_db` tab cannot be enqueued in the reverse direction.
+- 401 / 403 — auth failures.
+- 503 — `{ "error": "sync disabled", "tab": "..." }` — when `tab_config.enabled = false` for the tab (kill switch).
 
 ## 7. Media ingestion (Google Drive)
 

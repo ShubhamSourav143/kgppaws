@@ -5,7 +5,7 @@
 | **Product** | KGP PAWS — digital animal welfare platform for IIT Kharagpur |
 | **Owner** | Shubham (Animal Welfare Society, IIT Kharagpur) |
 | **Doc status** | Living document — updated on every feature completion |
-| **Last updated** | 2026-07-16 |
+| **Last updated** | 2026-07-17 |
 | **Production URL** | https://kgp-paws.vercel.app (custom domain kgppaws.org pending) |
 
 > **Maintenance rule:** whenever a feature changes state, update its row here, add a line to
@@ -32,14 +32,32 @@ of real campus animals, never stock imagery or cartoon illustration.
 |---|------|---------|
 | G1 | Any scanned collar QR resolves to that animal's living profile | Scan → profile < 3 s on 4G |
 | G2 | Reporting an animal in distress takes under 60 seconds on mobile | Form completion time |
-| G3 | Volunteers manage 100 % of content without touching code | Google Sheets is the CMS |
+| G3 | Volunteers manage 100 % of content without touching code | Google Sheets is the CMS — see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) |
 | G4 | Donation trust through radical transparency | Every campaign publishes its expense ledger; confirmations logged with UTR |
 | G5 | Admins see operations at a glance | Dashboard: reports, dogs, donations, sync health |
 | G6 | Best-in-class quality bar | Lighthouse: **Performance ≥ 95**, SEO 100, Accessibility 100, Best Practices 100 |
-| G7 | Zero data-entry duplication | Two-way Google Sheets ⇄ Supabase sync with conflict handling + audit log |
+| G7 | Zero data-entry duplication | Owned-per-field Sheets ⇄ Supabase sync with conflict handling, retry, audit — see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) |
+| G8 | Architecture ready for 1,000× current volume without a rewrite | Job-queue-based sync, staging tables, partitioned audit log, per-tab locks — see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §13 |
 
 **Non-goals (explicit):** online payment gateway integration (Razorpay/Stripe/PhonePe APIs) —
-donations are UPI-QR + manual confirmation by design; native mobile apps; multi-campus support (v1 is IIT KGP only).
+donations are UPI-QR + manual confirmation by design; native mobile apps; multi-campus support
+in v1 (v3-ready by design, but IIT KGP only through launch).
+
+### 2.1 CMS-first architecture
+
+As of 2026-07-17, the platform's content architecture follows the principles in
+[CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md):
+
+- **Supabase is the single source of truth** for everything the application renders.
+- **Google Sheets is the operational CMS** — volunteers edit content in one spreadsheet
+  (`KGP PAWS CMS`, 18 tabs); the sync engine keeps Supabase updated.
+- **Google Drive is the media inbox** — never a CDN. Files are ingested, optimized, and served
+  from Supabase Storage.
+- **Every field has exactly one owning system.** Content fields → Sheets. Transactional fields
+  → Supabase. Workflow fields (a narrow enumerated set) are the only dual-owned exception.
+- **Sync is a job**, not a request — queued, executed by a worker, retryable, auditable.
+
+Read [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) before touching sync-related code.
 
 ## 3. Target users
 
@@ -138,14 +156,21 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 
 ### F. Google Sheets CMS & sync
 
+Detailed design: [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md). Column-level tab spec:
+[GOOGLE_SHEETS_SCHEMA.md](GOOGLE_SHEETS_SCHEMA.md).
+
 | Feature | Priority | Status | Tested |
 |---|---|---|---|
-| Sheet designs for: Dogs, Medical History, Vaccination, Sterilization, Gallery, Blogs, Donations, Volunteers, Reports, QR Codes, Website Settings | P0 | COMPLETED (design — see [GOOGLE_SHEETS_SCHEMA.md](GOOGLE_SHEETS_SCHEMA.md)) | n/a (doc) |
-| Sheets → Supabase sync engine (Dogs tab) | P0 | IN PROGRESS | Code complete (`/api/sync/run`) — real, `googleapis`-based, follows the `isSupabaseConfigured` no-op-when-unconfigured pattern. **Cannot be tested against a real spreadsheet without Google Cloud credentials** — see KNOWN_ISSUES. Scoped to one direction + one tab intentionally; see code comments |
-| Supabase → Sheets sync (dashboard/website writes reach Sheets) | P0 | NOT STARTED | Deferred until the one-directional engine above is verified against a real sheet — see ARCHITECTURE.md §6 |
-| Conflict handling (row versioning, last-write-wins + conflict log) | P0 | NOT STARTED | design in ARCHITECTURE.md §6; not needed until bidirectional sync exists |
-| Sync audit log | P0 | COMPLETED | ✅ `sync_log` table (migration 0002), written by the sync engine on every run |
-| Admin sync-health panel + scheduled sync (Vercel Cron) + manual "Sync now" | P0 | NOT STARTED | `/api/sync/status` route built; dashboard UI panel and Cron wiring still open |
+| **18-tab spreadsheet design** (Home, Dogs, Medical History, Vaccination, Sterilization, Adoption, Adoption Applications, Donate, Donation Confirmations, Stories, Reports, Volunteers, Help, Events, FAQ, Navigation, Footer, Website Settings) | P0 | COMPLETED (design — see [GOOGLE_SHEETS_SCHEMA.md](GOOGLE_SHEETS_SCHEMA.md)) | n/a (doc) |
+| **CMS architecture spec** (ownership rules, job queue, retry, audit, scalability targets) | P0 | COMPLETED (see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md)) | n/a (doc) |
+| **Sync foundations** (job queue, staging tables, audit log, worker, enqueue API) | P0 | NOT STARTED | M-CMS-1 |
+| **Content tabs — batch 1** (Home, Settings, Navigation, Footer, FAQ, Help; homepage/header/footer refactored to read from `content_*` tables) | P0 | NOT STARTED | M-CMS-2. Blocked on Google service account. |
+| **Content tabs — batch 2** (Dogs v2, Medical History, Vaccination, Sterilization) + media pipeline v2 (variants + blurhash + broken-image detection) | P0 | NOT STARTED | M-CMS-3 |
+| **Content tabs — batch 3** (Donate, Adoption, Stories, Volunteers, Events) + retire in-app story CMS panel | P0 | NOT STARTED | M-CMS-4 |
+| **Reverse sync** (Supabase → Sheets for adoption applications, donation confirmations, reports; workflow-field two-way sync) | P0 | NOT STARTED | M-CMS-5 |
+| **Admin sync dashboard** (`/admin/sync`: job history, live status, per-tab health, conflict inbox, manual controls) + Vercel Cron | P0 | NOT STARTED | M-CMS-6 |
+| **Alerting + monitoring + load test + security audit** | P1 | NOT STARTED | M-CMS-7 |
+| Sync audit log (`sync_log`, per-run aggregate) | P0 | COMPLETED | ✅ live, migration 0002 — extended with `content_audit_log` (row-level diffs) in M-CMS-1 |
 
 ### G. Media pipeline (Google Drive)
 
@@ -224,8 +249,21 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 
 ## 6. Release plan
 
-Modules and sequencing live in [TASKS.md](TASKS.md). Summary: **M1** foundations (Supabase live,
-GitHub) → **M2** Sheets sync engine → **M3** Drive media pipeline + real photos → **M4** Dog
-profile v2 + `DOG#####` QR + A4 PDF → **M5** UPI donations → **M6** reports v2 + notifications →
-**M7** blog engine → **M8** search → **M9** dashboard v2 + dark mode → **M10** performance/SEO
-audit + domain launch.
+Modules and sequencing live in [TASKS.md](TASKS.md).
+
+**Delivered (2026-07):** M0 docs · M1 Supabase live · M-A PWA · M-B automated tests · initial
+real-photo experience (`/animal/dreamland`, `/stories/field-notes-2025`).
+
+**Next up — CMS-first architecture rollout ([CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md)):**
+**M-CMS-1** sync foundations → **M-CMS-2** content tabs batch 1 (Home/Settings/Nav/Footer/FAQ/Help)
+→ **M-CMS-3** Dogs v2 + medical + media v2 → **M-CMS-4** Donate/Adoption/Stories/Volunteers/Events
+→ **M-CMS-5** reverse sync (DB → Sheets) → **M-CMS-6** admin sync dashboard + Vercel Cron →
+**M-CMS-7** hardening + alerting.
+
+**Remaining independent modules:** **M-C** dark mode · **M4** `DOG#####` QR + A4 PDF · **M5**
+UPI donation flow (unblocks with UPI QR image) · **M6** email/WhatsApp notifications (unblocks
+with provider decisions) · **M8** AI semantic search · **M9** dashboard v2 + Realtime · **M10**
+Lighthouse audit + domain launch.
+
+The legacy M2/M3/M7 milestones (Sheets sync + Drive pipeline + Sheets-driven blog) are
+subsumed by M-CMS-1 through M-CMS-4 and are marked SUPERSEDED in [TASKS.md](TASKS.md).

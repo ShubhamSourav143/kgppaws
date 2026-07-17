@@ -1,9 +1,13 @@
 # KGP PAWS — Task Plan & Dependency Checklist
 
-Living document. Last updated **2026-07-16**. This is the execution plan referenced by
+Living document. Last updated **2026-07-17**. This is the execution plan referenced by
 PRD.md §6. Work proceeds **module by module**: plan → implement → test → update docs → mark
 PRD status → summarize changes. No module starts before the previous one is stable, except
 where explicitly parallelizable (noted below).
+
+> **CMS-first architecture (2026-07-17).** The M-CMS-1 through M-CMS-7 milestones added below
+> supersede the legacy M2/M3/M7 sync milestones. See [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md)
+> for the full design.
 
 ---
 
@@ -82,20 +86,13 @@ system-preference default + manual toggle with persistence. Required by spec
 - ⏭️ `SUPABASE_SERVICE_ROLE_KEY` not yet set — not needed until the first server route (M2).
   Retrieve from Supabase dashboard → Project Settings → API when M2 starts.
 
-### M2 — Google Sheets sync engine — **CODE COMPLETE, BLOCKED ON CREDENTIALS FOR LIVE TEST** (dep #2)
-- ✅ Migration `0002`/`0005`: `public_id` + auto-assign trigger, `sheet_row_id`/`row_version`/
-  `sync_source`/`synced_at` on `animals`/`stories`, `sync_log`, `site_settings`, `breed` column.
-- ✅ `/api/sync/run` built — Sheets→Supabase, Dogs tab, cron-secret-gated, `googleapis`-based,
-  writes generated `_id`/`public_id` back to the sheet, logs every run to `sync_log`.
-- ✅ `/api/sync/status` built — recent runs for the (not-yet-built) admin panel.
-- ⏭️ Deliberately deferred to a later pass, once the one-directional engine is verified against
-  a real sheet: `/api/sync/resolve` (conflict resolution — not needed until bidirectional),
-  Supabase→Sheets write-back, the admin dashboard's sync-health panel, Vercel Cron wiring.
-- ⚠️ **Cannot be verified end-to-end without dep #2** (Google Cloud service account + a real
-  spreadsheet). The column-mapping logic is reasoned through carefully (see code comments in
-  `app/api/sync/run/route.ts`) but has never run against live Sheets data.
+### M2 — Google Sheets sync engine (Dogs tab only) — **SUPERSEDED** by M-CMS-1 through M-CMS-3
+- ✅ Migration `0002`/`0005`, `/api/sync/run`, `/api/sync/status` shipped 2026-07-17.
+- ⚠️ **This module's design is superseded by the CMS-first architecture** ([CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md)):
+  single-tab, no-queue, no-conflict, no-retry sync is not the target. The route file is kept
+  temporarily as a shim that enqueues into the new queue during M-CMS-1 rollout, then removed.
 
-### M3 — Google Drive media pipeline + real-photography experience — **PARTIALLY COMPLETE**
+### M3 — Google Drive media pipeline + real-photography experience — **PARTIALLY COMPLETE / SUPERSEDED by M-CMS-3 for the pipeline** (real photos already shipped)
 - ✅ **Real-photography experience shipped** — not via the Drive API (still blocked on dep #2),
   but via a one-time **local import** since the owner's Drive is mounted locally on this
   machine. 10 real photos optimized (sharp: EXIF/GPS-stripped, resized, re-encoded) and
@@ -143,12 +140,7 @@ system-preference default + manual toggle with persistence. Required by spec
 - Verify: submit a report → admin receives email + WhatsApp within the cron interval; failure
   is retried and visible in the outbox status.
 
-### M7 — Blog engine (Sheets-driven) — depends on M2, M3
-- Render `Blogs` tab rows as story pages (markdown → rich blocks, images from Drive).
-- Retire the in-app Story CMS admin panel in favor of the Sheet as source of truth (dashboard
-  keeps a read-only preview + publish/schedule toggle that writes back to the Sheet).
-- Verify: write a post in Sheets → live on `/stories/[slug]` within one sync cycle, correct SEO
-  meta, reading time, related articles.
+### M7 — Blog engine (Sheets-driven) — **SUPERSEDED by M-CMS-4** (Stories tab)
 
 ### M8 — Intelligent search — depends on M1 (and ideally M7 for blog content to search)
 - `search_index` materialized view, FTS + trigram + light intent mapping.
@@ -166,6 +158,132 @@ system-preference default + manual toggle with persistence. Required by spec
 - Lighthouse 100×4 pass across the key templates (home, animal profile, donate, stories, admin).
 - Point `kgppaws.org` at Vercel; update `NEXT_PUBLIC_SITE_URL`, sitemap, QR base URL.
 - Final security review (Turnstile, rate limits, RLS re-audit).
+
+---
+
+## CMS-first architecture roadmap (2026-07-17 →)
+
+Anchor document: [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md). These milestones supersede M2, M3
+(pipeline portion only), and M7. Total estimated effort: 12–16 working days.
+
+### M-CMS-1 — Sync foundations — NOT STARTED (unblocked)
+**Verifiable outcome:** an empty sync job runs end-to-end; `sync_jobs` row transitions
+`queued → running → succeeded`; `content_audit_log` records the run (with zero rows changed);
+compat-shim call to `/api/sync/run` enqueues a job in the new queue.
+
+- Migration `0006_cms_first_architecture.sql`:
+  - New tables: `sync_jobs`, `sync_conflicts`, `content_audit_log`, `tab_config`,
+    staging tables per content tab.
+  - Rename `site_settings → content_settings`.
+  - Rename existing sync-metadata columns to match the new naming
+    (`synced_at → last_synced_at`, add `sync_status`, `last_sync_error`,
+    `archived_at`, `public_id` on all content tables).
+  - New content tables: `content_home`, `content_adoption`, `content_help`, `content_faq`,
+    `content_events`, `content_navigation`, `content_footer`, `content_donate`,
+    `volunteer_directory`, `animal_vaccinations`, `animal_sterilizations`.
+  - Seed `tab_config` for all 18 editable tabs with categories + archival policies.
+  - RLS policies per [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §11.3.
+  - `content_audit_log` immutability enforced via missing update/delete policies.
+- New `lib/sync/` module:
+  - `lib/sync/types.ts` — Zod schema per tab.
+  - `lib/sync/tabs/registry.ts` — reads `tab_config`, dispatches to per-tab modules.
+  - `lib/sync/tabs/<tab>.ts` — one file per tab: header spec, mapper, validator, apply logic.
+    (M-CMS-1 ships the registry; per-tab files land in M-CMS-2 onward.)
+  - `lib/sync/queue.ts` — enqueue, dedup, dequeue, heartbeat, retry, next-run-at scheduler.
+  - `lib/sync/worker.ts` — the shared per-tab worker (§7.3 of CMS_ARCHITECTURE.md).
+  - `lib/sync/incremental.ts` — incremental scan logic (§7.1). Reads `_updated_at` column,
+    computes candidate set, batchGet full rows.
+  - `lib/sync/audit.ts` — diff computation, `content_audit_log` writer.
+  - `lib/sync/locks.ts` — `pg_advisory_lock` wrapper for per-tab locking with heartbeat.
+- New API routes:
+  - `POST /api/sync/enqueue` — admin-authenticated. Enqueues a job. Dedups on
+    `(tab, direction, row_id)`.
+  - `POST /api/sync/worker` — cron-secret-gated. Pulls the next queued job and runs it.
+    Reentrant; safe to call in parallel.
+  - `POST /api/sync/housekeeping` — cron-secret-gated. Marks expired heartbeats failed, retries,
+    cleans succeeded jobs > 30d.
+- **Compat-layer rewrites** (not deletions):
+  - `/api/sync/run` becomes a shim that enqueues a `Dogs` full-scan job into the new queue
+    and returns the enqueued jobId. Same request shape (`x-cron-secret` header). Logged as
+    `triggered_by = 'compat_shim'` so we can see whether it's still being called before removal.
+  - `/api/sync/status` becomes a thin wrapper over the new `sync_jobs` table, returning the
+    same JSON shape it returned `sync_log` rows before.
+- **No per-tab implementations in this milestone** — the registry allows registering tabs, but
+  the tabs themselves land in M-CMS-2/3/4. M-CMS-1's job is the plumbing.
+
+### M-CMS-2 — Content tabs batch 1 (Home, Settings, Navigation, Footer, FAQ, Help) — NOT STARTED
+**Verifiable outcome:** change a Home hero title in Sheets → run sync → homepage renders new
+title within one sync cycle. Change a nav item in Sheets → renders. Change a FAQ answer → renders.
+
+Depends on M-CMS-1 and dep #2 (Google service account) for live verification. Engine can be
+unit-tested end-to-end without dep #2 using a fixture spreadsheet dump.
+
+- Six content tabs implemented in the sync engine (schemas, mappers, staging apply).
+- Refactor `app/page.tsx` — every user-visible string moves to `content_home` reads via
+  `services/content.ts`.
+- Refactor `components/layout/Header.tsx`, footer, `/about`, FAQ block to read from
+  `content_navigation` / `content_footer` / `content_help` / `content_faq`.
+- Write initial content into the sheet (one-shot script; then edits happen in Sheets).
+
+### M-CMS-3 — Content tabs batch 2 (Dogs, Medical, Vaccination, Sterilization) + media v2 — NOT STARTED
+**Verifiable outcome:** add a new dog row in Sheets + drop 3 photos in `Dogs/<Public ID>/gallery/`
+in Drive → both appear on site within one sync cycle with responsive images (AVIF/WebP × 4 sizes).
+
+- Full Dogs tab in the sync engine (all 26 fields per GOOGLE_SHEETS_SCHEMA.md).
+- Medical History, Vaccination, Sterilization tabs.
+- Retire the Dogs-only `/api/sync/run` shim.
+- Media pipeline v2:
+  - Variant ladder: original / 1600 / 800 / 400, each in AVIF + WebP + JPEG.
+  - Blurhash placeholder per image, stored in `animal_photos.blurhash`.
+  - Broken-image nightly cron: cross-references `animal_photos ↔ Storage` and
+    `drive_assets ↔ Drive`; discrepancies → `sync_conflicts` with `type: 'broken_media'`.
+  - Frontend switched to `next/image` srcset from the variant ladder.
+
+### M-CMS-4 — Content tabs batch 3 (Donate, Adoption, Stories, Volunteers, Events) — NOT STARTED
+**Verifiable outcome:** publish a new story via Sheets → live on `/stories/[slug]` within one
+sync cycle. Change a donation campaign goal in Sheets → homepage stat updates.
+
+- Five content tabs implemented.
+- Donate: `donation_campaigns` sync (existing table + new sync-metadata columns) + `content_donate`.
+- Retire the in-app Story CMS admin panel — becomes read-only preview.
+- Stories markdown → rich blocks parser at sync time.
+- Donation campaign QR image auto-linkage from `Assets/donation-qr/`.
+
+### M-CMS-5 — Reverse sync (Supabase → Sheets) — NOT STARTED
+**Verifiable outcome:** submit a report on the website → within one cycle, appears as a new row
+in the Reports tab. Change status in Sheets → within one cycle, propagates to DB and appears in
+dashboard.
+
+- Postgres `AFTER INSERT/UPDATE` triggers on `adoption_applications`, `donation_confirmations`,
+  `rescue_reports` (per [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §4.3).
+- Worker `db_to_sheets` direction implementation.
+- Workflow-field two-way sync per [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §6.3.
+- Column-level allowlist per transactional table (never write lat/lng, never write internal_notes
+  contents beyond a "has notes" flag).
+
+### M-CMS-6 — Admin sync dashboard + Vercel Cron — NOT STARTED
+**Verifiable outcome:** Cron runs every 10 min; admin sees jobs stream in without refresh;
+manual "Sync Now" per tab works; conflicts appear and can be resolved.
+
+- `/admin/sync` page: job history, per-tab health, conflict inbox, manual controls, media health.
+- Supabase Realtime subscription to `sync_jobs` for live progress.
+- Vercel Cron wiring:
+  - `/api/sync/enqueue?scope=full` — every 10 minutes.
+  - `/api/media/ingest` — every 15 minutes.
+  - `/api/sync/housekeeping` — every 1 minute.
+- Retry / dismiss / resolve UI on `sync_conflicts` rows.
+
+### M-CMS-7 — Hardening, alerting, monitoring, load test — NOT STARTED
+**Verifiable outcome:** kill the worker mid-run → housekeeping cron re-enqueues; kill the Sheets
+API → job retries with backoff; alert fires on `header_mismatch`; a 10× load test passes.
+
+- Alert routing: `header_mismatch`, `invariant_violation`, stale-tab (>1h no successful sync),
+  conflict-count > 10, broken-media > 20 → outbox → email + WhatsApp.
+- Metrics: sync latency p50/p95 per tab, API quota headroom, job success rate.
+- Runbook in `docs/DEPLOYMENT.md`: how to inspect a failed job, how to force-sync a single row,
+  how to rotate the service account key.
+- Load test at 10× current row count (500 dogs, 5,000 medical events).
+- Security audit of service account permissions and RLS on new tables.
 
 ---
 
