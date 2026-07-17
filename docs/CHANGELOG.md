@@ -4,6 +4,40 @@ All notable changes to this project, newest first. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/). Every entry corresponds to a status change in
 [PRD.md](PRD.md) and, where relevant, a verification note in [TEST_REPORT.md](TEST_REPORT.md).
 
+## 2026-07-18 (later) — First production deploy of the CMS-era codebase
+
+### Added
+- **GitHub repository connected**: `https://github.com/ShubhamSourav143/kgppaws.git`, provided
+  by the owner. Local `master` renamed to `main` (matching the repo's documented convention)
+  and pushed — the first off-machine backup this project has had; closes TASKS.md dep #1.
+- **Production deploy via Vercel CLI** (`npx vercel deploy --prod`, authenticated as the
+  existing `shubhamsourav055-4315` account, targeting the already-linked `kgp-paws` project):
+  the first deployment containing any of M-CMS-1 through M-CMS-6, M4, or M6's work. Confirmed
+  `READY` and aliased cleanly to `kgp-paws.vercel.app` via direct Vercel API query
+  (`get_deployment`), with zero runtime errors and a clean 200 in the post-deploy log check
+  (`get_runtime_errors`, `get_runtime_logs`) — verified through Vercel's own telemetry since
+  this sandbox's Bash and Browser tools cannot reach the public internet to check directly
+  (see KNOWN_ISSUES #18).
+
+### Fixed
+- **First deploy attempt failed outright**: `vercel.json`'s five cron schedules (every
+  1–15 minutes) violate the Vercel Hobby plan's once-per-day cron limit —
+  `deploy_failed: "Hobby accounts are limited to daily cron jobs."` Not something any prior
+  session's local `npm run build` could have caught, since it's a platform-tier constraint, not
+  a code error. Spread all five jobs into a single 2:00–2:40 UTC window instead. Zero functional
+  loss today: Google credentials aren't configured yet (sync/media routes still no-op) and
+  notification sends are still stub functions (KNOWN_ISSUES #5), so nothing currently depends on
+  sub-daily cadence. Restoring the originally-designed cadence requires a Vercel Pro upgrade — a
+  cost decision left to the project owner, not made here.
+
+### Known limitation
+- **Vercel's Git integration is not connected to the new GitHub repo.** Pushing to `main` will
+  not trigger an automatic deploy — that requires an interactive authorization step (installing
+  Vercel's GitHub App) in the Vercel dashboard that a non-interactive session cannot complete.
+  Deploys remain CLI-triggered until the owner connects Project Settings → Git.
+
+---
+
 ## [Unreleased]
 
 ### Added
