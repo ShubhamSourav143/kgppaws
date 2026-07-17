@@ -1,11 +1,14 @@
 # KGP PAWS — Database Schema (Supabase Postgres)
 
-Living document. Last updated **2026-07-16**. Source of truth: `supabase/migrations/*.sql`.
-This file explains the schema in prose; the SQL is authoritative for exact types/constraints.
+Living document. Last updated **2026-07-17**. Source of truth: `supabase/migrations/*.sql`.
+Live project: `kgp-paws` (ref `unyhhkulkgznqoqalqxk`, ap-south-1). Migrations `0002`–`0005` were
+applied directly to the live database via the Supabase MCP during development and only written
+back into repo migration files afterward — a gap that existed briefly this session (see
+CHANGELOG 2026-07-17) and is now closed; the files match what's actually live.
 
 ---
 
-## 1. Migration `0001_initial_schema.sql` (written, not yet applied to a live project — see [TASKS.md](TASKS.md) M1)
+## 1. Migration `0001_initial_schema.sql` — ✅ **applied to the live project** (2026-07-16)
 
 23 tables, all RLS-enabled. Full policy text lives in the migration file; summarized here.
 
@@ -123,18 +126,20 @@ This file explains the schema in prose; the SQL is authoritative for exact types
 
 ---
 
-## 2. Migration `0002` — planned additions (M1–M5)
+## 2. Migrations `0002`–`0005` — ✅ **applied to the live project** (2026-07-17)
 
-Not yet written; scope agreed here so DB and product work land together.
+### 2.1 Sync infrastructure — `0002_cms_foundations.sql`
 
-### 2.1 Sync infrastructure (M2)
+Scoped to `animals` and `stories` only — **not** "every syncable table" as first sketched here;
+`donation_campaigns`/`volunteers` sync metadata is added if/when those sheets get built (M2
+currently covers the Dogs tab only — see ARCHITECTURE.md §6).
 
 ```sql
--- added to every syncable table (animals, stories, donation_campaigns, volunteers, …)
 alter table animals add column sheet_row_id text;      -- stable _id from the Sheet
 alter table animals add column row_version int not null default 1;
 alter table animals add column sync_source text not null default 'app'; -- 'app' | 'sheets'
 alter table animals add column synced_at timestamptz;
+-- identical four columns added to `stories`
 
 create table sync_log (
   id uuid primary key default gen_random_uuid(),
@@ -149,18 +154,21 @@ create table sync_log (
 );
 ```
 
-### 2.2 Permanent animal ID (M4)
+### 2.2 Permanent animal ID — `0002` + `0004_auto_assign_public_id.sql`
 
 ```sql
 alter table animals add column public_id text unique; -- 'DOG00023', 'CAT00004'
 create sequence animal_public_id_seq;
--- backfill existing rows from paws_id; new rows allocate from sequence, zero-padded per species
+-- backfill: existing rows numbered by creation order, zero-padded per species
+-- (0004) trigger: new rows auto-assign via next_animal_public_id(species) on insert
+--   if not already set — caught by testing, not assumed; see CHANGELOG 2026-07-17
 ```
 
-`slug` stays for pretty story links; `public_id` becomes the canonical QR/URL identifier
-(`/dog/DOG00023`). `/p/{token}` remains as the revocable-tag fallback.
+`slug` stays for pretty story links; `public_id` is the canonical identifier — 9 animals have
+one today (8 backfilled demo + 1 real). `/dog/[publicId]` route not yet built (still `/p/[token]`
++ `/animal/[slug]`); `/p/{token}` remains as the revocable-tag fallback regardless.
 
-### 2.3 UPI donation model (M5)
+### 2.3 UPI donation model — **still planned, not built** (M5)
 
 ```sql
 create table donation_confirmations (
@@ -181,29 +189,37 @@ create table donation_confirmations (
 );
 -- campaigns_with_totals gains a second source: sum(amount) where status='approved'
 -- (replaces the Razorpay-oriented `donations` table as the primary donation record)
+```
 
+`site_settings` itself is **already built** (moved to §2.1's migration since it's generic
+key/value config, not UPI-specific) — see below. Only `donation_confirmations` remains open.
+
+### 2.4 Site settings + media pipeline — `0002_cms_foundations.sql`
+
+```sql
 create table site_settings (
   key text primary key,          -- 'upi_qr_1', 'upi_id', 'upi_holder_name', …
   value jsonb not null,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users(id)   -- added vs. the original sketch
 );
-```
 
-### 2.4 Media pipeline (M3)
-
-```sql
 create table drive_assets (
   id uuid primary key default gen_random_uuid(),
-  drive_file_id text unique not null,
-  kind text not null,             -- 'dog_photo' | 'treatment_photo' | 'blog_image' | 'video' | 'document'
+  drive_file_id text unique,      -- nullable: local (non-Drive-API) imports have no Drive file ID
+  kind text not null,             -- 'dog_photo' | 'story_photo' | 'blog_image' | 'video' | 'document'
   animal_id uuid references animals(id),
-  story_slug text,
-  storage_path text not null,     -- optimized asset in Supabase Storage
-  variants jsonb not null,        -- {orig, 1600, 800, 400, avif, webp, blurhash}
-  checksum text not null,
+  story_id uuid references stories(id),      -- was `story_slug text` in the original sketch
+  storage_path text not null,
+  variants jsonb not null default '{}',      -- reserved for the AVIF/WebP ladder — not populated yet
+  checksum text,                  -- nullable: local imports don't compute one
+  source text not null default 'local_import', -- 'local_import' | 'drive_api' — new vs. original sketch
   ingested_at timestamptz not null default now()
 );
 ```
+
+Both tables are public-read (`for select using (true)`), admin-write (`has_role(admin)`).
+10 real rows exist today — see §3 seed note.
 
 ### 2.5 Notification outbox (M6)
 
@@ -227,9 +243,35 @@ create table notification_outbox (
 categories (Injured / Missing / Emergency / Dead animal — "Emergency" maps to `severity =
 'emergency'` rather than a `problem`, so no enum change needed there).
 
+### 2.7 Storage policy + small gap-closes — `0003`, `0005` — ✅ applied
+
+```sql
+-- 0003_storage_admin_write_policy.sql
+create policy "admin_write_animal_photos" on storage.objects for insert to authenticated
+  with check (bucket_id = 'animal-photos' and has_role(array['admin','super_admin']::user_role[]));
+create policy "admin_update_animal_photos" on storage.objects for update to authenticated
+  using (bucket_id = 'animal-photos' and has_role(array['admin','super_admin']::user_role[]))
+  with check (bucket_id = 'animal-photos' and has_role(array['admin','super_admin']::user_role[]));
+
+-- 0005_breed_and_photo_constraint.sql
+alter table animals add column breed text not null default '';
+alter table animal_photos add constraint animal_photos_animal_path_key unique (animal_id, storage_path);
+```
+
+`0003` replaces a first attempt (a temporary `for insert to anon` policy) that was correctly
+blocked by this session's own safety tooling before it ever ran — see CHANGELOG 2026-07-17.
+`0005`'s unique constraint was added *before* the Drive ingest route's `upsert(...).onConflict`
+could hit the bug of relying on a constraint that didn't exist yet.
+
 ---
 
-## 3. Conventions
+## 3. Current live data (2026-07-17)
+
+9 `animals` rows (8 demo + 1 real, `dreamland`/`DOG00009`), 7 `stories` rows (6 demo + 1 real,
+`field-notes-2025`), 10 `drive_assets`/`animal_photos`+`story_media` rows from the local photo
+import (see CHANGELOG). Everything else is the M1 seed (`supabase/seed.sql`), all `is_demo = true`.
+
+## 4. Conventions
 
 - UUID PKs everywhere except lookup/config tables keyed by natural text (`site_settings.key`).
 - `created_at` on every table; `updated_at` + `set_updated_at()` trigger on mutable ones.

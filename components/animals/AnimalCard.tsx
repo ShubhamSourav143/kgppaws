@@ -29,7 +29,11 @@ export function AnimalCard({
     >
       <div className="relative overflow-hidden">
         <div className="transition-transform duration-500 ease-out group-hover:scale-[1.04]">
-          <AnimalPortrait animal={animal} className="aspect-[5/4] rounded-none" />
+          <AnimalPortrait
+            animal={animal}
+            photoUrl={animal.photos.find((p) => p.url)?.url}
+            className="aspect-[5/4] rounded-none"
+          />
         </div>
         <SaveButton
           slug={animal.slug}

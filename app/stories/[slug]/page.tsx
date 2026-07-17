@@ -6,6 +6,7 @@ import { getStory, listStories } from "@/services/stories";
 import { getAnimal } from "@/services/animals";
 import { AnimalCard } from "@/components/animals/AnimalCard";
 import { StoryCard } from "@/components/stories/StoryCard";
+import { PhotoGallery } from "@/components/media/PhotoGallery";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -153,6 +154,17 @@ export default async function StoryPage({
           {story.blocks.map((block, i) => (
             <Block key={i} block={block} />
           ))}
+
+          {story.photos.length > 0 && (
+            <section aria-labelledby="story-photos-h" className="mt-12">
+              <h2 id="story-photos-h" className="font-display text-2xl font-bold text-forest-deep">
+                Photos from this story
+              </h2>
+              <div className="mt-5">
+                <PhotoGallery photos={story.photos} fallbackPalette={story.heroPalette} />
+              </div>
+            </section>
+          )}
 
           {/* contextual CTA */}
           <aside className="mt-14 rounded-3xl bg-forest p-8 text-center text-cream">

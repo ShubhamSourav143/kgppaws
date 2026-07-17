@@ -179,12 +179,21 @@ Design rules:
   service-account email as Editor. Credentials live in a server-only env var.
 - Every applied change also writes `audit_logs` (actor = `sheets-sync`).
 
+> **Implementation status (2026-07-17):** the diagram above is the target design. What's
+> actually built is the top-left path only — `POST /api/sync/run`
+> (`app/api/sync/run/route.ts`) reads the Dogs tab and upserts into `animals`, diffing by
+> `sheet_row_id`, writing generated `_id`/`public_id` back to the sheet, and logging to
+> `sync_log`. **Not yet built:** the DB→Sheets write-back path, conflict detection (`alt` branch
+> above), `revalidateTag()` cache invalidation, and the cron schedule itself. None of it has run
+> against a real spreadsheet — there's no Google Cloud service account to test with yet (see
+> KNOWN_ISSUES.md #2). Treat the code as carefully reasoned-through, not proven.
+
 ## 7. Google Drive image & media pipeline
 
 Serving straight from Drive is slow and rate-limited, so Drive is the **upload inbox**, not the CDN:
 
 ```
-Volunteer drops photo in Drive folder (e.g. /Dogs/DOG0001/gallery/2.jpg)
+Volunteer drops photo in Drive folder (e.g. /Dogs/DOG00001/gallery/2.jpg)
   → ingest cron lists changed files (Drive API, changes feed)
   → download → sharp: strip EXIF-GPS, resize ladder (3200/1600/800/400), AVIF/WebP + blurhash
   → upload to Supabase Storage (public bucket, immutable cache headers)
@@ -197,7 +206,7 @@ Volunteer drops photo in Drive folder (e.g. /Dogs/DOG0001/gallery/2.jpg)
 
 ```
 Dogs/
-  DOG0001/
+  DOG00001/
     cover.jpg            → the dog's cover image (exactly one)
     gallery/             → unlimited profile photos
       1.jpg  2.jpg  …
@@ -219,6 +228,17 @@ component rather than a broken image (`fallback_images: true` in the spec).
   `<video>` (or YouTube embed if URL provided).
 - Local nicety: the owner's Drive is mounted at `G:\My Drive\…`, so bulk seeding can run
   locally before API credentials exist.
+
+> **Implementation status (2026-07-17):** `POST /api/media/ingest`
+> (`app/api/media/ingest/route.ts`) implements the Drive→Storage path above — folder
+> traversal, checksum-based change detection, `sharp` optimization, `drive_assets` +
+> `animal_photos` upsert. **Not yet built:** the AVIF/WebP responsive ladder (currently one
+> JPEG per photo, not 3200/1600/800/400 variants) and blurhash. **Never live-tested** — no
+> Drive API credentials exist yet. What *has* actually run, using the local-mount nicety noted
+> above rather than the Drive API: a one-time manual import script (not part of the app) that
+> optimized and uploaded 10 real photos from `G:\My Drive\By Shubham\Dog photo\` directly to
+> Supabase Storage, seeding the first real animal (`dreamland`) and story (`field-notes-2025`).
+> See CHANGELOG.md 2026-07-17.
 
 ## 8. Authentication & authorization
 
@@ -272,7 +292,7 @@ query → embed → cosine similarity (ivfflat index)
 ```
 
 Hybrid (vector + lexical) rather than pure vector: exact lookups like a dog's name or
-`DOG0001` must rank first deterministically, which embeddings alone do poorly.
+`DOG00001` must rank first deterministically, which embeddings alone do poorly.
 
 **Open decision — embedding provider.** Options: OpenAI `text-embedding-3-small` (cheap,
 excellent quality, external API + cost), or a local/open model via Supabase Edge Functions

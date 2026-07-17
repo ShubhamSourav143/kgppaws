@@ -50,6 +50,8 @@ export interface AnimalPhoto {
   id: string;
   caption: string;
   date: string;
+  /** Public Storage URL — undefined for demo entries without a real upload. */
+  url?: string;
 }
 
 /** Config for the illustrated portrait system (used until real photos are uploaded via CMS). */
@@ -209,6 +211,12 @@ export type StoryBlock =
   | { type: "image"; caption: string; palette: [string, string] }
   | { type: "timeline"; items: { date: string; text: string }[] };
 
+export interface StoryPhoto {
+  id: string;
+  url: string;
+  caption: string;
+}
+
 export interface Story {
   id: string;
   slug: string;
@@ -221,6 +229,8 @@ export interface Story {
   author: string;
   heroPalette: [string, string];
   blocks: StoryBlock[];
+  /** Real uploaded photos attached to this story (separate from the decorative "image" blocks above). */
+  photos: StoryPhoto[];
   featured?: boolean;
   demo: boolean;
 }

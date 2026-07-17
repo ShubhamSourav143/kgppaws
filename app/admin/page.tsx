@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
@@ -29,15 +29,9 @@ const ACTIVITY = [
 ];
 
 export default function AdminOverviewPage() {
-  const [localReportCount, setLocalReportCount] = useState(0);
-  const [localAppCount, setLocalAppCount] = useState(0);
-  const [pledges, setPledges] = useState(0);
-
-  useEffect(() => {
-    setLocalReportCount(getLocalReports().length);
-    setLocalAppCount(getLocalApplications().length);
-    setPledges(getLocalDonations().length);
-  }, []);
+  const [localReportCount] = useState(() => getLocalReports().length);
+  const [localAppCount] = useState(() => getLocalApplications().length);
+  const [pledges] = useState(() => getLocalDonations().length);
 
   const openReports =
     DEMO_REPORTS.filter((r) => r.status !== "resolved").length + localReportCount;

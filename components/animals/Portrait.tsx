@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { Animal } from "@/types";
 
@@ -5,21 +6,48 @@ import type { Animal } from "@/types";
  * Illustrated animal portrait — KGP PAWS' cohesive visual identity for
  * animals until real photography is uploaded through the CMS. Every
  * portrait wears the PAWS collar with its QR tag.
+ *
+ * When `photoUrl` is supplied (a real uploaded cover photo), it renders
+ * instead of the illustration, inside the same sized/rounded container so
+ * callers don't need separate layout logic for the two cases.
  */
 export function AnimalPortrait({
   animal,
   idle = false,
   frame = "rounded",
   className,
+  photoUrl,
 }: {
   animal: Pick<Animal, "name" | "species" | "portrait">;
   /** enable subtle blink/head-tilt idle animation */
   idle?: boolean;
   frame?: "rounded" | "arch";
   className?: string;
+  photoUrl?: string;
 }) {
   const p = animal.portrait;
   const isCat = animal.species === "cat";
+
+  if (photoUrl) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden",
+          frame === "arch" ? "rounded-b-3xl rounded-t-[999px]" : "rounded-3xl",
+          className
+        )}
+      >
+        <Image
+          src={photoUrl}
+          alt={`Photo of ${animal.name}`}
+          fill
+          sizes="(min-width: 1024px) 28rem, 90vw"
+          className="object-cover"
+          priority
+        />
+      </div>
+    );
+  }
 
   return (
     <div

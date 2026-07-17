@@ -74,8 +74,9 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 | **PWA** — installable, manifest, service worker, offline shell, app icons | P0 | COMPLETED | ✅ E2E 2026-07-16 (see TEST_REPORT.md) |
 | **Dark mode** — full app, token-driven, respects system preference + manual toggle | P0 | NOT STARTED | — M9 |
 | Lenis smooth scrolling (site-wide, reduced-motion aware) | P1 | NOT STARTED | — M3 |
-| **Real-photography experience** — replace all illustrated/vector animal portraits with real photos from Google Drive | P0 | BLOCKED | — awaiting photo→dog mapping + Drive pipeline (M3) |
-| Floating image walls / scroll storytelling / parallax with real photos (GSAP + Lenis) | P1 | NOT STARTED | — |
+| **Real-photography experience** — real animal profile + gallery, cover photo replacing the illustration, sourced from actual volunteer photography | P0 | TESTED | ✅ live (`/animal/dreamland`) — see CHANGELOG 2026-07-17. The 8 *fictional* demo animals (Simba, Muesli, …) intentionally keep their illustrated portraits — they have no real photos to replace them with, and are labelled demo |
+| Real-photo lightbox gallery (grid + keyboard-accessible full view, prev/next) | P0 | TESTED | ✅ `components/media/PhotoGallery.tsx`, used on animal profiles + story pages |
+| Floating image wall / scroll storytelling with real photos — **R3F (not GSAP+Lenis as originally scoped) + GSAP ScrollTrigger** | P1 | TESTED | ✅ homepage "Real Faces on Campus" section — 3D floating photo tiles (React Three Fiber) + horizontal scroll-scrubbed captions (GSAP); renders nothing when there are no real photos yet; static fallback under reduced-motion |
 | Three.js / R3F hero moment (photo-based, no cartoon 3D) | P2 | NOT STARTED | — |
 | Interactive photo galleries per animal (lightbox, swipe, lazy-loaded) | P0 | NOT STARTED | — |
 | Smooth page transitions (View Transitions / Framer Motion) | P1 | NOT STARTED | — |
@@ -129,8 +130,9 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 | Feature | Priority | Status | Tested |
 |---|---|---|---|
 | Editorial story pages (rich blocks: headings, quotes, images, timelines) | P0 | COMPLETED | ✅ live |
+| First real (non-demo) story, with a real photo gallery | P0 | TESTED | ✅ [Field Notes: Faces We've Met This Year](/stories/field-notes-2025) — 8 real photos, honestly worded, no invented outcomes |
 | Blogs authored entirely in Google Sheets (markdown body) → rendered as web pages | P0 | BLOCKED | Google credentials (M7) |
-| Images & video embeds from Google Drive | P0 | BLOCKED | Drive pipeline (M3) |
+| Images & video embeds from Google Drive | P0 | IN PROGRESS | `story_media` + `PhotoGallery` render real images now (this session); Drive-sourced ingestion still credential-gated (M3) |
 | Markdown + tables support | P1 | NOT STARTED | — |
 | SEO per post (meta description, OG image), reading time, related articles | P1 | IN PROGRESS | reading time + related done; per-post OG images pending |
 
@@ -139,21 +141,21 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 | Feature | Priority | Status | Tested |
 |---|---|---|---|
 | Sheet designs for: Dogs, Medical History, Vaccination, Sterilization, Gallery, Blogs, Donations, Volunteers, Reports, QR Codes, Website Settings | P0 | COMPLETED (design — see [GOOGLE_SHEETS_SCHEMA.md](GOOGLE_SHEETS_SCHEMA.md)) | n/a (doc) |
-| Sheets → Supabase sync (volunteer edits reach the website) | P0 | BLOCKED | Google service account (M2) |
-| Supabase → Sheets sync (dashboard/website writes reach Sheets) | P0 | BLOCKED | Google service account (M2) |
-| Conflict handling (row versioning, last-write-wins + conflict log) | P0 | NOT STARTED | design in ARCHITECTURE.md §6 |
-| Sync audit log + admin sync-health panel | P0 | NOT STARTED | — |
-| Scheduled sync (Vercel cron) + manual "Sync now" | P0 | NOT STARTED | — |
+| Sheets → Supabase sync engine (Dogs tab) | P0 | IN PROGRESS | Code complete (`/api/sync/run`) — real, `googleapis`-based, follows the `isSupabaseConfigured` no-op-when-unconfigured pattern. **Cannot be tested against a real spreadsheet without Google Cloud credentials** — see KNOWN_ISSUES. Scoped to one direction + one tab intentionally; see code comments |
+| Supabase → Sheets sync (dashboard/website writes reach Sheets) | P0 | NOT STARTED | Deferred until the one-directional engine above is verified against a real sheet — see ARCHITECTURE.md §6 |
+| Conflict handling (row versioning, last-write-wins + conflict log) | P0 | NOT STARTED | design in ARCHITECTURE.md §6; not needed until bidirectional sync exists |
+| Sync audit log | P0 | COMPLETED | ✅ `sync_log` table (migration 0002), written by the sync engine on every run |
+| Admin sync-health panel + scheduled sync (Vercel Cron) + manual "Sync now" | P0 | NOT STARTED | `/api/sync/status` route built; dashboard UI panel and Cron wiring still open |
 
 ### G. Media pipeline (Google Drive)
 
 | Feature | Priority | Status | Tested |
 |---|---|---|---|
-| Drive folders as asset source (dog photos, treatment photos, blog media, videos, documents) | P0 | BLOCKED | Drive API credentials (M3) |
-| Ingest job: Drive → optimized storage → CDN (`next/image`) | P0 | NOT STARTED | — |
-| Automatic optimization: responsive sizes, AVIF/WebP, lazy loading, blur placeholders, caching | P0 | NOT STARTED | — |
-| Unlimited images / treatments / documents per animal | P0 | NOT STARTED | schema supports it |
-| Cover-image selection per dog (via Sheets column) | P0 | NOT STARTED | — |
+| Drive folders as asset source, `Dogs/<public_id>/{cover,gallery/,medical/}` convention | P0 | IN PROGRESS | Ingest route built (`/api/media/ingest`) — credential-gated, untestable without Drive API access. `medical/` files are deliberately **not** auto-published (see code comment) — that's an admin judgement call |
+| **One-time local import** (bypassing the Drive API, reading the owner's local Drive mirror directly) | P0 | TESTED | ✅ 10 real photos optimized (sharp: EXIF-stripped, resized, re-encoded) and uploaded to Supabase Storage 2026-07-17. 2 of 12 failed — the local Drive cache disk was at 100% capacity; not a code defect, see KNOWN_ISSUES |
+| Automatic optimization: strip EXIF/GPS, resize, re-encode | P0 | TESTED | ✅ via `sharp`, both the local import and the Drive ingest route |
+| Unlimited images / treatments / documents per animal | P0 | COMPLETED | schema + `drive_assets` tracking table support it |
+| Cover-image selection per dog (via Sheets column, or `cover.*` filename convention for Drive) | P0 | IN PROGRESS | Drive convention implemented in the ingest route; Sheets-column override not yet wired |
 
 ### H. Search
 
@@ -183,6 +185,7 @@ Priorities: **P0** = launch-blocking · **P1** = launch-important · **P2** = po
 |---|---|---|---|
 | Supabase email/password auth | P0 | COMPLETED | ✅ live — credential form active on production, demo switcher correctly disabled |
 | Two roles only: volunteer, admin | P0 | COMPLETED | manual |
+| First real admin account provisioned | P0 | TESTED | ✅ `shubhamsourav055+kgppawsadmin@gmail.com`, granted `admin` in `user_roles` 2026-07-17 — needed for Storage's admin-write policy (photo uploads), doubles as the first real `/admin` login. Password shared with the project owner out of band, not stored in this repo |
 | DB-enforced authorization (RLS on every table; client guards are UX only) | P0 | TESTED | ✅ verified as the `anon` role: donations/reports invisible, privilege-escalation hole found & closed (see TEST_REPORT.md) |
 | Demo-mode role explorer (no credentials configured) | P2 | COMPLETED | ✅ manual |
 | Supabase Realtime (live dashboard updates: new reports/donations appear without refresh) | P1 | NOT STARTED | M9 |

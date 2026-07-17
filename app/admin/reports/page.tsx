@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, MapPin, UserCheck } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
@@ -24,16 +24,13 @@ const VOLUNTEERS = ["— unassigned —", "Morning team", "Evening team", "Night
 const SEVERITY_RANK = { emergency: 0, urgent: 1, moderate: 2, low: 3 } as const;
 
 export default function AdminReportsPage() {
-  const [reports, setReports] = useState<RescueReport[]>([]);
+  const [reports] = useState<RescueReport[]>(() =>
+    [...getLocalReports(), ...DEMO_REPORTS].sort(
+      (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]
+    )
+  );
   const [statusOverride, setStatusOverride] = useState<Record<string, ReportStatus>>({});
   const [assignee, setAssignee] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const all = [...getLocalReports(), ...DEMO_REPORTS].sort(
-      (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]
-    );
-    setReports(all);
-  }, []);
 
   const effectiveStatus = (r: RescueReport) => statusOverride[r.id] ?? r.status;
 

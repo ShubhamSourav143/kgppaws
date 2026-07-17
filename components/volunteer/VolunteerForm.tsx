@@ -57,7 +57,7 @@ export function VolunteerForm() {
     setValue("interests", next, { shouldValidate: true });
   };
 
-  const onSubmit = (_values: FormValues) => {
+  const onSubmit = () => {
     // Live mode: insert into `volunteers` with status "applied" (see schema).
     // Demo mode: registration is acknowledged without a backend write.
     setSubmitted(true);

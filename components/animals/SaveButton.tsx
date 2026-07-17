@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Heart } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
-import { getSavedAnimals, toggleSavedAnimal } from "@/lib/local-store";
+import { getSavedAnimals, subscribeToLocalStore, toggleSavedAnimal } from "@/lib/local-store";
 import { cn } from "@/lib/utils";
 
 /** Outline-heart → filled-heart save toggle (persists in demo storage). */
@@ -16,13 +16,13 @@ export function SaveButton({
   name: string;
   className?: string;
 }) {
-  const [saved, setSaved] = useState(false);
+  const saved = useSyncExternalStore(
+    subscribeToLocalStore,
+    () => getSavedAnimals().includes(slug),
+    () => false
+  );
   const [pop, setPop] = useState(false);
   const reduce = useReducedMotion();
-
-  useEffect(() => {
-    setSaved(getSavedAnimals().includes(slug));
-  }, [slug]);
 
   return (
     <motion.button
@@ -32,7 +32,7 @@ export function SaveButton({
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        setSaved(toggleSavedAnimal(slug));
+        toggleSavedAnimal(slug);
         setPop(true);
       }}
       onAnimationComplete={() => setPop(false)}

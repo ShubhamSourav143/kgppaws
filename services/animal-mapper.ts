@@ -1,3 +1,4 @@
+import { storagePublicUrl } from "@/lib/config";
 import type { Animal } from "@/types";
 
 /**
@@ -45,9 +46,17 @@ export function mapAnimalRow(row: any): Animal {
       from: "#E7D6BC", to: "#B08968", coat: "#A9744C", coatDark: "#7C5233",
       muzzle: "#F4EADB", ear: "floppy",
     },
-    photos: (row.animal_photos ?? []).map((p: any) => ({
-      id: p.id, caption: p.caption ?? "", date: p.taken_on ?? p.created_at ?? "",
-    })),
+    photos: (row.animal_photos ?? [])
+      .slice()
+      .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((p: any) => ({
+        // NOT falling back to created_at: that's row-insertion time, which for
+        // a live upload is "whenever a volunteer got round to it" — showing it
+        // as the photo's date would misrepresent when it was actually taken.
+        // No known date is better shown as no date than a wrong one.
+        id: p.id, caption: p.caption ?? "", date: p.taken_on ?? "",
+        url: p.storage_path ? storagePublicUrl(p.storage_path) : undefined,
+      })),
     // Sorted here rather than relying on PostgREST embedded ordering, so the
     // timeline reads newest-first regardless of insertion order.
     medicalTimeline: (row.animal_medical_events ?? [])

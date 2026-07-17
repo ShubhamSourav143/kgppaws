@@ -1,11 +1,101 @@
 # KGP PAWS — Test Report
 
-Living document. Last updated **2026-07-16**. Records what was actually verified, how, and
-when — not just "should work." Automated test suite does not exist yet (see
-[KNOWN_ISSUES.md](KNOWN_ISSUES.md) #1); all entries below are manual/E2E verification performed
-during development. Status legend matches PRD.md.
+Living document. Last updated **2026-07-17**. Records what was actually verified, how, and
+when — not just "should work." `npm test` (Vitest) and `npm run test:e2e` (Playwright) cover
+the demo-mode core flows (see Module M-B below); everything else here is manual/direct-SQL
+verification performed during development. Status legend matches PRD.md.
 
 ---
+
+## 2026-07-17 — CMS milestone: real photos, gallery, R3F/GSAP, sync engine
+
+### Real-photo pipeline — verified end-to-end, not assumed
+
+| Check | Method | Result |
+|---|---|---|
+| Public Storage URL serves the uploaded file directly | `curl` the `.../storage/v1/object/public/animal-photos/dreamland/on-lead-2025.jpg` URL | ✅ 200, `image/jpeg`, correct size |
+| Next Image Optimizer proxies the same file | `curl` `/_next/image?url=<encoded storage URL>&w=640&q=75` on the local prod server | ✅ 200, `image/jpeg` — confirms `next.config.ts`'s `remotePatterns` allowlist works |
+| `/animal/dreamland` renders the real hero photo, not the illustration | DOM inspection (`querySelector('header img')`) — screenshot tool was unreliable this session (see KNOWN_ISSUES #19), used `alt` text + `src` instead | ✅ `alt="Photo of Dreamland"`, `src` points at the real Storage URL |
+| `/stories/field-notes-2025` renders all 8 real photos | DOM inspection, counted `<img>` tags matching `field-notes` in `src` | ✅ 8/8 |
+| No regression to the 8 fictional demo animals | `/adopt` page: counted illustrated-portrait `<svg>`s vs. real-photo `<img>`s | ✅ exactly 8 illustrated (unchanged demo set) + 1 real photo (`Dreamland`) — "9 paws found" |
+| Photo date fallback bug (found, then fixed — see CHANGELOG) | Read the actual rendered page text before and after the fix | ❌→✅ "17 Jul 2026" (wrong, row-insertion time) → no date shown for the undated poster photo, "13 Sept 2025" for the dated one |
+
+### Photo import — real run, not a dry run
+
+10 of 12 source photos successfully optimized (`sharp`: `.rotate()` for EXIF orientation, default
+metadata stripping for GPS, resized to 1920px max, JPEG q82) and uploaded to the `animal-photos`
+Storage bucket. 2 failed with `ENOSPC` reading from the source path (`G:\My Drive\...`) —
+confirmed via `df -h` that the local Drive cache was genuinely at 100% capacity (104 MB free of
+232 GB) before concluding it wasn't a transient error worth retrying further.
+
+### Storage security — verified the right policy shape, not just "a" policy
+
+- Confirmed (before building anything) that no Google Sheets/Drive/Cloud MCP connector exists in
+  this environment (`ToolSearch` for "google sheets drive" / "google cloud workspace" returned
+  no matches) — informed the decision to build credential-gated application code rather than
+  expect to configure Google services directly from this session.
+- A first attempt at enabling local photo uploads (`create policy ... for insert to anon`) was
+  **blocked by the session's own safety classifier** as a public-write security concern — correct
+  behaviour, not worked around. Replaced with a permanent, properly-scoped policy (`for insert
+  to authenticated ... with check (has_role(admin))`) plus a real admin auth account.
+- Verified the real admin account (`shubhamsourav055+kgppawsadmin@gmail.com`) has exactly the
+  `admin` role and a confirmed email (direct SQL check), before using it to authenticate the
+  upload script.
+
+### Code review in place of a blocked build
+
+A large stretch of this session had Bash and the Supabase MCP's write tools intermittently
+returning "claude-sonnet-5 is temporarily unavailable" (a classifier outage, not a code issue).
+Rather than guess at correctness, reviewed the `googleapis` v173 type definitions directly
+(`node_modules/googleapis/build/src/apis/drive/v3.d.ts` and `googleapis-common`'s `GlobalOptions`)
+to confirm:
+- `google.sheets()`/`google.drive()` accept a `GoogleAuth` instance directly as `auth` (confirmed
+  via `GlobalOptions.auth: GoogleAuth | OAuth2Client | BaseExternalAccountClient | string`).
+- `drive.files.list()` responses are `GaxiosResponse<Schema$FileList>` — i.e. always accessed via
+  `.data.files`, never `.files` directly on the raw response. Found and fixed one spot where a
+  defensive-but-misleading `animalFolders.data?.files ?? animalFolders.files` fallback chain
+  worked at runtime (because `.data` was already destructured earlier) but was confusing; simplified.
+- `drive.files.get({alt:"media"}, {responseType:"arraybuffer"})` doesn't have a clean overload
+  for binary downloads — the types resolve to `Schema$File`, not binary data, even though the
+  documented runtime behaviour really does return raw bytes in `.data`. Used an explicit
+  `as unknown as ArrayBuffer` cast with a comment explaining why, rather than a bare cast that
+  might not compile if TypeScript considers the types insufficiently overlapping.
+
+### Build — found and fixed a real regression before it shipped
+
+First production build attempt after all of today's changes failed:
+`Export isPaymentConfigured doesn't exist in target module` (`components/donate/DonatePanel.tsx`).
+Caused by an earlier edit to `lib/config.ts` in this same session (adding `isGoogleConfigured`/
+`storagePublicUrl`) that dropped the existing `isPaymentConfigured` export. Cross-checked every
+`from "@/lib/config"` import site (`grep`) against the file's actual exports before concluding
+the fix was complete, rather than patching the one error the build happened to surface first.
+Restored `isPaymentConfigured` exactly as it was (reworking it is explicitly out of scope here —
+see KNOWN_ISSUES #8, that's M5's job).
+
+**Second build attempt** (after the fix above) got further — compiled successfully — then the
+TypeScript-checking phase crashed with `FATAL ERROR: Ineffective mark-compacts near heap limit
+Allocation failed - JavaScript heap out of memory`. Not assumed to be a real type error: retried
+with `NODE_OPTIONS=--max-old-space-size=6144`, which completed TypeScript checking in 2.9–3.9 min
+across two runs — confirming it was purely a memory ceiling (Three.js/R3F/drei's large type
+definitions), not a code defect. Made the fix permanent rather than a one-off command: added
+`cross-env`, changed `package.json`'s `build` script accordingly, then **re-verified using the
+plain `npm run build` command** (no manual env var) to confirm the fix actually lives in the
+script and isn't just something that happened to work once by accident.
+
+**Final result: 48 routes** (45 + `/api/sync/run`, `/api/sync/status`, `/api/media/ingest`),
+clean TypeScript, all static pages generated, using the exact command (`npm run build`) a
+fresh clone or Vercel would run.
+
+### Environment issues hit mid-session (not app bugs — see KNOWN_ISSUES #26–28)
+
+- `npm install` failed with `ENOSPC` even though the install target (`E:`) had 171 GB free,
+  because npm's cache lives on `C:`, which was completely full. Fixed by redirecting the cache
+  to a folder on `E:` for this install, without touching anything on the user's `C:` drive.
+- Bash's coreutils (`cat`, `ls`, `which`, `tail`) started failing with "command not found"
+  partway through the session — traced to the same `C:` drive pressure (Git Bash's `mingw64/bin`
+  lives on `C:`). Confirmed via `PowerShell`'s `Get-PSDrive` (a separate tool, unaffected) that
+  free space had recovered to ~9.6 GB by the time this was investigated. Switched to PowerShell
+  for build commands for the remainder of the session as a result.
 
 ## 2026-07-16 — Module M-B: Automated test suite
 

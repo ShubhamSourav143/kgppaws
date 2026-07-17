@@ -21,6 +21,26 @@ export function createStaticSupabase() {
 }
 
 /**
+ * Service-role client for privileged server-only writes: the Sheets sync
+ * engine, Drive media ingest, QR admin operations. Bypasses RLS entirely —
+ * never import this from anything reachable by a plain user request; only
+ * from cron-secret-gated route handlers.
+ *
+ * Returns null until SUPABASE_SERVICE_ROLE_KEY is set, matching the same
+ * "not configured yet" pattern as every other integration in this app.
+ */
+export function createServiceSupabase() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return null;
+  }
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } }
+  );
+}
+
+/**
  * Server Supabase client (RSC / route handlers / server actions).
  * Returns null in demo mode — callers must fall back to demo data.
  *

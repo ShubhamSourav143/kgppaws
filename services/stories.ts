@@ -1,6 +1,9 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { storagePublicUrl } from "@/lib/config";
 import { DEMO_STORIES, getDemoStory } from "@/lib/demo/stories";
 import type { Story } from "@/types";
+
+const STORY_SELECT = "*, story_media(*)";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function mapStoryRow(row: any): Story {
@@ -16,8 +19,17 @@ function mapStoryRow(row: any): Story {
     author: row.author ?? "KGP PAWS",
     heroPalette: row.hero_palette ?? ["#173F35", "#0E2B23"],
     blocks: row.blocks ?? [],
+    photos: (row.story_media ?? [])
+      .slice()
+      .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .filter((m: any) => m.kind !== "video" && m.storage_path)
+      .map((m: any) => ({
+        id: m.id,
+        url: storagePublicUrl(m.storage_path)!,
+        caption: m.caption ?? "",
+      })),
     featured: row.featured ?? false,
-    demo: false,
+    demo: row.is_demo ?? false,
   };
 }
 
@@ -26,7 +38,7 @@ export async function listStories(): Promise<Story[]> {
   if (supabase) {
     const { data, error } = await supabase
       .from("stories")
-      .select("*")
+      .select(STORY_SELECT)
       .eq("status", "published")
       .order("published_at", { ascending: false });
     if (!error && data) return data.map(mapStoryRow);
@@ -39,7 +51,7 @@ export async function getStory(slug: string): Promise<Story | undefined> {
   if (supabase) {
     const { data, error } = await supabase
       .from("stories")
-      .select("*")
+      .select(STORY_SELECT)
       .eq("slug", slug)
       .eq("status", "published")
       .maybeSingle();

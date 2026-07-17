@@ -13,6 +13,132 @@ All notable changes to this project, newest first. Format loosely follows
 
 ---
 
+## 2026-07-17 — Content Management System milestone (M2/M3, real photos, R3F/GSAP)
+
+The single largest module so far: real (non-demo) content on the site for the first time,
+a real-photo gallery system, a React Three Fiber + GSAP homepage showcase, and the code (not
+yet live-testable) for Google Sheets/Drive sync. Kicked off from the owner's own photo folder,
+which turned out to hold something more significant than expected.
+
+### A finding that reshaped the plan before any code was written
+- The owner's `Dog photo` folder wasn't stock/example imagery — it contained a real "URGENT:
+  ABANDONED DOG NEEDS YOU!" rescue poster from IIT KGP campus (a Dobermann found tied near
+  Dreamland), a real litter of rescued puppies, and several other individually-documented real
+  animals, spanning roughly Dec 2024–Sept 2025. This was established by actually opening and
+  looking at the photos before making any assumption, not by inferring intent from filenames.
+- Given the stakes of misattributing a real, possibly-still-open rescue case, this was treated
+  as a content decision only the owner could make (not a default to guess past) — confirmed via
+  a single, tightly-scoped question before proceeding. Chosen path: build real animal/story
+  records grounded only in directly-evidenced facts (the poster's own printed text; what the
+  photos actually show), explicitly marking anything unconfirmed (name, current status) rather
+  than inventing an ending. The 8 fictional demo animals were left untouched, still clearly
+  labelled `is_demo: true`.
+
+### Added — real content
+- **First real animal record**: `/animal/dreamland` (`PAWS-KGP-DOG-0034`, `public_id DOG00009`,
+  `is_demo: false`). Bio, health status ("monitoring") and health note are deliberately hedged —
+  no invented name, no claimed outcome, no asserted timeline between the two source photos
+  beyond what's visually apparent. Real QR tag issued (token `cfef198b`).
+- **First real story**: `/stories/field-notes-2025`, "Field Notes: Faces We've Met This Year" —
+  8 real photos (a December 2024 litter, several March 2025 individuals), honestly captioned,
+  explicitly declining to invent outcomes the record can't support.
+- 10 of 12 real photos optimized (sharp: EXIF/GPS stripped via `.rotate()` + default metadata
+  stripping, resized to a 1920px max dimension, re-encoded as JPEG q82) and uploaded to a new
+  public `animal-photos` Supabase Storage bucket. 2 photos failed — not a code defect, see Fixed.
+
+### Added — infrastructure to support real content
+- **Real admin auth account** (`shubhamsourav055+kgppawsadmin@gmail.com`, granted `admin` in
+  `user_roles`) — needed because Storage writes require an authenticated admin session, not
+  just a database connection, and this is also the first real `/admin` login going forward.
+- **Permanent `public_id` system** (migration `0002`/`0004`): `DOG#####`/`CAT#####`, backfilled
+  for all 9 existing animals, auto-assigned for new ones via a `BEFORE INSERT` trigger.
+- `drive_assets`, `site_settings`, `sync_log` tables; sync metadata columns on `animals`/`stories`.
+- A permanent, properly-scoped Storage RLS policy: authenticated admins may write to
+  `animal-photos`; everyone can read. Not a temporary hole — see Fixed below for what didn't
+  make it into the final design.
+- **`components/media/PhotoGallery.tsx`** — lightbox gallery (grid + full-view, prev/next,
+  Escape to close, arrow-key navigation), real photos via `next/image`, graceful gradient
+  fallback for demo entries with no upload. Wired into both animal profiles and story pages,
+  which previously only ever rendered a decorative "photo via CMS" placeholder — **no code
+  path existed to show a real photo at all** before this session.
+- **`components/home/RealFaces.tsx` + `RealFacesScene.tsx`** — homepage section, the first use
+  of React Three Fiber on the site: real photos as gently floating/rotating textured tiles
+  (`@react-three/drei`'s `Image`), mouse-parallax camera, plus a GSAP ScrollTrigger-pinned
+  horizontal scrub of photo captions. Dynamically imported (`ssr:false`), renders nothing when
+  there's no real content yet, and skips the Canvas entirely under `prefers-reduced-motion`
+  (static caption list only) rather than forcing WebGL motion on a visitor who asked for less.
+- `AnimalPortrait` now accepts an optional `photoUrl` and renders it (inside the same sized/
+  rounded container) instead of the illustration when a real cover photo exists — used on both
+  the animal profile hero and `AnimalCard`.
+- **Sheets sync engine code** (`app/api/sync/run`, `/status`) and **Drive ingest code**
+  (`app/api/media/ingest`) — real, complete `googleapis`-based implementations, cron-secret-
+  gated, following the exact "return `configured: false` rather than erroring" pattern used for
+  Supabase everywhere else. Deliberately scoped to one direction (Sheets/Drive → Supabase) and
+  one tab (Dogs) for this pass — see TASKS.md for why bidirectional sync and conflict
+  resolution are a follow-up, not this pass.
+
+### Fixed — found by review or by actually testing, not assumed correct
+- **A public-write Storage policy was correctly blocked before it shipped.** The first plan for
+  uploading local photos was a temporary `anon`-role INSERT policy on `storage.objects` — the
+  session's own safety classifier blocked it as a public-write security concern, which was the
+  right call. Replaced with a permanent, properly-scoped policy (authenticated admins only) and
+  a real admin account, rather than finding a way around the block.
+- **`services/stories.ts` hardcoded `demo: false` for every live-mode story** regardless of the
+  row's actual `is_demo` column — harmless while every live row happened to be non-demo, but
+  wrong in general and would have mislabelled a demo row if one were ever seeded live. Fixed to
+  read `row.is_demo`.
+- **Photo dates would have shown today's date, not the photo's actual date.** The animal-photo
+  mapper fell back to `created_at` (row-insertion time) when `taken_on` was unset — for a live
+  upload that's "whenever a volunteer got round to uploading it," not when the photo was taken.
+  Caught by looking at the actual rendered page ("17 Jul 2026" next to a photo of a 2025 rescue
+  poster) rather than trusting the query. Removed the fallback; no known date now shows no date
+  line at all, which is more honest than a wrong one.
+- **2 of 12 local photo uploads failed with `ENOSPC`**: the owner's local Google Drive cache
+  (`G:`) was at 100% capacity (104 MB free of 232 GB). Not a code defect — confirmed via `df -h`
+  before concluding it wasn't transient. Did not attempt to free space by deleting the owner's
+  files (out of scope, risky); proceeded with the 10 photos that succeeded, which was enough
+  for both the animal record and the story.
+- **`googleapis` and the Three.js/R3F/GSAP packages initially failed to install with `ENOSPC`**
+  — a *different* disk this time: the `C:` drive (npm's cache location) was at 0 bytes free,
+  even though the actual install target (`E:`) had 171 GB free. Fixed by redirecting npm's
+  cache to a folder on `E:` rather than touching anything on `C:`. The `C:` drive being
+  completely full is a standing environment issue, not something resolved here — see
+  KNOWN_ISSUES.
+- `animal_photos` had no unique constraint on `(animal_id, storage_path)`, which the Drive
+  ingest route's `upsert(...).onConflict(...)` silently depends on — would have errored the
+  first time the route actually ran. Added the constraint (migration `0005`) before it could
+  bite.
+- Documented Google Sheets "Dogs" tab has a `Breed` column with no matching database column.
+  Added `animals.breed` (migration `0005`) rather than silently dropping it during sync.
+- **Migrations `0002`–`0005` existed live in the database but not as files in the repo** —
+  applied directly via the Supabase MCP during development, never written back. A fresh clone
+  running `supabase db push` would not have reproduced the current schema. Closed by writing
+  `supabase/migrations/0002_cms_foundations.sql` through `0005_breed_and_photo_constraint.sql`
+  with the exact SQL that was actually applied, and correcting `docs/DATABASE_SCHEMA.md`'s
+  framing (it still said "planned additions" for things that had been live for hours).
+
+### Verified
+- Public Storage URL pattern (`{project}.supabase.co/storage/v1/object/public/animal-photos/…`)
+  fetches the real uploaded file directly (curl, 200 `image/jpeg`).
+- Next.js Image Optimizer correctly proxies and serves the same file through
+  `/_next/image?url=…` once `next.config.ts` allowlisted the Supabase host via `remotePatterns`.
+- `/animal/dreamland` and `/stories/field-notes-2025` both render real photos end-to-end (DOM
+  inspection: correct `<img>` src, correct alt text) — 1 real-photo card + 8 illustrated demo
+  cards on `/adopt`, confirming no regression to the existing fictional dataset.
+- Production build re-verified after all of today's changes: **48 routes** (up from 45 — the
+  3 new API routes), clean TypeScript, all static pages generated. Two real problems surfaced
+  and fixed along the way (not silently patched around) — see Fixed above for the
+  `isPaymentConfigured` regression, and below for the memory issue.
+- **`next build`'s TypeScript-checking phase ran out of memory** after adding Three.js/R3F/drei
+  (their type definitions are large; default V8 heap ~2 GB wasn't enough — first attempt crashed
+  with `FATAL ERROR: Ineffective mark-compacts near heap limit`, second attempt with a larger
+  heap took 2.9–3.9 min to typecheck successfully). Fixed **permanently**, not just for this one
+  run: added `cross-env` and changed `package.json`'s `build` script to
+  `cross-env NODE_OPTIONS=--max-old-space-size=6144 next build`, so both local builds and
+  Vercel's build inherit the larger heap automatically.
+
+---
+
 ## 2026-07-16 — Module M-B: Automated test suite ✅ TESTED
 
 45 Vitest unit tests + 17 Playwright E2E tests, all passing. Closes KNOWN_ISSUES #12

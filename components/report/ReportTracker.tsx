@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { Check, CircleDashed, SearchX } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
 import { ButtonLink } from "@/components/ui/Button";
 import { DEMO_REPORTS, PROBLEM_LABELS, SEVERITY_LABELS } from "@/lib/demo/reports";
-import { getLocalReports } from "@/lib/local-store";
+import { getLocalReports, readRaw, subscribeToLocalStore } from "@/lib/local-store";
 import { zoneName } from "@/lib/demo/zones";
 import {
   REPORT_STATUS_LABELS,
@@ -31,14 +31,22 @@ function formatDateTime(iso: string) {
  * their own reports; volunteers see assigned ones).
  */
 export function ReportTracker({ reportId }: { reportId: string }) {
-  const [report, setReport] = useState<RescueReport | null | undefined>(undefined);
+  // `rawReports` is `null` on the server and during initial hydration (we
+  // can't read localStorage there), then the real JSON string on the client
+  // — this mirrors the fallback-then-resolve behavior of the old effect
+  // without a hydration mismatch, since useSyncExternalStore renders the
+  // server snapshot until the client value is confirmed post-mount.
+  const rawReports = useSyncExternalStore<string | null>(
+    subscribeToLocalStore,
+    () => readRaw("reports"),
+    () => null
+  );
 
-  useEffect(() => {
+  const report = useMemo<RescueReport | null | undefined>(() => {
+    if (rawReports === null) return undefined;
     const all = [...getLocalReports(), ...DEMO_REPORTS];
-    setReport(
-      all.find((r) => r.id.toLowerCase() === reportId.toLowerCase()) ?? null
-    );
-  }, [reportId]);
+    return all.find((r) => r.id.toLowerCase() === reportId.toLowerCase()) ?? null;
+  }, [rawReports, reportId]);
 
   if (report === undefined) {
     return (

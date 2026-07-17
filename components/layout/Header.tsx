@@ -72,8 +72,13 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // close drawer on navigation
-  useEffect(() => setOpen(false), [pathname]);
+  // close drawer on navigation — adjust state during render rather than in
+  // an effect (see https://react.dev/learn/you-might-not-need-an-effect)
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setOpen(false);
+  }
 
   const dashboardHref =
     user?.role === "admin" || user?.role === "super_admin"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { CalendarClock, StickyNote } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
@@ -14,14 +14,13 @@ import type { AdoptionApplication, ApplicationStatus } from "@/types";
 const STATUSES = Object.keys(APPLICATION_STATUS_LABELS) as ApplicationStatus[];
 
 export default function AdminAdoptionsPage() {
-  const [apps, setApps] = useState<AdoptionApplication[]>([]);
+  const [apps] = useState<AdoptionApplication[]>(() => [
+    ...getLocalApplications(),
+    ...DEMO_APPLICATIONS,
+  ]);
   const [statusOverride, setStatusOverride] = useState<Record<string, ApplicationStatus>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [meetDates, setMeetDates] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    setApps([...getLocalApplications(), ...DEMO_APPLICATIONS]);
-  }, []);
 
   const animalName = (slug: string) =>
     DEMO_ANIMALS.find((a) => a.slug === slug)?.name ?? slug;

@@ -19,11 +19,7 @@ export function Counter({
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    if (!inView) return;
-    if (reduce) {
-      setDisplay(value);
-      return;
-    }
+    if (!inView || reduce) return;
     let raf: number;
     const start = performance.now();
     const tick = (now: number) => {
@@ -36,9 +32,13 @@ export function Counter({
     return () => cancelAnimationFrame(raf);
   }, [inView, value, duration, reduce]);
 
+  // reduced motion skips the rAF loop entirely — show the final value as
+  // soon as it's in view, computed during render instead of via setState
+  const shown = inView && reduce ? value : display;
+
   return (
     <span ref={ref}>
-      {display.toLocaleString("en-IN")}
+      {shown.toLocaleString("en-IN")}
       {suffix}
     </span>
   );

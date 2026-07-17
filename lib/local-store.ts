@@ -32,6 +32,29 @@ function write<T>(key: string, value: T) {
   }
 }
 
+/**
+ * Subscribe to same-tab demo-store writes, for `useSyncExternalStore`.
+ * Lets client-only reads react to storage changes without a
+ * `useEffect` + `setState` round trip on mount.
+ */
+export function subscribeToLocalStore(callback: () => void) {
+  window.addEventListener("kgppaws:store", callback);
+  return () => window.removeEventListener("kgppaws:store", callback);
+}
+
+/**
+ * Raw JSON string for a demo-store key. Unlike `read()`, the return value
+ * has normal string equality, so it's safe to use as a `useSyncExternalStore`
+ * snapshot without re-triggering renders on every check.
+ */
+export function readRaw(key: string): string {
+  try {
+    return window.localStorage.getItem(NS + key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 /* ------------------------------ Rescue reports ------------------------------ */
 
 export function getLocalReports(): RescueReport[] {

@@ -16,9 +16,27 @@ export const isMapboxConfigured = Boolean(
   process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 );
 
+/** Legacy Razorpay-oriented check — DonatePanel.tsx; slated for the UPI-QR rework in M5. */
 export const isPaymentConfigured = Boolean(
   process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
 );
+
+/**
+ * Google Sheets CMS + Drive media sync. False until a real service account
+ * + spreadsheet ID are provided — /api/sync/* and /api/media/ingest return
+ * a clear "not configured" response rather than erroring, matching the
+ * isSupabaseConfigured fallback pattern used everywhere else in this app.
+ */
+export const isGoogleConfigured = Boolean(
+  process.env.GOOGLE_SERVICE_ACCOUNT_JSON && process.env.GOOGLE_SHEETS_SPREADSHEET_ID
+);
+
+/** Public URL for a file in the `animal-photos` Storage bucket. */
+export function storagePublicUrl(path: string): string | undefined {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return undefined;
+  return `${base}/storage/v1/object/public/animal-photos/${path}`;
+}
 
 export const SITE = {
   name: "KGP PAWS",

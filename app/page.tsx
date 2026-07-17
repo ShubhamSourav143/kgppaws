@@ -4,6 +4,7 @@ import { CampusHome } from "@/components/home/CampusHome";
 import { Impact } from "@/components/home/Impact";
 import { MeetThePaws } from "@/components/home/MeetThePaws";
 import { DigitalIdentity } from "@/components/home/DigitalIdentity";
+import { RealFaces, type RealFacePhoto } from "@/components/home/RealFaces";
 import { StoriesPreview } from "@/components/home/StoriesPreview";
 import { MapPreview } from "@/components/home/MapPreview";
 import { HelpSection } from "@/components/home/HelpSection";
@@ -28,6 +29,18 @@ export default async function HomePage() {
     ["shanti", "rocket"].includes(a.slug)
   );
 
+  // Real (non-demo) photography only — nothing fictional ever appears here.
+  const realFacePhotos: RealFacePhoto[] = [
+    ...animals.flatMap((a) =>
+      a.photos
+        .filter((p) => p.url)
+        .map((p) => ({ url: p.url!, caption: p.caption || a.name, href: `/animal/${a.slug}` }))
+    ),
+    ...stories.flatMap((s) =>
+      s.photos.map((p) => ({ url: p.url, caption: p.caption || s.title, href: `/stories/${s.slug}` }))
+    ),
+  ];
+
   return (
     <>
       <Hero />
@@ -36,6 +49,7 @@ export default async function HomePage() {
       <Impact metrics={metrics} />
       <MeetThePaws animals={animals} />
       <DigitalIdentity animal={simba} />
+      <RealFaces photos={realFacePhotos.slice(0, 12)} />
       <StoriesPreview
         stories={featuredStories.length >= 3 ? featuredStories : stories}
       />

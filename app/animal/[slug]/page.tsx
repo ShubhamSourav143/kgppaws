@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   BadgeCheck,
-  Camera,
   HandHeart,
   Heart,
   Home,
@@ -13,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AnimalPortrait } from "@/components/animals/Portrait";
+import { PhotoGallery } from "@/components/media/PhotoGallery";
 import { MedicalTimeline } from "@/components/animals/MedicalTimeline";
 import { ShareButton } from "@/components/animals/ShareButton";
 import { SaveButton } from "@/components/animals/SaveButton";
@@ -25,7 +25,7 @@ import { DemoNotice } from "@/components/ui/Section";
 import { getAnimal, listAnimals } from "@/services/animals";
 import { listCampaigns } from "@/services/campaigns";
 import { zoneName } from "@/lib/demo/zones";
-import { formatDate, HEALTH_STATUS_LABELS } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { SITE } from "@/lib/config";
 
 export async function generateStaticParams() {
@@ -114,6 +114,7 @@ export default async function AnimalProfilePage({
               animal={animal}
               idle
               frame="arch"
+              photoUrl={animal.photos.find((p) => p.url)?.url}
               className="aspect-[4/4.6] shadow-lift"
             />
             <SaveButton
@@ -259,40 +260,26 @@ export default async function AnimalProfilePage({
           </section>
 
           {/* photo journey */}
-          <section aria-labelledby="photos-h">
-            <Reveal>
-              <h2 id="photos-h" className="font-display text-3xl font-bold text-forest-deep">
-                Photo journey
-              </h2>
-            </Reveal>
-            <ul className="mt-6 flex snap-x gap-4 overflow-x-auto pb-3">
-              {animal.photos.map((photo, i) => (
-                <li key={photo.id} className="w-60 shrink-0 snap-start">
-                  <Reveal delay={i * 0.08}>
-                    <figure className="overflow-hidden rounded-2xl border border-line bg-parchment shadow-soft">
-                      <div
-                        className="grain relative grid aspect-square place-items-center"
-                        style={{
-                          background: `linear-gradient(${140 + i * 40}deg, ${animal.portrait.from}, ${animal.portrait.to})`,
-                        }}
-                      >
-                        <Camera className="h-8 w-8 text-parchment/70" aria-hidden="true" />
-                        <span className="absolute bottom-2 right-3 text-[10px] font-bold text-parchment/70">
-                          photo via CMS
-                        </span>
-                      </div>
-                      <figcaption className="p-3">
-                        <p className="text-sm font-semibold text-forest-deep">
-                          {photo.caption}
-                        </p>
-                        <p className="mt-0.5 text-xs text-moss">{formatDate(photo.date)}</p>
-                      </figcaption>
-                    </figure>
-                  </Reveal>
-                </li>
-              ))}
-            </ul>
-          </section>
+          {animal.photos.length > 0 && (
+            <section aria-labelledby="photos-h">
+              <Reveal>
+                <h2 id="photos-h" className="font-display text-3xl font-bold text-forest-deep">
+                  Photo journey
+                </h2>
+              </Reveal>
+              <div className="mt-6">
+                <PhotoGallery
+                  photos={animal.photos.map((p) => ({
+                    id: p.id,
+                    url: p.url,
+                    caption: p.caption,
+                    date: p.date ? formatDate(p.date) : undefined,
+                  }))}
+                  fallbackPalette={[animal.portrait.from, animal.portrait.to]}
+                />
+              </div>
+            </section>
+          )}
 
           {/* sightings */}
           <section aria-labelledby="sightings-h">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,6 +31,7 @@ type Values = z.infer<ReturnType<typeof makeSchema>>;
 export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const {
     register,
     handleSubmit,
@@ -39,6 +40,15 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     resolver: zodResolver(makeSchema(mode)),
     defaultValues: { name: "" },
   });
+
+  // Preserves the original hard-reload redirect (not router.push) rather
+  // than guessing at intent; the mutation just needs to live in an effect,
+  // not the submit handler, to satisfy react-hooks/immutability.
+  useEffect(() => {
+    if (redirecting) {
+      window.location.href = "/dashboard";
+    }
+  }, [redirecting]);
 
   const onSubmit = async (values: Values) => {
     setServerError(null);
@@ -61,7 +71,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
       setServerError(error.message);
       return;
     }
-    window.location.href = "/dashboard";
+    setRedirecting(true);
   };
 
   return (

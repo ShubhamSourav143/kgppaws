@@ -84,16 +84,16 @@ when configured, demo data otherwise.
 
 | Route | Method | Status | Notes |
 |---|---|---|---|
-| `POST /api/sync/run` | POST | NOT STARTED (M2) | Cron-triggered (Vercel Cron, every 5 min) + manually triggerable from the admin dashboard. Header `x-cron-secret` required. Body `{ tabs?: string[] }` (omit = all tabs). Runs the diff/upsert/conflict logic described in ARCHITECTURE.md §6, writes a `sync_log` row, returns a summary. |
-| `GET /api/sync/status` | GET | NOT STARTED (M2) | Admin-only. Last N `sync_log` rows + any rows currently `_status=CONFLICT` or `ERROR`. Powers the dashboard sync-health panel. |
-| `POST /api/sync/resolve` | POST | NOT STARTED (M2) | Admin-only. Body `{ table, rowId, resolution: 'keep_sheet' | 'keep_db' }` — manually resolves a flagged conflict. |
+| `POST /api/sync/run` | POST | IN PROGRESS (M2) | **Code complete, 2026-07-17** — Sheets→Supabase for the Dogs tab only (see `app/api/sync/run/route.ts`). `x-cron-secret` header required; returns `{configured:false}` (200, not an error) when Google credentials are absent. Diffs by `sheet_row_id`, upserts `animals`, writes back generated `_id`/`public_id`, logs to `sync_log`. **Not yet bidirectional** — DB→Sheets write-back is a follow-up. Not vercel-cron-scheduled yet. **Untested against a real spreadsheet** — no credentials to test with. |
+| `GET /api/sync/status` | GET | COMPLETED (M2) | Returns the last 20 `sync_log` rows. RLS (not an app-level check) restricts this to admin/super_admin. No admin dashboard UI consumes it yet. |
+| `POST /api/sync/resolve` | POST | NOT STARTED (M2) | Deferred until sync is bidirectional — conflicts can't occur in a one-directional engine. |
 
 ## 7. Media ingestion (Google Drive)
 
 | Route | Method | Status | Notes |
 |---|---|---|---|
-| `POST /api/media/ingest` | POST | NOT STARTED (M3) | Cron-triggered (every 15 min) + manual trigger. Lists Drive changes since last cursor, downloads new/changed files, runs the optimize pipeline (sharp: strip EXIF-GPS, resize ladder, AVIF/WebP, blurhash), uploads to Supabase Storage, upserts `drive_assets`, links to `animal_photos`/`story_media` by folder convention, revalidates affected pages. |
-| `GET /api/media/status` | GET | NOT STARTED (M3) | Admin-only. Last ingest run summary, error list (e.g. unrecognized folder, corrupt file). |
+| `POST /api/media/ingest` | POST | IN PROGRESS (M3) | **Code complete, 2026-07-17** — see `app/api/media/ingest/route.ts`. Walks `Dogs/<public_id>/` subfolders under `GOOGLE_DRIVE_ROOT_FOLDER_ID`, downloads new/changed images (by `md5Checksum` vs. the last-ingested `drive_assets` row), optimizes with `sharp` (rotate/resize/strip metadata — one JPEG size, not yet the full AVIF/WebP responsive ladder), uploads to Storage, upserts `drive_assets` + `animal_photos`. `medical/`-folder files are catalogued but **deliberately not** auto-published — see code comment. **Untested against a real Drive folder.** Not cron-scheduled yet. |
+| `GET /api/media/status` | GET | NOT STARTED (M3) | Reuses `/api/sync/status`'s `sync_log` rows (tagged `tab_name: 'drive_media'`) — a dedicated endpoint hasn't been built, but the data already exists. |
 
 ## 8. Search
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BadgeIndianRupee, Plus, ShieldAlert } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
 import { Progress } from "@/components/ui/Progress";
@@ -12,13 +12,9 @@ import { formatINR, formatDate, pct } from "@/lib/utils";
 import type { CampaignExpense } from "@/types";
 
 export default function AdminDonationsPage() {
-  const [pledges, setPledges] = useState<LocalDonationIntent[]>([]);
+  const [pledges] = useState<LocalDonationIntent[]>(() => getLocalDonations());
   const [extraExpenses, setExtraExpenses] = useState<Record<string, CampaignExpense[]>>({});
   const [expenseForm, setExpenseForm] = useState<Record<string, { label: string; amount: string }>>({});
-
-  useEffect(() => {
-    setPledges(getLocalDonations());
-  }, []);
 
   const addExpense = (slug: string) => {
     const f = expenseForm[slug];

@@ -19,7 +19,7 @@ Nothing below is guessed or assumed — each is called out at the module it bloc
 | 3 | **The actual Google Sheet** (new, based on GOOGLE_SHEETS_SCHEMA.md) or confirmation to create one from the schema | M2 | Share link, or say "create it for me" | ❌ not provided |
 | 4 | **The actual Google Drive folder structure** (Dog Photos, Treatment Photos, Blog Images, Videos, Documents) — can be the folder already referenced (`G:\My Drive\By Shubham\Dog photo\`) reorganized, or a fresh structure | M3 | Folder link(s) + confirmation of the convention | ⏳ one local folder seen; not yet mapped to dogs or shared via API |
 | 5 | **Supabase project** | Live database (M1) | — | ✅ **done** — provisioned `kgp-paws` (ref `unyhhkulkgznqoqalqxk`, ap-south-1, $0/mo) in your `bms` org, schema + RLS applied, seeded, wired to Vercel |
-| 6 | **Photo → animal mapping** for the 8 seed dogs (or a fresh list of real animals to replace the demo set) + which photo is the homepage hero | Real-photography experience (M3) | A simple list: "IMG-...WA0001 = Simba", etc. | ❌ not provided (asked twice, unanswered) |
+| 6 | **Photo → animal mapping** | Real-photography experience | ✅ **resolved 2026-07-17, differently than expected** — the photos in `G:\My Drive\By Shubham\Dog photo\` turned out to be real IIT KGP rescue documentation (an "abandoned dog" appeal poster, real puppies), not stock/example content or photos of the 8 fictional demo dogs. Confirmed with the owner before use (see CHANGELOG); resulted in one new real animal record + one new real story, **not** a mapping onto Simba/Muesli/etc. |
 | 7 | **Vercel project access** | Already have it — deployed 2026-07-16 | — | ✅ done |
 | 8 | **Domain** `kgppaws.org` (or chosen alternative) | Custom domain, canonical QR URLs (M10) | Registrar access or confirmation to purchase | ❌ not provided |
 | 9 | **Email provider** decision + credentials (Resend recommended; or Gmail/Workspace SMTP app password) | Notifications (M6) | Pick one; provide API key or Gmail app password | ❌ not decided |
@@ -82,19 +82,44 @@ system-preference default + manual toggle with persistence. Required by spec
 - ⏭️ `SUPABASE_SERVICE_ROLE_KEY` not yet set — not needed until the first server route (M2).
   Retrieve from Supabase dashboard → Project Settings → API when M2 starts.
 
-### M2 — Google Sheets sync engine — BLOCKED (deps #2, #3); can start schema/engine code against a scratch Sheet in parallel with M1
-- Build `/api/sync/run`, `/api/sync/status`, `/api/sync/resolve`.
-- Migration `0002` sync columns + `sync_log` table.
-- Admin dashboard sync-health panel.
-- Verify: edit a row in Sheets → appears on site within one cron cycle; edit in dashboard →
-  appears in Sheets; deliberately conflict a row → both sides show `CONFLICT`, resolvable.
+### M2 — Google Sheets sync engine — **CODE COMPLETE, BLOCKED ON CREDENTIALS FOR LIVE TEST** (dep #2)
+- ✅ Migration `0002`/`0005`: `public_id` + auto-assign trigger, `sheet_row_id`/`row_version`/
+  `sync_source`/`synced_at` on `animals`/`stories`, `sync_log`, `site_settings`, `breed` column.
+- ✅ `/api/sync/run` built — Sheets→Supabase, Dogs tab, cron-secret-gated, `googleapis`-based,
+  writes generated `_id`/`public_id` back to the sheet, logs every run to `sync_log`.
+- ✅ `/api/sync/status` built — recent runs for the (not-yet-built) admin panel.
+- ⏭️ Deliberately deferred to a later pass, once the one-directional engine is verified against
+  a real sheet: `/api/sync/resolve` (conflict resolution — not needed until bidirectional),
+  Supabase→Sheets write-back, the admin dashboard's sync-health panel, Vercel Cron wiring.
+- ⚠️ **Cannot be verified end-to-end without dep #2** (Google Cloud service account + a real
+  spreadsheet). The column-mapping logic is reasoned through carefully (see code comments in
+  `app/api/sync/run/route.ts`) but has never run against live Sheets data.
 
-### M3 — Google Drive media pipeline + real-photography experience — BLOCKED (deps #2, #4, #6)
-- Build `/api/media/ingest`, `drive_assets` table, sharp optimization pipeline.
-- Replace illustrated portraits with real photos across cards, profile, gallery.
-- Build floating image walls / scroll storytelling with GSAP + Lenis using real photos.
-- Verify: drop a photo in the Drive folder → optimized variants appear on the live profile
-  within one ingest cycle; Lighthouse image metrics stay green (no CLS, lazy-loaded).
+### M3 — Google Drive media pipeline + real-photography experience — **PARTIALLY COMPLETE**
+- ✅ **Real-photography experience shipped** — not via the Drive API (still blocked on dep #2),
+  but via a one-time **local import** since the owner's Drive is mounted locally on this
+  machine. 10 real photos optimized (sharp: EXIF/GPS-stripped, resized, re-encoded) and
+  uploaded to Supabase Storage. Resulted in one new real animal (`/animal/dreamland`) and one
+  new real story (`/stories/field-notes-2025`) — see CHANGELOG for why it wasn't a mapping onto
+  the 8 fictional demo dogs.
+- ✅ Illustrated portraits now correctly replaced by real cover photos **wherever a real photo
+  exists** (`AnimalPortrait` accepts an optional `photoUrl`); the 8 fictional demo animals keep
+  their illustrations by design (see PRD.md §5.A).
+- ✅ Real-photo lightbox gallery (`components/media/PhotoGallery.tsx`) — used on both animal
+  profiles and story pages.
+- ✅ Floating image wall / scroll storytelling shipped as `components/home/RealFaces.tsx` — a
+  React Three Fiber floating-photo-tile scene + GSAP ScrollTrigger horizontal caption scrub
+  (GSAP + R3F rather than the originally-scoped GSAP + Lenis; Lenis wasn't needed once R3F
+  handled the "floating" part). Renders nothing when there's no real content yet; static
+  fallback under `prefers-reduced-motion`.
+- ✅ `/api/media/ingest` built (Drive→Storage, `Dogs/<public_id>/{cover,gallery/,medical/}`
+  convention) — same "code complete, credential-gated" status as M2's sync engine.
+- ⏭️ Not done: automatic ingestion when a volunteer drops a NEW photo in Drive (needs dep #2);
+  cover-image override via a Sheets column (Drive filename convention works, Sheets override
+  doesn't yet); responsive AVIF/WebP ladder (current pipeline produces one optimized JPEG per
+  photo — proportionate for a manual import, the automated pipeline should do more).
+- Verify (once dep #2 arrives): drop a photo in the Drive folder → optimized variants appear on
+  the live profile within one ingest cycle; Lighthouse image metrics stay green.
 
 ### M4 — Animal profile v2 + permanent ID + QR/PDF — depends on M1; independent of M2/M3 schema-wise
 - `public_id` (`DOG#####`) migration + `/dog/[publicId]` route.

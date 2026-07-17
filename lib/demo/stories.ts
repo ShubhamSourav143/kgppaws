@@ -16,6 +16,7 @@ export const DEMO_STORIES: Story[] = [
     heroPalette: ["#C97F45", "#173F35"],
     featured: true,
     demo: true,
+    photos: [],
     blocks: [
       {
         type: "p",
@@ -78,6 +79,7 @@ export const DEMO_STORIES: Story[] = [
     heroPalette: ["#C48A5A", "#7A4A2B"],
     featured: true,
     demo: true,
+    photos: [],
     blocks: [
       {
         type: "p",
@@ -122,6 +124,7 @@ export const DEMO_STORIES: Story[] = [
     heroPalette: ["#6E7570", "#202421"],
     featured: true,
     demo: true,
+    photos: [],
     blocks: [
       {
         type: "p",
@@ -164,6 +167,7 @@ export const DEMO_STORIES: Story[] = [
     author: "Guest — adopter family",
     heroPalette: ["#DCC9A3", "#8C6A4F"],
     demo: true,
+    photos: [],
     blocks: [
       {
         type: "p",
@@ -207,6 +211,7 @@ export const DEMO_STORIES: Story[] = [
     author: "Volunteer diary",
     heroPalette: ["#173F35", "#0E2B23"],
     demo: true,
+    photos: [],
     blocks: [
       {
         type: "p",
@@ -248,6 +253,7 @@ export const DEMO_STORIES: Story[] = [
     author: "KGP PAWS",
     heroPalette: ["#B59B77", "#5E432C"],
     demo: true,
+    photos: [],
     blocks: [
       {
         type: "p",
