@@ -22,14 +22,13 @@ import {
   getTabConfig,
   heartbeat,
 } from "./queue";
-import { releaseLock, tryAcquireLock } from "./locks";
 import { getHandler } from "./tabs";
 import type { SyncJob, TabConfig, TabRunContext, TabRunResult } from "./types";
 
 export interface WorkerResult {
   ran: boolean;
   jobId?: string;
-  state?: "succeeded" | "failed" | "skipped_locked" | "no_handler";
+  state?: "succeeded" | "failed" | "no_handler";
   tab?: string;
   direction?: string;
   reason?: string;
@@ -76,24 +75,9 @@ export async function runOnce(supabase: SupabaseClient): Promise<WorkerResult> {
     };
   }
 
-  // Try to acquire the tab's advisory lock. If another worker holds it, we
-  // release our claim on the job (revert state → queued) and let the next
-  // poll pick it up when the other worker finishes.
-  const locked = await tryAcquireLock(supabase, job.tab);
-  if (!locked) {
-    await supabase
-      .from("sync_jobs")
-      .update({ state: "queued", started_at: null, heartbeat_at: null })
-      .eq("id", job.id);
-    return {
-      ran: true,
-      jobId: job.id,
-      state: "skipped_locked",
-      tab: job.tab,
-      direction: job.direction,
-    };
-  }
-
+  // Per-tab mutual exclusion is enforced inside claimNextJob (heartbeat-
+  // guarded running-job lease) — by the time we hold a claimed job, no other
+  // live worker is running this tab.
   try {
     const handler = getHandler(job.tab);
     if (!handler) {
@@ -188,8 +172,6 @@ export async function runOnce(supabase: SupabaseClient): Promise<WorkerResult> {
       direction: job.direction,
       reason: err instanceof Error ? err.message : String(err),
     };
-  } finally {
-    await releaseLock(supabase, job.tab);
   }
 }
 

@@ -5,20 +5,25 @@
 --   - Job queue + audit + conflict tables
 --   - Per-tab configuration table (declarative archival policy)
 --   - Content tables (one per Sheets tab)
---   - Renamed sync-metadata columns matching new 8-column Sheet system-column set
+--   - Staging tables (atomic-apply landing zones)
+--   - Renamed sync-metadata columns matching the 8-column Sheet system set
 --   - Rename site_settings → content_settings
---   - Immutable content_audit_log via missing update/delete policies
---   - Advisory-lock helpers for the sync worker
+--   - content_audit_log immutability enforced by a BEFORE trigger (not RLS —
+--     the service role bypasses RLS, so a trigger is the only real guarantee)
 --
--- Idempotent: uses IF NOT EXISTS / CREATE OR REPLACE throughout so a partial
--- application can be resumed. Row-level data is preserved.
+-- Concurrency note: per-tab mutual exclusion uses a heartbeat-guarded
+-- "running-job lease" on sync_jobs (a tab with a fresh 'running' job cannot
+-- be claimed again). Session-scoped pg_advisory_lock was rejected: PostgREST
+-- connection pooling means acquire and release can land on different backend
+-- sessions, leaking the lock.
+--
+-- Idempotent: IF NOT EXISTS / guarded DO blocks throughout, so a partial
+-- application can be resumed. Row data is preserved.
 -- ============================================================
-
--- ---------- 1. Extensions ----------
 
 create extension if not exists pgcrypto;
 
--- ---------- 2. Rename site_settings → content_settings ----------
+-- ---------- 1. Rename site_settings → content_settings ----------
 
 do $$ begin
   if exists (select 1 from information_schema.tables
@@ -30,15 +35,13 @@ do $$ begin
   end if;
 end $$;
 
--- ---------- 3. Standard sync-metadata columns helper ----------
---
--- Every content/master-data table gets the same 10-column sync-metadata block.
--- Encapsulating in a function so the migration file stays readable.
+-- ---------- 2. Sync-metadata columns on existing synced tables ----------
 
 create or replace function _add_sync_metadata_columns(tbl regclass) returns void
-language plpgsql as $$
+language plpgsql as $fn$
 declare
   qualified text := tbl::text;
+  cname text := replace(replace(tbl::text, 'public.', ''), '"', '') || '_sheet_row_id_key';
 begin
   execute format('alter table %s add column if not exists sheet_row_id text', qualified);
   execute format('alter table %s add column if not exists public_id text', qualified);
@@ -49,51 +52,42 @@ begin
   execute format('alter table %s add column if not exists sync_source text not null default ''sheets''', qualified);
   execute format('alter table %s add column if not exists is_active boolean not null default true', qualified);
   execute format('alter table %s add column if not exists archived_at timestamptz', qualified);
-  -- add unique constraint on sheet_row_id (nullable UNIQUE — allows staging inserts before UUID assigned)
-  execute format($fmt$
-    do $$ begin
-      if not exists (
-        select 1 from pg_constraint
-        where conname = '%1$s_sheet_row_id_key'
-      ) then
-        alter table %2$s add constraint %1$s_sheet_row_id_key unique (sheet_row_id);
-      end if;
-    end $$;
-  $fmt$, replace(qualified, 'public.', ''), qualified);
-end $$;
+  if not exists (
+    select 1 from pg_constraint where conrelid = tbl and conname = cname
+  ) then
+    execute format('alter table %s add constraint %I unique (sheet_row_id)', qualified, cname);
+  end if;
+end $fn$;
 
--- Apply to existing tables that participate in sync.
--- animals and stories already have some columns (from migration 0002); the function is
--- idempotent, so existing columns are untouched and only missing ones added.
 select _add_sync_metadata_columns('public.animals');
 select _add_sync_metadata_columns('public.stories');
 select _add_sync_metadata_columns('public.donation_campaigns');
 select _add_sync_metadata_columns('public.content_settings');
+select _add_sync_metadata_columns('public.animal_medical_events');
 
--- Rename the old `synced_at` (migration 0002) to `last_synced_at` if it exists.
+-- Rename 0002's `synced_at` to `last_synced_at` where it exists.
 do $$ begin
   if exists (select 1 from information_schema.columns
-             where table_schema='public' and table_name='animals'
-             and column_name='synced_at')
-     and not exists (select 1 from information_schema.columns
-                     where table_schema='public' and table_name='animals'
-                     and column_name='last_synced_at')
-  then
+             where table_schema='public' and table_name='animals' and column_name='synced_at') then
+    if exists (select 1 from information_schema.columns
+               where table_schema='public' and table_name='animals' and column_name='last_synced_at') then
+      -- both exist (helper added last_synced_at first): keep 0002's data, drop the empty new one
+      alter table animals drop column last_synced_at;
+    end if;
     alter table animals rename column synced_at to last_synced_at;
   end if;
 
   if exists (select 1 from information_schema.columns
-             where table_schema='public' and table_name='stories'
-             and column_name='synced_at')
-     and not exists (select 1 from information_schema.columns
-                     where table_schema='public' and table_name='stories'
-                     and column_name='last_synced_at')
-  then
+             where table_schema='public' and table_name='stories' and column_name='synced_at') then
+    if exists (select 1 from information_schema.columns
+               where table_schema='public' and table_name='stories' and column_name='last_synced_at') then
+      alter table stories drop column last_synced_at;
+    end if;
     alter table stories rename column synced_at to last_synced_at;
   end if;
 end $$;
 
--- ---------- 4. tab_config — declarative per-tab configuration ----------
+-- ---------- 3. tab_config — declarative per-tab configuration ----------
 
 create table if not exists tab_config (
   tab_name         text primary key,
@@ -117,33 +111,30 @@ create policy tab_config_admin_write on tab_config for all
   using (has_role(array['admin','super_admin']::user_role[]))
   with check (has_role(array['admin','super_admin']::user_role[]));
 
--- Seed all 18 editable tabs. INSERT ... ON CONFLICT DO NOTHING so re-runs are safe.
+-- Dogs archival: 'manual' until M-CMS-3 adds the current_status column the
+-- intended status_based predicate needs. Changing later is a one-row UPDATE.
 insert into tab_config (tab_name, category, direction, db_tables, db_primary_table, archive_policy, revalidate_paths, active_column) values
-  -- Content
-  ('Home',           'content',          'sheets_to_db', array['content_home'],       'content_home',       '{"kind":"none"}'::jsonb,                                                                                     array['/'],                              true),
-  ('Adoption',       'content',          'sheets_to_db', array['content_adoption'],   'content_adoption',   '{"kind":"none"}'::jsonb,                                                                                     array['/adopt'],                         true),
-  ('Donate',         'content',          'sheets_to_db', array['donation_campaigns','content_donate'], 'donation_campaigns', '{"kind":"status_based","archive_when":"is_active = false and updated_at < now() - interval ''180 days''"}'::jsonb, array['/donate','/'], true),
-  ('Stories',        'content',          'sheets_to_db', array['stories'],            'stories',            '{"kind":"status_based","archive_when":"status = ''draft'' and updated_at < now() - interval ''180 days''"}'::jsonb, array['/stories','/stories/[slug]'], true),
-  ('Help',           'content',          'sheets_to_db', array['content_help'],       'content_help',       '{"kind":"none"}'::jsonb,                                                                                     array['/help','/volunteer'],             true),
-  ('Events',         'content',          'sheets_to_db', array['content_events'],     'content_events',     '{"kind":"status_based","archive_when":"ends_at < now() - interval ''90 days''"}'::jsonb,                    array['/events','/'],                    true),
-  ('FAQ',            'content',          'sheets_to_db', array['content_faq'],        'content_faq',        '{"kind":"none"}'::jsonb,                                                                                     array['/faq'],                           true),
-  ('Navigation',     'content',          'sheets_to_db', array['content_navigation'], 'content_navigation', '{"kind":"none"}'::jsonb,                                                                                     array['/'],                              true),
-  ('Footer',         'content',          'sheets_to_db', array['content_footer'],     'content_footer',     '{"kind":"none"}'::jsonb,                                                                                     array['/'],                              true),
-  -- Master Data
-  ('Dogs',           'master_data',      'sheets_to_db', array['animals'],            'animals',            '{"kind":"status_based","archive_when":"health_status = ''deceased'' and updated_at < now() - interval ''365 days''"}'::jsonb, array['/adopt','/animal/[slug]'], true),
-  ('Volunteers',     'master_data',      'sheets_to_db', array['volunteer_directory'],'volunteer_directory','{"kind":"none"}'::jsonb,                                                                                     array['/volunteer','/about'],            true),
-  ('Website Settings','master_data',     'sheets_to_db', array['content_settings'],   'content_settings',   '{"kind":"none"}'::jsonb,                                                                                     array['/'],                              false),
-  -- Transaction Data — volunteer-submitted
-  ('Medical History','transaction_data', 'sheets_to_db', array['animal_medical_events'], 'animal_medical_events', '{"kind":"time_window","column":"event_date","keep":"2 years"}'::jsonb,                                array['/animal/[slug]'],                 true),
-  ('Vaccination',    'transaction_data', 'sheets_to_db', array['animal_vaccinations'],'animal_vaccinations','{"kind":"time_window","column":"date_given","keep":"3 years"}'::jsonb,                                      array['/animal/[slug]'],                 true),
-  ('Sterilization',  'transaction_data', 'sheets_to_db', array['animal_sterilizations'],'animal_sterilizations','{"kind":"none"}'::jsonb,                                                                                array['/animal/[slug]'],                 true),
-  -- Transaction Data — public-submitted (DB → Sheets)
-  ('Adoption Applications', 'transaction_data', 'db_to_sheets', array['adoption_applications'],  'adoption_applications',  '{"kind":"status_based","archive_when":"status in (''adopted'',''not_selected'') and updated_at < now() - interval ''90 days''"}'::jsonb, array['/admin/adoptions'], false),
-  ('Donation Confirmations','transaction_data', 'db_to_sheets', array['donation_confirmations'], 'donation_confirmations', '{"kind":"size_threshold","order_by":"created_at","keep_newest":500}'::jsonb,                array['/admin/donations','/donate'],   false),
-  ('Reports',              'transaction_data', 'db_to_sheets', array['rescue_reports'],          'rescue_reports',         '{"kind":"status_based","archive_when":"status = ''resolved'' and updated_at < now() - interval ''30 days''"}'::jsonb, array['/admin/reports'], false)
+  ('Home',            'content',          'sheets_to_db', array['content_home'],       'content_home',       '{"kind":"none"}'::jsonb,                                                                                     array['/'],                          true),
+  ('Adoption',        'content',          'sheets_to_db', array['content_adoption'],   'content_adoption',   '{"kind":"none"}'::jsonb,                                                                                     array['/adopt'],                     true),
+  ('Donate',          'content',          'sheets_to_db', array['donation_campaigns','content_donate'], 'donation_campaigns', '{"kind":"status_based","archive_when":"is_active = false and updated_at < now() - interval ''180 days''"}'::jsonb, array['/donate','/'], true),
+  ('Stories',         'content',          'sheets_to_db', array['stories'],            'stories',            '{"kind":"status_based","archive_when":"status = ''draft'' and updated_at < now() - interval ''180 days''"}'::jsonb, array['/stories'],   true),
+  ('Help',            'content',          'sheets_to_db', array['content_help'],       'content_help',       '{"kind":"none"}'::jsonb,                                                                                     array['/volunteer','/about'],        true),
+  ('Events',          'content',          'sheets_to_db', array['content_events'],     'content_events',     '{"kind":"status_based","archive_when":"ends_at < now() - interval ''90 days''"}'::jsonb,                    array['/'],                          true),
+  ('FAQ',             'content',          'sheets_to_db', array['content_faq'],        'content_faq',        '{"kind":"none"}'::jsonb,                                                                                     array['/'],                          true),
+  ('Navigation',      'content',          'sheets_to_db', array['content_navigation'], 'content_navigation', '{"kind":"none"}'::jsonb,                                                                                     array['/'],                          true),
+  ('Footer',          'content',          'sheets_to_db', array['content_footer'],     'content_footer',     '{"kind":"none"}'::jsonb,                                                                                     array['/'],                          true),
+  ('Dogs',            'master_data',      'sheets_to_db', array['animals'],            'animals',            '{"kind":"manual"}'::jsonb,                                                                                   array['/adopt'],                     true),
+  ('Volunteers',      'master_data',      'sheets_to_db', array['volunteer_directory'],'volunteer_directory','{"kind":"none"}'::jsonb,                                                                                     array['/volunteer','/about'],        true),
+  ('Website Settings','master_data',      'sheets_to_db', array['content_settings'],   'content_settings',   '{"kind":"none"}'::jsonb,                                                                                     array['/'],                          false),
+  ('Medical History', 'transaction_data', 'sheets_to_db', array['animal_medical_events'],  'animal_medical_events',  '{"kind":"time_window","column":"event_date","keep":"2 years"}'::jsonb,                              array[]::text[],                     true),
+  ('Vaccination',     'transaction_data', 'sheets_to_db', array['animal_vaccinations'],    'animal_vaccinations',    '{"kind":"time_window","column":"date_given","keep":"3 years"}'::jsonb,                              array[]::text[],                     true),
+  ('Sterilization',   'transaction_data', 'sheets_to_db', array['animal_sterilizations'],  'animal_sterilizations',  '{"kind":"none"}'::jsonb,                                                                            array[]::text[],                     true),
+  ('Adoption Applications',  'transaction_data', 'db_to_sheets', array['adoption_applications'],  'adoption_applications',  '{"kind":"status_based","archive_when":"status in (''adopted'',''not_selected'') and updated_at < now() - interval ''90 days''"}'::jsonb, array[]::text[], false),
+  ('Donation Confirmations', 'transaction_data', 'db_to_sheets', array['donation_confirmations'], 'donation_confirmations', '{"kind":"size_threshold","order_by":"created_at","keep_newest":500}'::jsonb,                 array[]::text[],                     false),
+  ('Reports',                'transaction_data', 'db_to_sheets', array['rescue_reports'],         'rescue_reports',         '{"kind":"status_based","archive_when":"status = ''resolved'' and updated_at < now() - interval ''30 days''"}'::jsonb, array[]::text[], false)
 on conflict (tab_name) do nothing;
 
--- ---------- 5. sync_jobs — the job queue ----------
+-- ---------- 4. sync_jobs — the job queue ----------
 
 create table if not exists sync_jobs (
   id            uuid primary key default gen_random_uuid(),
@@ -172,8 +163,7 @@ create index if not exists idx_sync_jobs_state_next on sync_jobs (state, next_ru
   where state in ('queued', 'running');
 create index if not exists idx_sync_jobs_tab_dir on sync_jobs (tab, direction, enqueued_at desc);
 
--- Dedup: at most one active job per (tab, direction, row_id).
--- Using a partial unique index; NULL row_id treated as sentinel via COALESCE.
+-- Dedup: at most one active job per (tab, direction, row-key).
 create unique index if not exists uniq_sync_jobs_active
   on sync_jobs (tab, direction, coalesce(row_id, '00000000-0000-0000-0000-000000000000'::uuid))
   where state in ('queued', 'running');
@@ -182,9 +172,12 @@ alter table sync_jobs enable row level security;
 drop policy if exists sync_jobs_admin_read on sync_jobs;
 create policy sync_jobs_admin_read on sync_jobs for select
   using (has_role(array['admin','super_admin']::user_role[]));
--- Writes are service-role only (no policy created for public roles).
+-- Writes: service role only (no write policy for public roles).
 
--- ---------- 6. sync_conflicts ----------
+-- Link the per-run summary log to its job.
+alter table sync_log add column if not exists job_id uuid references sync_jobs(id);
+
+-- ---------- 5. sync_conflicts ----------
 
 create table if not exists sync_conflicts (
   id             uuid primary key default gen_random_uuid(),
@@ -199,7 +192,8 @@ create table if not exists sync_conflicts (
   resolved_by    uuid references auth.users(id),
   resolved_at    timestamptz
 );
-create index if not exists idx_sync_conflicts_open on sync_conflicts (detected_at desc) where resolution is null;
+create index if not exists idx_sync_conflicts_open on sync_conflicts (detected_at desc)
+  where resolution is null;
 
 alter table sync_conflicts enable row level security;
 drop policy if exists sync_conflicts_admin_read on sync_conflicts;
@@ -210,7 +204,7 @@ create policy sync_conflicts_admin_write on sync_conflicts for update
   using (has_role(array['admin','super_admin']::user_role[]))
   with check (has_role(array['admin','super_admin']::user_role[]));
 
--- ---------- 7. content_audit_log — immutable per-row diff log ----------
+-- ---------- 6. content_audit_log — immutable per-row diff log ----------
 
 create table if not exists content_audit_log (
   id            bigserial primary key,
@@ -227,14 +221,26 @@ create index if not exists idx_content_audit_row on content_audit_log (table_nam
 create index if not exists idx_content_audit_at on content_audit_log (at desc);
 
 alter table content_audit_log enable row level security;
--- Read: admin only.
 drop policy if exists content_audit_admin_read on content_audit_log;
 create policy content_audit_admin_read on content_audit_log for select
   using (has_role(array['admin','super_admin']::user_role[]));
--- Insert: service role only (no policy for public roles).
--- Update, Delete: no policies AT ALL → completely blocked even for service role (immutable).
+-- Inserts: service role only. Updates/deletes: blocked for EVERYONE by trigger
+-- below — RLS alone cannot protect against the service role (it bypasses RLS).
 
--- ---------- 8. Content tables ----------
+create or replace function forbid_audit_mutation() returns trigger
+language plpgsql
+set search_path = public
+as $fn$
+begin
+  raise exception '% is append-only — % blocked', tg_table_name, tg_op;
+end $fn$;
+
+drop trigger if exists tr_content_audit_log_immutable on content_audit_log;
+create trigger tr_content_audit_log_immutable
+  before update or delete on content_audit_log
+  for each row execute function forbid_audit_mutation();
+
+-- ---------- 7. Content tables ----------
 
 create table if not exists content_home (
   id                uuid primary key default gen_random_uuid(),
@@ -492,6 +498,28 @@ create table if not exists animal_sterilizations (
   updated_at        timestamptz not null default now()
 );
 
+-- ---------- 8. Staging tables (atomic-apply landing zones) ----------
+-- One stg_<table> per Sheets→DB synced table. No FKs/triggers — pure landing
+-- zone. RLS enabled with zero policies: only the service role (bypasses RLS)
+-- can touch them.
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'animals','stories','donation_campaigns','content_settings',
+    'animal_medical_events','animal_vaccinations','animal_sterilizations',
+    'content_home','content_adoption','content_donate','content_help',
+    'content_events','content_faq','content_navigation','content_footer',
+    'volunteer_directory'
+  ] loop
+    execute format('create table if not exists stg_%I (like %I including defaults)', t, t);
+    execute format('alter table stg_%I add column if not exists sync_job_id uuid', t);
+    execute format('alter table stg_%I enable row level security', t);
+  end loop;
+end $$;
+
 -- ---------- 9. RLS on new content tables ----------
 
 do $$
@@ -523,27 +551,12 @@ begin
     'volunteer_directory','animal_vaccinations','animal_sterilizations',
     'tab_config'
   ] loop
-    execute format($fmt$
-      drop trigger if exists tr_%1$s_updated_at on %1$s;
-      create trigger tr_%1$s_updated_at before update on %1$s
-        for each row execute function set_updated_at();
-    $fmt$, tbl);
+    execute format('drop trigger if exists tr_%s_updated_at on %I', tbl, tbl);
+    execute format('create trigger tr_%s_updated_at before update on %I for each row execute function set_updated_at()', tbl, tbl);
   end loop;
 end $$;
 
--- ---------- 11. Advisory-lock helpers (used by lib/sync/locks.ts) ----------
-
-create or replace function sync_try_acquire_lock(tab_name text) returns boolean
-language sql as $$
-  select pg_try_advisory_lock(hashtext('kgp-paws:sync:' || tab_name));
-$$;
-
-create or replace function sync_release_lock(tab_name text) returns void
-language sql as $$
-  select pg_advisory_unlock(hashtext('kgp-paws:sync:' || tab_name));
-$$;
-
--- ---------- 12. Cleanup: drop the helper ----------
+-- ---------- 11. Cleanup ----------
 
 drop function _add_sync_metadata_columns(regclass);
 

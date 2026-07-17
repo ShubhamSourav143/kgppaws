@@ -194,7 +194,8 @@ compat-shim call to `/api/sync/run` enqueues a job in the new queue.
   - `lib/sync/incremental.ts` — incremental scan logic (§7.1). Reads `_updated_at` column,
     computes candidate set, batchGet full rows.
   - `lib/sync/audit.ts` — diff computation, `content_audit_log` writer.
-  - `lib/sync/locks.ts` — `pg_advisory_lock` wrapper for per-tab locking with heartbeat.
+  - Per-tab mutual exclusion lives in `queue.ts` as a heartbeat-guarded running-job lease —
+    session-scoped `pg_advisory_lock` was rejected (leaks under PostgREST connection pooling).
 - New API routes:
   - `POST /api/sync/enqueue` — admin-authenticated. Enqueues a job. Dedups on
     `(tab, direction, row_id)`.

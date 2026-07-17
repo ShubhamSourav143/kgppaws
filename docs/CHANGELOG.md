@@ -13,6 +13,49 @@ All notable changes to this project, newest first. Format loosely follows
 
 ---
 
+## 2026-07-17 — Final architecture review pack + migration 0006 fixes (pre-apply)
+
+Owner-requested review deliverables before the live migration, plus real defects found by
+re-reviewing the committed migration *before* it ever ran against the database.
+
+### Added — architecture review deliverables (all seven)
+- **Sync Matrix** — CMS_ARCHITECTURE.md §4.7: one authoritative row per tab (ownership,
+  direction, edit permissions per surface, workflow fields, archival).
+- **ER diagrams** — DATABASE_SCHEMA.md §0: sync infrastructure + domain core (mermaid).
+- **Full column contract** — GOOGLE_SHEETS_SCHEMA.md rewritten: every column on all 18 tabs
+  now carries type, required flag, and validation rule; tabs grouped by category; `Donate`
+  two-row-shape discrimination; Website Settings known-key registry.
+- **Drive folder standard** — CMS_ARCHITECTURE.md §12.1: every media category (Dogs, Stories,
+  Events, Volunteers, Assets, Medical Documents, QR Codes) with naming rules the ingest walker
+  enforces.
+- **`docs/CMS_OPERATIONS.md`** (new): sync-dashboard wireframe (§1), schema evolution strategy
+  (§2 — name-based column matching, three-phase additive rollout, tab lifecycle), backup &
+  disaster-recovery strategy (§3 — per-system RPO/RTO, five scenario runbooks, drill plan).
+
+### Fixed — migration 0006 defects caught by review before first application
+- **Dollar-quoting collision**: the column-helper function's `$$`-delimited body contained a
+  nested `do $$` block, which would have terminated the body early — syntax error on apply.
+  Rewrote with `$fn$` delimiters and inline `IF` (no nested DO).
+- **Multi-statement `EXECUTE`**: the trigger-creation loop passed two statements in one
+  `EXECUTE` (plpgsql rejects that). Split into separate executes.
+- **Staging tables were documented but not created.** Added `stg_<table>` for all 16
+  Sheets→DB synced tables (LIKE-based, RLS-sealed to the service role).
+- **Audit-log immutability was RLS-only — which the service role bypasses.** Added a
+  `BEFORE UPDATE OR DELETE` trigger raising an exception, making append-only real for every
+  role.
+- **Advisory locks replaced with a heartbeat lease.** Session-scoped `pg_advisory_lock` over
+  PostgREST's pooled connections can acquire on one backend session and release on another —
+  leaking the lock and wedging a tab. Per-tab mutual exclusion is now a table-based
+  "running-job lease" in `claimNextJob` (fresh-heartbeat check + post-claim re-check);
+  `lib/sync/locks.ts` deleted.
+- **Dedup lookup in `enqueueJob` never selected `row_id`**, so row-scoped dedup silently
+  matched nothing; also now treats a 23505 insert race as `already_running` instead of erroring.
+- Dogs archival policy seeded as `manual` (the intended `status_based` predicate needs the
+  `current_status` column that only lands in M-CMS-3 — no point seeding a predicate that
+  references a column that doesn't exist).
+
+---
+
 ## 2026-07-17 — Content Management System milestone (M2/M3, real photos, R3F/GSAP)
 
 The single largest module so far: real (non-demo) content on the site for the first time,

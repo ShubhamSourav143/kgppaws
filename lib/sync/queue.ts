@@ -88,30 +88,26 @@ export async function enqueueJob(
 
   const rowId = args.rowId ?? null;
 
-  const { data: existing, error: existingErr } = await supabase
-    .from("sync_jobs")
-    .select("id, tab, direction, enqueued_at")
-    .eq("tab", args.tab)
-    .eq("direction", args.direction)
-    .in("state", ["queued", "running"])
-    .limit(1);
+  const findActive = async () => {
+    const { data, error } = await supabase
+      .from("sync_jobs")
+      .select("id, tab, direction, row_id, enqueued_at")
+      .eq("tab", args.tab)
+      .eq("direction", args.direction)
+      .in("state", ["queued", "running"]);
+    if (error) throw new Error(`enqueueJob lookup failed: ${error.message}`);
+    return (data ?? []).find((job) => (job.row_id ?? null) === rowId) ?? null;
+  };
 
-  if (existingErr) throw new Error(`enqueueJob lookup failed: ${existingErr.message}`);
-
-  if (existing && existing.length > 0) {
-    // Match on row_id — SQL IS NULL semantics require a separate filter.
-    for (const job of existing) {
-      const jobRowId = (job as unknown as { row_id: string | null }).row_id ?? null;
-      if (jobRowId === rowId) {
-        return {
-          jobId: job.id,
-          state: "already_running",
-          tab: job.tab,
-          direction: job.direction as SyncDirection,
-          enqueuedAt: job.enqueued_at,
-        };
-      }
-    }
+  const existing = await findActive();
+  if (existing) {
+    return {
+      jobId: existing.id,
+      state: "already_running",
+      tab: existing.tab,
+      direction: existing.direction as SyncDirection,
+      enqueuedAt: existing.enqueued_at,
+    };
   }
 
   const { data, error } = await supabase
@@ -129,7 +125,23 @@ export async function enqueueJob(
     .select("id, tab, direction, enqueued_at")
     .single();
 
-  if (error) throw new Error(`enqueueJob insert failed: ${error.message}`);
+  if (error) {
+    // 23505 = the uniq_sync_jobs_active index caught a race with a concurrent
+    // enqueue — the other job wins; report it as already_running.
+    if (isDedupError(error)) {
+      const raced = await findActive();
+      if (raced) {
+        return {
+          jobId: raced.id,
+          state: "already_running",
+          tab: raced.tab,
+          direction: raced.direction as SyncDirection,
+          enqueuedAt: raced.enqueued_at,
+        };
+      }
+    }
+    throw new Error(`enqueueJob insert failed: ${error.message}`);
+  }
 
   return {
     jobId: data.id,
@@ -143,18 +155,36 @@ export async function enqueueJob(
 // ---------- Dequeue ----------
 
 /**
- * Atomically claim the next runnable job. Uses `UPDATE ... FROM ... WHERE id IN
- * (SELECT ... FOR UPDATE SKIP LOCKED)` semantics — the RPC in migration 0007
- * would model this cleanly; for M-CMS-1 we use a two-step read-modify-write
- * guarded by the unique index on (tab, direction, coalesce(row_id, sentinel)),
- * which prevents the same job being claimed twice.
+ * Atomically claim the next runnable job.
  *
- * Returns null when the queue is empty.
+ * Mutual exclusion per tab is a heartbeat-guarded "running-job lease": a tab
+ * that already has a `running` job with a fresh heartbeat cannot be claimed
+ * again. (Session-scoped pg_advisory_lock was rejected — Supabase's pooled
+ * HTTP connections mean acquire and release can land on different backend
+ * sessions, leaking the lock. A table-based lease is pool-safe.)
+ *
+ * The claim itself is a state-guarded UPDATE (`eq("state", "queued")`), so
+ * two workers racing for the same job see exactly one winner. Two workers
+ * racing for *different* jobs of the same tab is closed by a post-claim
+ * re-check: if an older running job exists for our tab, we revert our claim.
+ *
+ * Returns null when nothing is runnable.
  */
 export async function claimNextJob(
   supabase: SupabaseClient
 ): Promise<SyncJob | null> {
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const freshHeartbeatCutoff = new Date(now.getTime() - HEARTBEAT_TTL_MS).toISOString();
+
+  // Tabs currently leased by a live running job.
+  const { data: runningRows, error: runningErr } = await supabase
+    .from("sync_jobs")
+    .select("tab")
+    .eq("state", "running")
+    .gte("heartbeat_at", freshHeartbeatCutoff);
+  if (runningErr) throw new Error(`claimNextJob lease check failed: ${runningErr.message}`);
+  const leasedTabs = new Set((runningRows ?? []).map((r) => r.tab));
 
   const { data: candidates, error } = await supabase
     .from("sync_jobs")
@@ -162,12 +192,14 @@ export async function claimNextJob(
     .eq("state", "queued")
     .lte("next_run_at", nowIso)
     .order("enqueued_at", { ascending: true })
-    .limit(5);
+    .limit(10);
 
   if (error) throw new Error(`claimNextJob select failed: ${error.message}`);
   if (!candidates || candidates.length === 0) return null;
 
   for (const candidate of candidates) {
+    if (leasedTabs.has(candidate.tab)) continue;
+
     const { data: claimed, error: claimErr } = await supabase
       .from("sync_jobs")
       .update({
@@ -181,11 +213,35 @@ export async function claimNextJob(
       .single();
 
     if (claimErr) {
-      // If UPDATE returned no row, another worker beat us to it — try the next candidate.
+      // No row updated → another worker won this job; try the next candidate.
       if ((claimErr as { code?: string }).code === "PGRST116") continue;
       throw new Error(`claimNextJob claim failed: ${claimErr.message}`);
     }
-    if (claimed) return claimed as SyncJob;
+    if (!claimed) continue;
+
+    // Post-claim lease re-check: if another running job for the same tab
+    // started before ours, yield to it.
+    const { data: contenders, error: contendersErr } = await supabase
+      .from("sync_jobs")
+      .select("id, started_at")
+      .eq("state", "running")
+      .eq("tab", claimed.tab)
+      .gte("heartbeat_at", freshHeartbeatCutoff)
+      .neq("id", claimed.id);
+    if (contendersErr) throw new Error(`claimNextJob re-check failed: ${contendersErr.message}`);
+
+    const older = (contenders ?? []).some(
+      (c) => c.started_at !== null && c.started_at <= (claimed.started_at ?? nowIso)
+    );
+    if (older) {
+      await supabase
+        .from("sync_jobs")
+        .update({ state: "queued", started_at: null, heartbeat_at: null })
+        .eq("id", claimed.id);
+      continue;
+    }
+
+    return claimed as SyncJob;
   }
 
   return null;

@@ -3,10 +3,12 @@
 Authoritative design document. Last updated **2026-07-17**.
 
 This document defines the long-term Content Management System architecture for KGP PAWS.
-It is the anchor for [PRD.md](PRD.md) §5.F, [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md),
-[GOOGLE_SHEETS_SCHEMA.md](GOOGLE_SHEETS_SCHEMA.md), and [API_SPEC.md](API_SPEC.md) — those
-documents describe *what* is stored and *what* the API surface looks like; this document
-describes *why the pieces fit together the way they do* and *what invariants must never break*.
+It is the anchor for [PRD.md](PRD.md) §5.F, [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (per-column
+reference + ER diagrams), [GOOGLE_SHEETS_SCHEMA.md](GOOGLE_SHEETS_SCHEMA.md) (full column/
+validation contract), [API_SPEC.md](API_SPEC.md) (endpoint contracts), and
+[CMS_OPERATIONS.md](CMS_OPERATIONS.md) (sync dashboard, schema evolution, backup & disaster
+recovery) — those documents describe *what*; this one describes *why the pieces fit together
+the way they do* and *what invariants must never break*.
 
 Changes to this document require the project owner's approval before implementation.
 
@@ -305,6 +307,39 @@ user-editable column, present only on tabs where volunteer-driven soft-delete ma
 Setting `Active = FALSE` (where present) is the volunteer soft-delete gesture; the engine never
 hard-deletes either side.
 
+### 4.7 Sync Matrix (authoritative summary)
+
+One row per tab. This matrix is the single place to answer "who may edit what, and which way
+does it flow." When this matrix and any other document disagree, this matrix wins.
+
+Legend — **Sheet edit**: what volunteers/admins may change in the spreadsheet
+(`all` = all business columns; `workflow` = only the listed workflow fields; `Value` = only the
+Value column; `—` = read-only). **Dashboard**: what admins may change in the web dashboard.
+**Public**: whether the public website writes rows. System columns (A–H) are service-account-only
+everywhere and omitted here.
+
+| Tab | Category | Direction | Primary DB table | Sheet edit | Dashboard | Public | Workflow fields (dual-owned) | Archival |
+|---|---|---|---|---|---|---|---|---|
+| Home | Content | Sheets → DB | `content_home` | all | read-only | — | — | none |
+| Adoption | Content | Sheets → DB | `content_adoption` | all | read-only | — | — | none |
+| Donate | Content + Master Data (two row shapes) | Sheets → DB | `donation_campaigns` + `content_donate` | all except `Raised Amount` | read-only | — | — | status_based (inactive > 180 d) |
+| Stories | Content | Sheets → DB | `stories` | all except `Cover Image` | read-only preview (from M-CMS-4) | — | — | status_based (draft > 180 d) |
+| Help | Content | Sheets → DB | `content_help` | all | read-only | — | — | none |
+| Events | Content | Sheets → DB | `content_events` | all | read-only | — | — | status_based (ended > 90 d) |
+| FAQ | Content | Sheets → DB | `content_faq` | all | read-only | — | — | none |
+| Navigation | Content | Sheets → DB | `content_navigation` | all | read-only | — | — | none |
+| Footer | Content | Sheets → DB | `content_footer` | all | read-only | — | — | none |
+| Dogs | Master Data | Sheets → DB | `animals` | all except `Public ID`, `Cover Image` | read-only (QR ops stay in dashboard) | — | — | manual (→ status_based in M-CMS-3) |
+| Volunteers | Master Data | Sheets → DB | `volunteer_directory` | all | read-only | — | — | none |
+| Website Settings | Master Data | Sheets → DB | `content_settings` | `Value` only | read-only | — | — | none |
+| Medical History | Transaction (volunteer) | Sheets → DB | `animal_medical_events` | all | read-only | — | — | time_window (2 y) |
+| Vaccination | Transaction (volunteer) | Sheets → DB | `animal_vaccinations` | all | read-only | — | — | time_window (3 y) |
+| Sterilization | Transaction (volunteer) | Sheets → DB | `animal_sterilizations` | all | read-only | — | — | none |
+| Adoption Applications | Transaction (public) | DB → Sheets | `adoption_applications` | workflow | workflow | submit (form) | `Status`, `Meet At`, `Internal Notes` | status_based (closed > 90 d) |
+| Donation Confirmations | Transaction (public) | DB → Sheets | `donation_confirmations` | workflow | workflow | submit (form) | `Status`, `Show Publicly` | size_threshold (newest 500) |
+| Reports | Transaction (public) | DB → Sheets | `rescue_reports` | workflow | workflow | submit (form) | `Status`, `Assigned Volunteer`, `Linked Dog Public ID` | status_based (resolved > 30 d) |
+| Reference — Zones / Categories / Statuses | Reference | not synced | (mirrors Postgres enums) | — (admins only, on enum migration) | — | — | — | n/a |
+
 ---
 
 ## 5. Database mapping
@@ -464,8 +499,11 @@ identical enqueue is a no-op. The queue never grows unbounded from repeated trig
 ### 7.3 Worker execution (Sheets → DB, per tab, incremental)
 
 ```
- 1. LOCK the tab (Postgres advisory lock on hashtext('sync:tab:<name>')) — prevents concurrent
-    workers from applying to the same tab. TTL 5 minutes via heartbeat.
+ 1. LEASE the tab — the claim step (queued → running, state-guarded UPDATE) is the mutual
+    exclusion: a tab with a live `running` job (heartbeat < 5 min old) cannot be claimed again.
+    Session-scoped pg_advisory_lock was deliberately rejected: Supabase's pooled HTTP
+    connections mean acquire and release can land on different backend sessions, leaking the
+    lock. A heartbeat-guarded table lease is pool-safe.
 
  2. HEADER CHECK — read the header row (values.get on A1:<last_col>1). Compare against the
     tab's expected header spec. Mismatch → abort with `header_mismatch`, no rows touched.
@@ -514,7 +552,7 @@ identical enqueue is a no-op. The queue never grows unbounded from repeated trig
 
 10. UPDATE sync_job → 'succeeded' with per-row counts. INSERT sync_log summary row.
 
-11. RELEASE lock.
+11. LEASE ends automatically — the job left the `running` state in step 10.
 ```
 
 ### 7.4 Worker execution (DB → Sheets, single row)
@@ -731,41 +769,60 @@ Media handling is a first-class part of the CMS but is architecturally separate 
 because the invariants are different (idempotent by checksum, not by version; large-object
 handling, not row-level diff).
 
-### 12.1 Drive folder convention
+### 12.1 Drive folder standard (authoritative, per media category)
 
 ```
-KGP PAWS/
+KGP PAWS/                        ← Drive root; shared to the service account as VIEWER
+│
 ├── CMS/
-│     KGP PAWS CMS.xlsx        ← the spreadsheet
+│   └── KGP PAWS CMS             ← the spreadsheet (service account: EDITOR on this file only)
 │
-├── Dogs/                       ← GOOGLE_DRIVE_DOGS_FOLDER_ID
-│   ├── DOG00001/
-│   │   ├── cover.jpg           ← exactly one cover.*, sort_order 0
-│   │   ├── gallery/
+├── Dogs/                        ← env GOOGLE_DRIVE_DOGS_FOLDER_ID
+│   ├── DOG00001/                ← folder name = animals.public_id, exact match
+│   │   ├── cover.jpg            ← exactly one cover.* → animal_photos sort_order 0
+│   │   ├── gallery/             ← public gallery, filename natural order → sort_order 1+
 │   │   │   ├── 1.jpg
-│   │   │   ├── 2.jpg
-│   │   │   └── 3.jpg
-│   │   └── medical/
+│   │   │   └── 2.jpg
+│   │   └── medical/             ← catalogued in drive_assets; NEVER auto-published (§12.4)
 │   │       ├── vaccination-report.pdf
-│   │       └── treatment.jpg   ← NOT auto-published (see §12.4)
-│   ├── DOG00002/
-│   └── DOG00003/
+│   │       └── treatment.jpg
+│   └── DOG00002/
 │
-├── Stories/                    ← GOOGLE_DRIVE_STORIES_FOLDER_ID
-│   ├── <slug>/
-│   │   ├── cover.jpg
-│   │   └── images/
-│   └── …
+├── Stories/                     ← env GOOGLE_DRIVE_STORIES_FOLDER_ID
+│   └── <slug>/                  ← folder name = stories.slug, exact match
+│       ├── cover.jpg            → story_media sort_order 0
+│       └── images/              → story_media sort_order 1+
 │
-├── Events/                     ← GOOGLE_DRIVE_EVENTS_FOLDER_ID
-│   └── <event_slug>/
+├── Events/                      ← env GOOGLE_DRIVE_EVENTS_FOLDER_ID
+│   └── <slug>/                  ← folder name = content_events.slug
+│       ├── cover.jpg
+│       └── gallery/
 │
-├── Blog Media/                 ← alias of Stories/ for backward compatibility
-├── Medical Documents/          ← restricted-access folder — never auto-published
-├── QR Codes/                   ← generated by admin dashboard; not user-editable
-└── Assets/                     ← logos, sponsor images, generic homepage media
-    └── homepage/
+├── Volunteers/                  ← env GOOGLE_DRIVE_VOLUNTEERS_FOLDER_ID
+│   └── <name-slug>.jpg          ← one headshot per person; matched to Volunteers tab `Photo`
+│
+├── Assets/                      ← env GOOGLE_DRIVE_ASSETS_FOLDER_ID
+│   ├── branding/                ← logo.svg, favicon.png, og-default.jpg
+│   ├── homepage/                ← hero + section media referenced by Home tab `Media Reference`
+│   ├── donation-qr/             ← <campaign-slug>.png, referenced by Donate tab `QR Image`
+│   └── sponsors/                ← <sponsor-slug>.png, referenced by Home tab Sponsors data
+│
+├── Medical Documents/           ← restricted folder; org-internal docs; NEVER ingested
+├── QR Codes/                    ← admin-managed archive of printed QR sheets; not ingested
+└── Blog Media/                  ← DEPRECATED alias — use Stories/; walker ignores it
 ```
+
+**Naming rules (enforced by the ingest walker; violations → `sync_conflicts` as `unresolved_fk`):**
+
+| Rule | Detail |
+|---|---|
+| Folder names are keys | `Dogs/<public_id>`, `Stories/<slug>`, `Events/<slug>` must match the DB value exactly (case-sensitive). |
+| Filenames | Lowercase, hyphens not spaces, ASCII. `cover.*` is reserved for the cover image (at most one per folder). |
+| Photo formats | `jpg` / `jpeg` / `png` / `webp`. Anything else in a photo location is skipped and flagged. |
+| Documents | `pdf` only, and only inside `medical/` or `Medical Documents/`. |
+| Video | `mp4` (H.264) ≤ 200 MB, or a YouTube URL in the relevant sheet column instead. |
+| Size limit | 25 MB per photo. Oversized files are skipped and flagged — not silently downscaled from a possibly-corrupt source. |
+| Unknown folders | A `Dogs/` subfolder matching no `public_id` is catalogued as `unresolved` and surfaced in the dashboard — never guessed. |
 
 ### 12.2 Ingest pipeline
 
@@ -872,8 +929,8 @@ Lighthouse image metrics green.
 - **Full-scan safety-sweep cost.** The daily full-scan sweep (§7.2) does read all rows. At
   10,000 rows × 20 tabs × 30 cells = 6M cell reads per day, well inside daily quota. If quota
   becomes a concern, the sweep interval extends to weekly.
-- **Concurrent worker contention.** Postgres advisory locks per tab prevent two workers from
-  applying to the same tab simultaneously. Different tabs run in parallel freely.
+- **Concurrent worker contention.** The per-tab running-job lease (heartbeat-guarded) prevents
+  two workers from applying to the same tab simultaneously. Different tabs run in parallel freely.
 - **Archived-row visibility.** The DB retains everything forever; only the sheet view is
   bounded. Admin dashboard and public API can query archived rows on demand.
 
@@ -995,8 +1052,9 @@ The engine can be built and unit-tested without these; live verification cannot.
   (full or single-row).
 - **Staging table.** A `stg_<tab>` mirror table used inside a single sync transaction to
   atomically swap into the live table.
-- **Advisory lock.** A Postgres `pg_advisory_lock` on a tab-name-derived key, used to prevent
-  two workers from applying to the same tab concurrently.
+- **Tab lease.** The per-tab mutual-exclusion mechanism: a tab with a `running` job whose
+  heartbeat is fresh (< 5 min) cannot be claimed by another worker. Table-based, so it survives
+  connection pooling (unlike session-scoped advisory locks).
 - **Row version.** A monotonically-increasing integer on every content row. Incremented by the
   sync engine on every write. Used for conflict detection.
 - **Ownership.** Which system's changes to a given field are authoritative. Every field has

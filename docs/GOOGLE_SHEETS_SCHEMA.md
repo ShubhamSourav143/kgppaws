@@ -1,579 +1,426 @@
 # KGP PAWS — Google Sheets CMS Schema
 
-Living document. Last updated **2026-07-17**. Implements the CMS design in
-[CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) — read that first for the *why*; this document is
-the *what* (column-level spec for every tab).
+Living document. Last updated **2026-07-17**. Column-level contract for the sync engine.
+Design rationale: [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) · edit-permission summary:
+[CMS_ARCHITECTURE.md §4.7 Sync Matrix](CMS_ARCHITECTURE.md#47-sync-matrix-authoritative-summary) ·
+operations: [CMS_OPERATIONS.md](CMS_OPERATIONS.md).
 
-**One spreadsheet:** `KGP PAWS CMS` — location `KGP PAWS/CMS/KGP PAWS CMS.xlsx` in Drive.
+**One spreadsheet:** `KGP PAWS CMS` — location `KGP PAWS/CMS/` in Drive.
 
-**Eighteen editable tabs, three reference tabs.** Tab names are **exact and case-sensitive** —
-the sync engine matches these literal strings. Grouped by category (see
-[CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §4.1):
+**Eighteen editable tabs + three reference tabs**, grouped by category. Tab names are **exact
+and case-sensitive** — the sync engine matches these literal strings.
 
-**Content — 9 tabs (Sheets → Supabase, page copy):**
-`Home` · `Adoption` · `Donate` · `Stories` · `Help` · `Events` · `FAQ` · `Navigation` · `Footer`
+| Category | Tabs |
+|---|---|
+| **Content** (9) | `Home` · `Adoption` · `Donate` · `Stories` · `Help` · `Events` · `FAQ` · `Navigation` · `Footer` |
+| **Master Data** (3 + 3 reference) | `Dogs` · `Volunteers` · `Website Settings` · `Reference — Zones` · `Reference — Categories` · `Reference — Statuses` |
+| **Transaction Data** (6) | volunteer-submitted: `Medical History` · `Vaccination` · `Sterilization` — public-submitted: `Adoption Applications` · `Donation Confirmations` · `Reports` |
 
-**Master Data — 4 editable + 3 reference tabs (Sheets → Supabase, foundational entities):**
-`Dogs` · `Volunteers` · `Donate — Campaigns` · `Website Settings` ·
-`Reference — Zones` · `Reference — Categories` · `Reference — Statuses`
-
-**Transaction Data — 6 tabs (mixed direction, timestamped events):**
-*Volunteer-submitted (Sheets → Supabase):* `Medical History` · `Vaccination` · `Sterilization`
-*Public-submitted (Supabase → Sheets):* `Adoption Applications` · `Donation Confirmations` · `Reports`
+*(The `Donate` tab carries campaign rows — Master Data in nature — alongside page-copy rows;
+see its section for the two row shapes.)*
 
 ---
 
-## Conventions (apply to every tab)
+## Conventions
 
-### System columns (present on every editable tab, in this fixed order)
+### System columns (columns A–H on every editable tab, in this exact order)
 
-Every editable tab carries these **eight** system columns as columns A–H. All are **protected
-ranges** — service-account-only edit. Volunteers see them but cannot modify them.
+All eight are **protected ranges** — only the service account can write them. Volunteers see
+them but cannot edit them. Business columns start at column I.
 
-| # | Column | Sheet type | Purpose |
-|---|---|---|---|
-| A | `_id` | text | Stable row ID (UUID). Assigned by the engine on first sync. Never changes. |
-| B | `_public_id` | text | Human-typeable public ID where one exists (`DOG00023`, story `slug`, campaign `slug`). Blank on tabs with no natural public ID. |
-| C | `_row_version` | number | Monotonically increasing integer. Incremented on every write. Used for conflict detection. |
-| D | `_sync_status` | text | `OK` / `PENDING` (volunteer edited, awaiting next sync) / `ERROR` / `CONFLICT`. |
-| E | `_last_synced` | timestamp | ISO timestamp of last successful sync for this row. |
-| F | `_last_error` | text | Human-readable message when `_sync_status = ERROR`. Blank otherwise. |
-| G | `_updated_at` | timestamp | ISO timestamp of the last write to this row (either side). Drives incremental sync. |
-| H | `_sync_source` | text | `sheets` \| `app` \| `trigger` \| `system` — which side originated the last write. |
+| # | Column | Type | Written when | Purpose |
+|---|---|---|---|---|
+| A | `_id` | UUID text | first sync of the row | Stable row ID. Never changes; row position never matters. |
+| B | `_public_id` | text | first sync | Human-typeable ID where one exists (`DOG00023`, a slug). Blank otherwise. |
+| C | `_row_version` | integer | every write | Monotonic counter; drives conflict detection. |
+| D | `_sync_status` | text | every sync touching the row | `OK` / `PENDING` / `ERROR` / `CONFLICT`. |
+| E | `_last_synced` | ISO timestamp | every successful sync | Last successful sync of this row. |
+| F | `_last_error` | text | on validation failure | Human-readable reason when `_sync_status = ERROR`; blank otherwise. |
+| G | `_updated_at` | ISO timestamp | every write (either side) | Drives incremental sync — the engine reads only this column to find changed rows. |
+| H | `_sync_source` | text | every write | `sheets` \| `app` \| `trigger` \| `system`. |
 
-Volunteer-editable business columns start at column I on every tab.
+### The `Active` column
 
-**On `Active`.** The `Active` column is a normal user-editable column on tabs where soft-delete
-makes sense (Content and Master Data tabs). It is *not* a system column. Setting `Active =
-FALSE` triggers a soft-delete in the DB (`is_active = false`); rows are never hard-deleted from
-either side. Transaction Data tabs do not have an `Active` column — deletion of events is not a
-supported operation.
+A normal user-editable boolean, present only where volunteer soft-delete makes sense (see
+[CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §4.6): all Content tabs, `Dogs`, `Volunteers`, and
+the three volunteer-submitted Transaction tabs. Not present on `Website Settings` or the
+public-submitted Transaction tabs. `FALSE` = soft delete; nothing is ever hard-deleted.
 
-**On the `PENDING` status.** When a volunteer edits a row, ideally the sheet immediately writes
-`_sync_status = PENDING` and `_updated_at = now` via a lightweight Apps Script `onEdit` handler.
-This is a Phase-2 nicety; without it, the engine detects the change on the next incremental scan
-via the `_updated_at` column (which the volunteer would need to update manually, or the engine
-falls back to full-scan). In M-CMS-1 through M-CMS-6, the manual-`_updated_at` fallback is used;
-the Apps Script `onEdit` handler ships in M-CMS-7 as part of hardening.
+### Validation model
+
+Validation runs in the sync engine (Zod, layer 2 of
+[CMS_ARCHITECTURE.md §8.1](CMS_ARCHITECTURE.md#81-validation-layers)) — Sheets data-validation
+dropdowns are a UX nicety layered on top, not the enforcement. A failing row gets
+`_sync_status = ERROR` + `_last_error` and is skipped; the run continues.
+
+Common rules referenced below:
+
+| Rule | Meaning |
+|---|---|
+| `bool` | `TRUE` / `FALSE` (also accepts `yes`/`no`/`1`/`0`, case-insensitive; normalized on write-back) |
+| `date` | `YYYY-MM-DD` |
+| `datetime` | `YYYY-MM-DD HH:MM` (IST assumed) |
+| `slug` | `^[a-z0-9]+(-[a-z0-9]+)*$`, unique within its tab |
+| `public-id` | `^(DOG|CAT|OTH)\d{5}$`; FK rules also require the animal to exist |
+| `url` | absolute `https://…` or site-internal path starting `/` |
+| `json:<schema>` | must parse as JSON and match the named Zod schema |
+| `drive:<folder>` | filename must exist in the stated Drive folder at sync time (checked against `drive_assets`) |
 
 ### Header verification
 
-Column headers are the sync engine's field map — renaming or reordering a header breaks sync
-until the mapping config is updated. Header drift is caught by the header check (see
-[CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §8.1) and surfaces as `header_mismatch` in the admin
-dashboard, not a silent failure.
-
-### Ownership legend (per tab)
-
-Every tab header below shows:
-- **Category:** Content / Master Data / Transaction Data (see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §4.1).
-- **Direction:** `Sheets → DB` or `DB → Sheets`.
-- **DB table(s):** which Supabase table this tab maps to.
-- **Archival policy:** how the sheet view is bounded as data grows (see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §4.5).
-- **Change scope:** which fields are editable by volunteers in the sheet.
+The engine's first step on every run compares the header row against this document's column
+lists (system columns by position A–H; business columns **by name**, order-independent from
+column I). Any missing or unknown header aborts the run with `header_mismatch` — see
+[CMS_OPERATIONS.md](CMS_OPERATIONS.md) §2 for how columns are added safely.
 
 ---
 
-## Tab reference
+# Content tabs (Sheets → Supabase)
 
-Tabs appear below in the reading order used throughout this document. Each header includes:
-**Category** (Content / Master Data / Transaction Data), **Direction** (sync direction),
-**DB table** (Supabase mapping), **Archival** policy, and **Change scope** (which fields
-volunteers may edit).
+### Tab: `Home` → `content_home` · archival: none
 
-### Tab: `Home`
+One row per homepage section slot.
 
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `content_home` ·
-**Archival:** `none` · **Change scope:** all non-system columns.
-
-One row per homepage section. `Section` column is a discriminator; the schema of `Content`
-depends on the section type. This keeps homepage structure flat and volunteer-friendly.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Section` | select | `Hero`, `Mission`, `Stats`, `Featured`, `Testimonials`, `Sponsors`, `Videos`, `Gallery` |
-| `Display Order` | number | Sections render in ascending order |
-| `Title` | text | Section-level title (may be blank; e.g. hero has no separate title) |
-| `Subtitle` | text | |
-| `Body` | long text (markdown) | For Hero → hero description; for Mission → the mission text; for Featured → intro copy |
-| `CTA Label` | text | e.g. "Meet the paws" (hero) |
-| `CTA URL` | text | e.g. `/adopt` (hero) |
-| `Media Reference` | text | Drive filename in `Assets/homepage/` (e.g. `hero-cover.jpg`); resolved to Storage URL at sync time |
-| `Data (JSON)` | long text (JSON) | Section-specific structured data. For `Stats`: `[{label,value,note}, …]`. For `Testimonials`: `[{quote,author,role}, …]`. For `Sponsors`: `[{name,logo,url}, …]`. Validated with a per-section Zod schema. |
-
-### Tab: `Dogs`
-
-**Category:** Master Data · **Direction:** Sheets → DB · **DB table:** `animals`
-(media auto-discovered from Drive; see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §12) ·
-**Archival:** `status_based` — animals with `Current Status = 'Rainbow Bridge'` and no updates
-for > 365 days are archived out of the sheet (still queryable via DB) ·
-**Change scope:** all non-system columns except `Public ID` (which the DB assigns on first sync).
-
-One row per animal. Media is **not stored in the sheet** — volunteers drop photos in
-`Dogs/<Public ID>/` in Drive, and the media pipeline links them automatically.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Public ID` | text | `DOG00023` / `CAT00004`. System-assigned on first sync via `next_animal_public_id()`. Read-only after that. |
-| `Name` | text | required |
-| `Species` | select | `Dog` / `Cat` / `Other` |
-| `Gender` | select | `Male` / `Female` / `Unknown` |
-| `Age` | text | free label, e.g. "~3 years" |
-| `Breed` | text | e.g. "Indie" |
-| `Colour` | text | |
-| `Weight (kg)` | number | optional |
-| `Size` | select | `Small` / `Medium` / `Large` |
-| `Zone` | select | matches `Reference — Zones` |
-| `Tagline` | text | one-liner shown on cards |
-| `Personality` | text | comma-separated tags |
-| `Story` | long text (markdown) | full narrative for the profile page |
-| `Description` | long text | short bio shown at top of profile |
-| `Friendly` | select | `Friendly` / `Selective` / `Cautious` / `Shy` |
-| `Vaccinated` | boolean | |
-| `Sterilized` | boolean | |
-| `Health Status` | select | `Healthy` / `Under Treatment` / `Recovering` / `Monitoring` |
-| `Health Note (public)` | text | shown publicly on profile |
-| `Internal Note` | text | **never rendered publicly** — staff only |
-| `Current Status` | select | `On Campus` / `In Foster` / `In Treatment` / `Adopted` / `Rainbow Bridge` |
-| `Adoption Status` | select | `Available` / `Foster Needed` / `Not Available` / `Adopted` |
-| `Good With People` | boolean | |
-| `Good With Animals` | boolean | |
-| `Special Care` | boolean | |
-| `Notes` | text | free-form volunteer notes |
-| `Cover Image` | text (auto) | Populated by the media pipeline from `Dogs/<Public ID>/cover.*`. Displayed as a Drive file link. **Not manually editable** — protected. |
-
-### Tab: `Medical History`
-
-**Category:** Transaction Data (volunteer-submitted) · **Direction:** Sheets → DB ·
-**DB table:** `animal_medical_events` ·
-**Archival:** `time_window` — the sheet keeps events from the last 2 years
-(`{ column: 'event_date', keep: '2 years' }`); older events remain in the DB and are queryable
-via the admin dashboard · **Change scope:** all non-system.
-
-Unlimited rows per animal. Foreign-keyed by `Dog Public ID` (typeable) rather than `_id`.
-No `Active` column — Transaction Data rows are not soft-deletable; corrections happen by editing
-the row.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Dog Public ID` | text | FK to `Dogs.Public ID`. Validated at sync time. |
-| `Date` | date | required |
-| `Event Type` | select | `Vaccination` / `Deworming` / `Sterilization` / `Injury` / `Treatment` / `Checkup` / `Recovery` |
-| `Diagnosis` | text | |
-| `Treatment` | text | |
-| `Medicine` | text | |
-| `Veterinarian` | text | vet or clinic name |
-| `Public Note` | text | shown on the public timeline |
-| `Internal Note` | text | staff-only, never public |
-| `Documents` | text | Drive filename(s) from `Dogs/<Public ID>/medical/` (comma-separated); catalogued in `drive_assets`, not auto-published |
-
-### Tab: `Vaccination`
-
-**Category:** Transaction Data (volunteer-submitted) · **Direction:** Sheets → DB ·
-**DB table:** `animal_vaccinations` ·
-**Archival:** `time_window` — 3 years (`{ column: 'date', keep: '3 years' }`) · **Change scope:** all non-system.
-
-Separate from `Medical History` because vaccinations have a recurring-reminder need (`Due Date`).
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Dog Public ID` | text | FK |
-| `Vaccine` | text | e.g. "Anti-rabies" |
-| `Date` | date | date given |
-| `Due Date` | date | optional — powers a future reminder |
-| `Veterinarian` | text | |
-| `Notes` | text | |
-
-### Tab: `Sterilization`
-
-**Category:** Transaction Data (volunteer-submitted) · **Direction:** Sheets → DB ·
-**DB table:** `animal_sterilizations` · **Archival:** `none` (one row per animal; small tab) ·
-**Change scope:** all non-system.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Dog Public ID` | text | FK |
-| `Date` | date | |
-| `Doctor` | text | |
-| `Hospital` | text | |
-| `Notes` | text | |
-
-### Tab: `Adoption`
-
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `content_adoption` ·
-**Archival:** `none` · **Change scope:** all non-system.
-
-Controls the copy on `/adopt` — not the animal list (that comes from `Dogs`), but the page-level
-copy around it: intro, categories, instructions, FAQs, success stories.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Section` | select | `Intro`, `Categories`, `Instructions`, `Success Stories`, `FAQ` |
-| `Display Order` | number | |
-| `Title` | text | |
-| `Body` | long text (markdown) | |
-| `Featured Animals` | text | comma-separated `Dog Public ID`s (for `Categories`/`Success Stories`) |
-| `Data (JSON)` | long text (JSON) | Section-specific: `Categories` → `[{name, description, icon, filter}, …]`; `FAQ` → `[{question, answer}, …]` |
-
-### Tab: `Donate`
-
-**Category:** Master Data (Campaigns) + Content (page copy) — this tab hybridises both;
-in practice, page-level copy rows have `Section != blank` and campaign rows have
-`Campaign Name != blank`. If clarity becomes a problem, split into a separate `Donate — Campaigns`
-tab (already flagged in [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §4.3). ·
-**Direction:** Sheets → DB ·
-**DB tables:** `donation_campaigns` (one row per campaign) + `content_donate` (page-level copy) ·
-**Archival:** `status_based` — campaigns with `Active = FALSE` for > 180 days are archived out ·
-**Change scope:** all non-system except `Raised Amount (INR)` (which is computed from
-`donation_confirmations` and echoed back into the sheet by DB→Sheets sync).
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Campaign Name` | text | required |
-| `Slug` | text | URL-safe unique key |
-| `Category` | select | `Feeding` / `Treatment` / `Vaccination` / `Sterilization` / `Recovery` / `Emergency` |
-| `Description` | long text (markdown) | |
-| `Goal Amount (INR)` | number | integer |
-| `Raised Amount (INR)` | number (auto) | **Read-only** — computed by DB, echoed back on sync. Protected. |
-| `Display Progress` | boolean | show/hide the progress bar |
-| `QR Image` | text | Drive filename in `Assets/donation-qr/`; resolved to Storage URL |
-| `UPI ID` | text | e.g. `awskgp@upi` |
-| `Account Holder` | text | |
-| `Featured` | boolean | pin to homepage |
-| `Display Order` | number | |
-| `Linked Dog Public ID` | text | optional — for treatment/recovery campaigns tied to one animal |
-
-### Tab: `Stories`
-
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `stories` (media
-auto-discovered from `Stories/<Slug>/`) ·
-**Archival:** `status_based` — `Published = FALSE` for > 180 days are archived out ·
-**Change scope:** all non-system.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Slug` | text | url-safe, unique |
-| `Title` | text | |
-| `Category` | select | `Rescue` / `Recovery` / `Adoption` / `Campus Paw` / `Volunteer Diary` / `Education` |
-| `Related Dog Public ID` | text | optional FK |
-| `Author` | text | |
-| `Date` | date | publish date |
-| `Excerpt` | text | ~200 chars, shown on cards |
-| `Markdown` | long text (markdown) | full post body |
-| `Tags` | text | comma-separated |
-| `SEO Title` | text | ~60 chars |
-| `SEO Description` | text | ~155 chars |
-| `Published` | boolean | `TRUE` → visible on `/stories`; `FALSE` → draft (still synced to DB, `status: 'draft'`) |
-| `Featured` | boolean | pin to homepage |
-| `Cover Image` | text (auto) | populated from `Stories/<Slug>/cover.*` |
-
-### Tab: `Volunteers`
-
-**Category:** Master Data · **Direction:** Sheets → DB ·
-**DB table:** `volunteer_directory` (public-facing) — **not** `volunteers` (which is the
-applicant/roster table populated by the signup form) ·
-**Archival:** `none` · **Change scope:** all non-system.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Name` | text | |
-| `Role` | text | e.g. "Coordinator, Vaccination Drives" |
-| `Contact` | text | public-facing contact (typically an email; never a personal phone) |
-| `Photo` | text | Drive filename in `Assets/volunteers/`; resolved to Storage URL |
-| `Responsibilities` | text | comma-separated |
-| `Bio` | long text | optional |
-| `Display Order` | number | |
-
-### Tab: `Help`
-
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `content_help` ·
-**Archival:** `none` · **Change scope:** all non-system.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Section` | select | `Volunteer Opportunities`, `Foster Information`, `Emergency Help`, `Contact Card`, `How to Help` |
-| `Display Order` | number | |
-| `Title` | text | |
-| `Body` | long text (markdown) | |
-| `Icon` | text | lucide-react icon name, e.g. `heart-handshake` |
-| `CTA Label` | text | |
-| `CTA URL` | text | |
-| `Data (JSON)` | long text (JSON) | Section-specific: `Contact Card` → `{name, role, phone, email, avatar}`; `Volunteer Opportunities` → `[{role, commitment, description}, …]` |
-
-### Tab: `Events`
-
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `content_events`
-(media auto-discovered from `Events/<Slug>/`) ·
-**Archival:** `status_based` — events with `End Date` more than 90 days in the past are archived out ·
-**Change scope:** all non-system.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Slug` | text | url-safe, unique |
-| `Title` | text | |
-| `Type` | select | `Feeding Drive` / `Vaccination Camp` / `Adoption Camp` / `Fundraiser` / `Volunteer Meet` |
-| `Start Date` | datetime | |
-| `End Date` | datetime | optional |
-| `Location` | text | |
-| `Description` | long text (markdown) | |
-| `RSVP URL` | text | optional external link |
-| `Featured` | boolean | pin to homepage |
-| `Display Order` | number | ties broken by Start Date |
-
-### Tab: `FAQ`
-
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `content_faq` ·
-**Archival:** `none` · **Change scope:** all non-system.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Category` | select | `General`, `Adoption`, `Donation`, `Volunteering`, `Reporting`, `Medical` |
-| `Question` | text | |
-| `Answer` | long text (markdown) | |
-| `Display Order` | number | |
-
-### Tab: `Navigation`
-
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `content_navigation` ·
-**Archival:** `none` · **Change scope:** all non-system.
-
-One row per menu item. Supports one level of nesting via `Parent Label`.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Label` | text | |
-| `URL` | text | internal path (`/adopt`) or external URL (`https://…`) |
-| `Icon` | text | optional lucide-react icon name |
-| `Parent Label` | text | optional — for submenus. Blank = top-level. |
-| `Display Order` | number | |
-| `Visible` | boolean | |
-| `Open In New Tab` | boolean | for external links |
-
-### Tab: `Footer`
-
-**Category:** Content · **Direction:** Sheets → DB · **DB table:** `content_footer` ·
-**Archival:** `none` · **Change scope:** all non-system.
-
-One row per footer element.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. |
-| `Active` | boolean | Soft-delete flag; `TRUE` by default. |
-| `Section` | select | `Social Link`, `Quick Link`, `Contact`, `Copyright`, `Newsletter Blurb` |
-| `Display Order` | number | |
-| `Label` | text | e.g. "Instagram" |
-| `URL` | text | e.g. `https://instagram.com/…` |
-| `Icon` | text | e.g. `instagram` |
-| `Value` | text | e.g. `+91 …` (for `Contact`) or the copyright text |
-
-### Tab: `Website Settings`
-
-**Category:** Master Data · **Direction:** Sheets → DB ·
-**DB table:** `content_settings` (renamed from `site_settings`) ·
-**Archival:** `none` · **Change scope:** the `Value` column.
-
-Key/value table. Each row is a single setting. The engine validates the `Value` against a
-Zod schema keyed by `Key`.
-
-| Column | Type | Notes |
-|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | See Conventions above. Master Data — key/value table, no `Active` column (settings are always active; disabling one means removing it). |
-| `Key` | text | e.g. `site_name`, `logo_url`, `seo_default_title` |
-| `Value` | text or JSON | typed per key |
-| `Description` | text | human-readable purpose (documentation-only; not synced) |
-
-**Well-known keys:**
-
-| Key | Value type | Purpose |
-|---|---|---|
-| `site_name` | text | e.g. "KGP PAWS" |
-| `site_tagline` | text | shown next to logo |
-| `logo_url` | text | Drive filename in `Assets/branding/` |
-| `favicon_url` | text | same |
-| `seo_default_title` | text | fallback for pages without a specific title |
-| `seo_default_description` | text | ~155 chars |
-| `seo_default_og_image` | text | Drive filename |
-| `google_analytics_id` | text | e.g. `G-XXXXXXX` |
-| `google_search_console_verification` | text | meta-tag content |
-| `theme` | JSON | `{"palette":{"forest":"…","cream":"…"}}` — overrides `app/globals.css` tokens |
-| `announcement_banner` | JSON | `{"enabled":true,"text":"…","cta":{"label":"…","url":"…"},"variant":"info"}` |
-| `emergency_contact_phone` | text | |
-| `emergency_contact_email` | text | |
-| `emergency_contact_whatsapp` | text | |
-
----
-
-## Transaction Data tabs — public-submitted (Supabase → Sheets)
-
-Rows are written by the public website into Supabase; the sync engine appends them to Sheets so
-volunteers can triage. **Volunteers/admins may only edit workflow columns** (see
-[CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §6.3) — everything else is protected.
-
-### Tab: `Adoption Applications`
-
-**Category:** Transaction Data (public-submitted) · **Direction:** DB → Sheets
-(workflow fields dual-owned) · **DB table:** `adoption_applications` ·
-**Archival:** `status_based` — applications with `Status in ('Adopted', 'Not Selected')` for
-> 90 days are archived out · **Change scope:** `Status`, `Internal Notes`, `Meet At` only.
-
-| Column | Type | Editable? | Notes |
+| Column | Type | Req | Validation |
 |---|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | ❌ | See Conventions above. Transaction Data — no `Active` column. |
-| `Application Code` | text | ❌ | e.g. `PAWS-ADOPT-2026-00042` |
+| `Section` | select | ✓ | one of `Hero`, `Mission`, `Stats`, `Featured`, `Testimonials`, `Sponsors`, `Videos`, `Gallery` |
+| `Display Order` | int | ✓ | ≥ 0; unique within a Section |
+| `Title` | text | – | ≤ 120 chars |
+| `Subtitle` | text | – | ≤ 200 chars |
+| `Body` | markdown | – | ≤ 5,000 chars |
+| `CTA Label` | text | – | ≤ 40 chars; requires `CTA URL` |
+| `CTA URL` | url | – | `url` rule |
+| `Media Reference` | text | – | `drive:Assets/homepage/` |
+| `Data (JSON)` | json | – | per-section: `Stats` → `json:statItems` `[{label,value,note?}]`; `Testimonials` → `json:testimonials` `[{quote,author,role?}]`; `Sponsors` → `json:sponsors` `[{name,logo,url?}]`; `Videos` → `json:videos` `[{title,youtubeUrl}]` |
+| `Active` | bool | ✓ | `bool` rule |
+
+### Tab: `Adoption` → `content_adoption` · archival: none
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Section` | select | ✓ | `Intro`, `Categories`, `Instructions`, `Success Stories`, `FAQ` |
+| `Display Order` | int | ✓ | ≥ 0; unique within Section |
+| `Title` | text | – | ≤ 120 chars |
+| `Body` | markdown | – | ≤ 5,000 chars |
+| `Featured Animals` | text | – | comma-separated `public-id`s, each must exist and be `Active` |
+| `Data (JSON)` | json | – | `Categories` → `json:adoptCategories`; `FAQ` → `json:qaPairs` `[{question,answer}]` |
+| `Active` | bool | ✓ | |
+
+### Tab: `Donate` → `donation_campaigns` + `content_donate` · archival: status_based (inactive > 180 d)
+
+**Two row shapes**, discriminated by which of the two required-one-of columns is filled:
+a **campaign row** has `Campaign Name` set (and `Section` blank); a **page-copy row** has
+`Section` set (and `Campaign Name` blank). A row with both or neither → `ERROR`.
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Section` | select | copy rows | `Intro`, `Transparency`, `Thank You` |
+| `Campaign Name` | text | campaign rows | ≤ 100 chars |
+| `Slug` | slug | campaign rows | `slug` rule, unique |
+| `Category` | select | campaign rows | `Feeding`, `Treatment`, `Vaccination`, `Sterilization`, `Recovery`, `Emergency` |
+| `Description` / `Body` | markdown | – | ≤ 5,000 chars |
+| `Goal Amount (INR)` | int | campaign rows | > 0; integer rupees |
+| `Raised Amount (INR)` | int | system | **read-only** — computed from approved `donation_confirmations`, echoed back by DB→Sheets sync |
+| `Display Progress` | bool | – | default `TRUE` |
+| `QR Image` | text | – | `drive:Assets/donation-qr/` |
+| `UPI ID` | text | – | `^[\w.\-]+@[a-z]+$` |
+| `Account Holder` | text | – | ≤ 100 chars |
+| `Featured` | bool | – | at most 3 campaign rows `TRUE` |
+| `Display Order` | int | ✓ | ≥ 0 |
+| `Linked Dog Public ID` | text | – | `public-id`, must exist |
+| `Active` | bool | ✓ | |
+
+### Tab: `Stories` → `stories` · archival: status_based (draft > 180 d)
+
+Media auto-discovered from `Stories/<Slug>/` in Drive — no image URLs in the sheet.
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Slug` | slug | ✓ | `slug` rule, unique |
+| `Title` | text | ✓ | ≤ 120 chars |
+| `Category` | select | ✓ | from `Reference — Categories` (type `blog`) |
+| `Related Dog Public ID` | text | – | `public-id`, must exist |
+| `Author` | text | ✓ | ≤ 80 chars |
+| `Date` | date | ✓ | `date` rule; publish date |
+| `Excerpt` | text | – | ≤ 300 chars |
+| `Markdown` | markdown | ✓ | ≤ 50,000 chars; image refs use `![](drive:<filename>)` resolved against `Stories/<Slug>/images/` |
+| `Tags` | text | – | comma-separated, ≤ 10 tags, each ≤ 30 chars |
+| `SEO Title` | text | – | ≤ 60 chars |
+| `SEO Description` | text | – | ≤ 160 chars |
+| `Published` | bool | ✓ | `FALSE` → synced as draft, not publicly visible |
+| `Featured` | bool | – | |
+| `Cover Image` | text | system | **read-only** — filled by the media pipeline from `Stories/<Slug>/cover.*` |
+| `Active` | bool | ✓ | |
+
+### Tab: `Help` → `content_help` · archival: none
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Section` | select | ✓ | `Volunteer Opportunities`, `Foster Information`, `Emergency Help`, `Contact Card`, `How to Help` |
+| `Display Order` | int | ✓ | ≥ 0; unique within Section |
+| `Title` | text | – | ≤ 120 chars |
+| `Body` | markdown | – | ≤ 5,000 chars |
+| `Icon` | text | – | lucide-react icon name, kebab-case |
+| `CTA Label` | text | – | ≤ 40 chars; requires `CTA URL` |
+| `CTA URL` | url | – | `url` rule |
+| `Data (JSON)` | json | – | `Contact Card` → `json:contactCard` `{name,role,phone?,email?}`; `Volunteer Opportunities` → `json:opportunities` `[{role,commitment,description}]` |
+| `Active` | bool | ✓ | |
+
+### Tab: `Events` → `content_events` · archival: status_based (ended > 90 d)
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Slug` | slug | ✓ | unique |
+| `Title` | text | ✓ | ≤ 120 chars |
+| `Type` | select | ✓ | `Feeding Drive`, `Vaccination Camp`, `Adoption Camp`, `Fundraiser`, `Volunteer Meet` |
+| `Start Date` | datetime | ✓ | `datetime` rule |
+| `End Date` | datetime | – | ≥ `Start Date` |
+| `Location` | text | – | ≤ 160 chars |
+| `Description` | markdown | – | ≤ 5,000 chars |
+| `RSVP URL` | url | – | https only |
+| `Featured` | bool | – | |
+| `Display Order` | int | ✓ | ties broken by `Start Date` |
+| `Active` | bool | ✓ | |
+
+### Tab: `FAQ` → `content_faq` · archival: none
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Category` | select | ✓ | `General`, `Adoption`, `Donation`, `Volunteering`, `Reporting`, `Medical` |
+| `Question` | text | ✓ | ≤ 200 chars; unique within Category |
+| `Answer` | markdown | ✓ | ≤ 2,000 chars |
+| `Display Order` | int | ✓ | ≥ 0 |
+| `Active` | bool | ✓ | |
+
+### Tab: `Navigation` → `content_navigation` · archival: none
+
+One row per menu item; one level of nesting via `Parent Label`.
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Label` | text | ✓ | ≤ 30 chars; unique among siblings |
+| `URL` | url | ✓ | `url` rule |
+| `Icon` | text | – | lucide-react icon name |
+| `Parent Label` | text | – | must equal an existing top-level `Label`; grandchildren rejected |
+| `Display Order` | int | ✓ | unique among siblings |
+| `Visible` | bool | ✓ | |
+| `Open In New Tab` | bool | – | only meaningful for external URLs |
+| `Active` | bool | ✓ | |
+
+### Tab: `Footer` → `content_footer` · archival: none
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Section` | select | ✓ | `Social Link`, `Quick Link`, `Contact`, `Copyright`, `Newsletter Blurb` |
+| `Display Order` | int | ✓ | ≥ 0 |
+| `Label` | text | – | ≤ 40 chars; required for `Social Link` / `Quick Link` |
+| `URL` | url | – | required for `Social Link` / `Quick Link` |
+| `Icon` | text | – | e.g. `instagram` |
+| `Value` | text | – | ≤ 200 chars; required for `Contact` / `Copyright` |
+| `Active` | bool | ✓ | |
+
+---
+
+# Master Data tabs (Sheets → Supabase)
+
+### Tab: `Dogs` → `animals` · archival: manual (→ status_based once `Current Status` lands in M-CMS-3)
+
+One row per animal. Media is never in the sheet — volunteers drop photos in
+`Dogs/<Public ID>/`; the pipeline links them (see [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §12).
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Public ID` | text | system | **read-only** — DB-assigned on first sync (`public-id` pattern) |
+| `Name` | text | ✓ | ≤ 60 chars |
+| `Species` | select | ✓ | `Dog`, `Cat`, `Other` |
+| `Gender` | select | ✓ | `Male`, `Female`, `Unknown` |
+| `Age` | text | – | ≤ 40 chars, free label ("~3 years") |
+| `Breed` | text | – | ≤ 60 chars |
+| `Colour` | text | – | ≤ 60 chars |
+| `Weight (kg)` | number | – | 0 < w ≤ 100 |
+| `Size` | select | ✓ | `Small`, `Medium`, `Large` |
+| `Zone` | select | ✓ | must exist in `Reference — Zones` |
+| `Tagline` | text | – | ≤ 120 chars |
+| `Personality` | text | – | comma-separated, ≤ 10 tags, each ≤ 30 chars |
+| `Description` | text | – | ≤ 1,000 chars; short bio at top of profile |
+| `Story` | markdown | – | ≤ 20,000 chars; full narrative |
+| `Friendly` | select | ✓ | `Friendly`, `Selective`, `Cautious`, `Shy` |
+| `Vaccinated` | bool | ✓ | |
+| `Sterilized` | bool | ✓ | |
+| `Health Status` | select | ✓ | `Healthy`, `Under Treatment`, `Recovering`, `Monitoring` |
+| `Health Note (public)` | text | – | ≤ 500 chars; publicly visible |
+| `Internal Note` | text | – | ≤ 2,000 chars; **never rendered publicly** |
+| `Current Status` | select | ✓ | `On Campus`, `In Foster`, `In Treatment`, `Adopted`, `Rainbow Bridge` *(column lands with M-CMS-3 schema)* |
+| `Adoption Status` | select | ✓ | `Available`, `Foster Needed`, `Not Available`, `Adopted` |
+| `Good With People` | bool | – | |
+| `Good With Animals` | bool | – | |
+| `Special Care` | bool | – | |
+| `Notes` | text | – | ≤ 2,000 chars; free volunteer notes |
+| `Cover Image` | text | system | **read-only** — filled by the pipeline from `Dogs/<Public ID>/cover.*` |
+| `Active` | bool | ✓ | |
+
+### Tab: `Volunteers` → `volunteer_directory` · archival: none
+
+Public-facing directory — **not** the applicant roster (`volunteers` table, populated by the
+signup form).
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Name` | text | ✓ | ≤ 80 chars |
+| `Role` | text | – | ≤ 80 chars |
+| `Contact` | text | – | email format; personal phone numbers rejected by pattern (public page!) |
+| `Photo` | text | – | `drive:Volunteers/` |
+| `Responsibilities` | text | – | comma-separated, ≤ 10 items |
+| `Bio` | text | – | ≤ 1,000 chars |
+| `Display Order` | int | ✓ | ≥ 0 |
+| `Active` | bool | ✓ | |
+
+### Tab: `Website Settings` → `content_settings` · archival: none · no `Active` column
+
+Key/value rows; only `Value` is volunteer-editable. `Value` is validated per key.
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Key` | text | ✓ | `^[a-z0-9_]+$`; must be a known key (below) — unknown keys → `ERROR`, not silently stored |
+| `Value` | text/json | ✓ | typed per key (below) |
+| `Description` | text | – | documentation only; not synced |
+
+| Key | Value validation |
+|---|---|
+| `site_name`, `site_tagline` | text ≤ 80 |
+| `logo_url`, `favicon_url`, `seo_default_og_image` | `drive:Assets/branding/` |
+| `seo_default_title` | text ≤ 60 |
+| `seo_default_description` | text ≤ 160 |
+| `google_analytics_id` | `^G-[A-Z0-9]+$` |
+| `google_search_console_verification` | text ≤ 100 |
+| `theme` | `json:theme` — palette token overrides |
+| `announcement_banner` | `json:banner` — `{enabled,text,cta?{label,url},variant}` |
+| `emergency_contact_phone`, `emergency_contact_whatsapp` | E.164 phone |
+| `emergency_contact_email` | email |
+
+### Reference tabs (admin-only; mirror Postgres enums; not synced as content)
+
+`Reference — Zones` (`Zone ID`, `Zone Name`, `Notes`) · `Reference — Categories`
+(`Category Type` ∈ blog/report/donation/event/help, `Category ID`, `Category Label`) ·
+`Reference — Statuses` (`Entity` ∈ adoption/donation/report, `Status ID`, `Status Label`,
+`Display Order`). Edited only alongside the corresponding enum migration.
+
+---
+
+# Transaction Data tabs — volunteer-submitted (Sheets → Supabase)
+
+No `Cover Image`/media columns; documents referenced by filename. These tabs have an `Active`
+column (soft-delete for mistaken entries — row stays in the DB for audit).
+
+### Tab: `Medical History` → `animal_medical_events` · archival: time_window (last 2 years in-sheet)
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Dog Public ID` | text | ✓ | `public-id`, must exist |
+| `Date` | date | ✓ | not > 1 day in the future |
+| `Event Type` | select | ✓ | `Vaccination`, `Deworming`, `Sterilization`, `Injury`, `Treatment`, `Checkup`, `Recovery` |
+| `Diagnosis` | text | – | ≤ 500 chars |
+| `Treatment` | text | – | ≤ 500 chars |
+| `Medicine` | text | – | ≤ 300 chars |
+| `Veterinarian` | text | – | ≤ 120 chars |
+| `Public Note` | text | – | ≤ 1,000 chars; shown on the public timeline |
+| `Internal Note` | text | – | ≤ 2,000 chars; staff-only |
+| `Documents` | text | – | comma-separated filenames, each `drive:Dogs/<Public ID>/medical/`; catalogued, never auto-published |
+| `Active` | bool | ✓ | |
+
+### Tab: `Vaccination` → `animal_vaccinations` · archival: time_window (3 years)
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Dog Public ID` | text | ✓ | `public-id`, must exist |
+| `Vaccine` | text | ✓ | ≤ 80 chars |
+| `Date` | date | ✓ | not > 1 day in the future |
+| `Due Date` | date | – | ≥ `Date` |
+| `Veterinarian` | text | – | ≤ 120 chars |
+| `Notes` | text | – | ≤ 500 chars |
+| `Active` | bool | ✓ | |
+
+### Tab: `Sterilization` → `animal_sterilizations` · archival: none
+
+| Column | Type | Req | Validation |
+|---|---|---|---|
+| `Dog Public ID` | text | ✓ | `public-id`, must exist; at most one `Active` row per animal |
+| `Date` | date | ✓ | not > 1 day in the future |
+| `Doctor` | text | – | ≤ 120 chars |
+| `Hospital` | text | – | ≤ 120 chars |
+| `Notes` | text | – | ≤ 500 chars |
+| `Active` | bool | ✓ | |
+
+---
+
+# Transaction Data tabs — public-submitted (Supabase → Sheets)
+
+Rows originate from website forms. Only the marked **workflow** columns are Sheets-editable
+(dual-owned, resolved by `_row_version` — [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md) §6.3);
+everything else is a protected range. No `Active` column. **Privacy allowlist:** the DB→Sheets
+writer sends only the columns listed here — `lat`/`lng` and raw reporter contact details are
+never written to the spreadsheet.
+
+### Tab: `Adoption Applications` ← `adoption_applications` · archival: status_based (closed > 90 d)
+
+| Column | Type | Editable | Validation (for workflow edits) |
+|---|---|---|---|
+| `Application Code` | text | ❌ | |
 | `Dog Public ID` | text | ❌ | |
-| `Applicant Name` | text | ❌ | |
-| `Applicant Email` | text | ❌ | |
-| `Applicant Phone` | text | ❌ | coordinators-only, hidden from public views |
-| `Living Situation` | text | ❌ | JSON summary |
-| `Experience` | text | ❌ | JSON summary |
-| `Motivation` | text | ❌ | |
-| `Status` | select | ✅ | `Submitted` / `Under Review` / `Contacted` / `Meet Scheduled` / `Approved` / `Not Selected` / `Adopted` |
-| `Meet At` | datetime | ✅ | optional |
-| `Internal Notes` | text | ✅ | staff-only |
+| `Applicant Name` / `Applicant Email` / `Applicant Phone` | text | ❌ | phone visible to coordinators via this sheet — sheet sharing is the access boundary |
+| `Living Situation` / `Experience` / `Motivation` | text | ❌ | JSON summaries flattened to readable text |
+| `Status` | select | ✅ workflow | `Submitted`, `Under Review`, `Contacted`, `Meet Scheduled`, `Approved`, `Not Selected`, `Adopted` |
+| `Meet At` | datetime | ✅ workflow | `datetime` rule |
+| `Internal Notes` | text | ✅ workflow | ≤ 2,000 chars; staff-only |
 | `Submitted At` | timestamp | ❌ | |
 
-### Tab: `Donation Confirmations`
+### Tab: `Donation Confirmations` ← `donation_confirmations` · archival: size_threshold (newest 500)
 
-**Category:** Transaction Data (public-submitted) · **Direction:** DB → Sheets
-(workflow fields dual-owned) · **DB table:** `donation_confirmations` ·
-**Archival:** `size_threshold` — the 500 most recent submissions
-(`{ order_by: 'submitted_at', keep_newest: 500 }`) stay in the sheet ·
-**Change scope:** `Status`, `Show Publicly` only.
-
-| Column | Type | Editable? | Notes |
+| Column | Type | Editable | Validation |
 |---|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | ❌ | See Conventions above. Transaction Data — no `Active` column. |
 | `Campaign Slug` | text | ❌ | |
-| `Donor Name` | text | ❌ | |
-| `Email` | text | ❌ | optional |
-| `Phone` | text | ❌ | optional, coordinators-only |
-| `Amount (INR)` | number | ❌ | |
+| `Donor Name` / `Email` / `Phone` | text | ❌ | |
+| `Amount (INR)` | int | ❌ | |
 | `UTR / Transaction ID` | text | ❌ | donor-reported |
-| `Purpose` | text | ❌ | |
-| `Message` | text | ❌ | |
-| `Status` | select | ✅ | `Pending` / `Approved` / `Rejected` |
-| `Show Publicly` | boolean | ✅ | powers "Recent Donors" wall once Approved |
+| `Purpose` / `Message` | text | ❌ | |
+| `Status` | select | ✅ workflow | `Pending`, `Approved`, `Rejected` |
+| `Show Publicly` | bool | ✅ workflow | only honored when `Status = Approved` |
 | `Submitted At` | timestamp | ❌ | |
 
-### Tab: `Reports`
+### Tab: `Reports` ← `rescue_reports` · archival: status_based (resolved > 30 d)
 
-**Category:** Transaction Data (public-submitted) · **Direction:** DB → Sheets
-(workflow fields dual-owned) · **DB table:** `rescue_reports` ·
-**Archival:** `status_based` — reports with `Status = 'Resolved'` and `updated_at` older than
-30 days are archived out (queryable via admin dashboard) ·
-**Change scope:** `Status`, `Assigned Volunteer`, `Linked Dog Public ID` only.
-
-**Never present in this tab (server-side only):** precise `lat`/`lng` coordinates,
-`reporter_contact` phone/email.
-
-| Column | Type | Editable? | Notes |
+| Column | Type | Editable | Validation |
 |---|---|---|---|
-| `_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source` | system (8 protected cols) | ❌ | See Conventions above. Transaction Data — no `Active` column. |
-| `Report Code` | text | ❌ | e.g. `PAWS-RESCUE-2026-00128` |
-| `Animal Type` | select | ❌ | `Dog` / `Cat` / `Other` |
-| `Category` | select | ❌ | `Injured` / `Missing` / `Emergency` / `Dead Animal` / `Other` |
-| `Severity` | select | ❌ | `Emergency` / `Urgent` / `Moderate` / `Low` |
-| `Zone` | text | ❌ | public-safe zone id |
-| `Location Note` | text | ❌ | free text; precise coords never appear |
-| `Description` | text | ❌ | |
+| `Report Code` | text | ❌ | |
+| `Animal Type` | select | ❌ | |
+| `Category` | select | ❌ | `Injured`, `Missing`, `Emergency`, `Dead Animal`, `Other` |
+| `Severity` | select | ❌ | `Emergency`, `Urgent`, `Moderate`, `Low` |
+| `Zone` | text | ❌ | public-safe zone only — **precise lat/lng never appears in this sheet** |
+| `Location Note` / `Description` | text | ❌ | |
 | `Photo` | text | ❌ | Storage URL |
-| `Status` | select | ✅ | `Reported` / `Volunteer Assigned` / `On the Way` / `Animal Located` / `Treatment Started` / `Monitoring` / `Resolved` |
-| `Assigned Volunteer` | text | ✅ | matches a row in `Volunteers` tab by Name (or blank) |
-| `Linked Dog Public ID` | text | ✅ | optional — once the animal is identified |
+| `Status` | select | ✅ workflow | `Reported`, `Volunteer Assigned`, `On the Way`, `Animal Located`, `Treatment Started`, `Monitoring`, `Resolved` |
+| `Assigned Volunteer` | text | ✅ workflow | must match a `Volunteers` tab `Name`, or blank |
+| `Linked Dog Public ID` | text | ✅ workflow | `public-id`, must exist |
 | `Reported At` | timestamp | ❌ | |
-
----
-
-## Reference tabs (admin-only, dropdown sources)
-
-Reference tabs are **not synced as content**. They power Sheets data-validation dropdowns and
-are edited only when the underlying Postgres enum changes (which is a schema migration, not a
-CMS update).
-
-### Tab: `Reference — Zones`
-
-| Column | Notes |
-|---|---|
-| `Zone ID` | e.g. `tech-market`, `main-building`, `patel-hall` |
-| `Zone Name` | e.g. "Tech Market", "Main Building" |
-| `Notes` | |
-
-Used by `Dogs.Zone` and `Reports.Zone` dropdowns.
-
-### Tab: `Reference — Categories`
-
-| Column | Notes |
-|---|---|
-| `Category Type` | `blog` / `report` / `donation` / `event` / `help` |
-| `Category ID` | machine-readable slug |
-| `Category Label` | display name |
-
-### Tab: `Reference — Statuses`
-
-| Column | Notes |
-|---|---|
-| `Entity` | `adoption` / `donation` / `report` |
-| `Status ID` | matches the Postgres enum value |
-| `Status Label` | display name |
-| `Display Order` | for sorting |
 
 ---
 
 ## Access model
 
-- **Volunteers/admins:** shared as **Editor** on the spreadsheet.
-- **Sync service account:** shared as **Editor** on the spreadsheet, **Viewer** on the media
-  Drive folders (`Dogs/`, `Stories/`, `Events/`, `Assets/`). Service account never has write
-  access to Drive.
-- **Protected ranges** (service-account-only edit), enforced via Sheets API on first sync:
-  - All system columns (`_id`, `_row_version`, `_synced_at`, `_status`) on every tab.
-  - `Public ID` column on `Dogs`.
-  - `Raised Amount (INR)` on `Donate`.
-  - `Cover Image` column on `Dogs` and `Stories` (populated by the media pipeline).
-  - All non-workflow columns on transactional tabs.
-
----
-
-## Header verification
-
-The sync engine's first step on every run is a header check. Expected headers per tab are
-hard-coded in `lib/sync/tabs/<tab-name>.ts`. Any drift (renamed, reordered, or missing columns)
-aborts the run with `header_mismatch`, surfaces in the admin dashboard, and requires the sheet
-to be fixed before sync resumes. No silent failure ever.
-
----
+- **Volunteers/admins:** Editor on the spreadsheet. Enforcement of "what they may actually
+  change" is the protected-range set below plus engine-side validation — not trust.
+- **Sync service account:** Editor on the spreadsheet; **Viewer** on the Drive media folders
+  (never write access to Drive).
+- **Protected ranges** (service-account-only), applied by the engine on first run:
+  system columns A–H on every tab · `Public ID` + `Cover Image` on `Dogs` · `Cover Image` on
+  `Stories` · `Raised Amount (INR)` on `Donate` · all non-workflow columns on the three
+  public-submitted Transaction tabs.
 
 ## Change history
 
 | Date | Change |
 |---|---|
 | 2026-07-16 | Initial 10-tab draft. |
-| 2026-07-17 | Rewritten for the CMS-first architecture. Now 18 content + transactional tabs, ownership direction per tab, explicit DB mapping per tab, workflow-field callouts. Supersedes the pre-2026-07-17 draft in full. |
-| 2026-07-17 | Owner-approved refinements applied: (a) system columns expanded to 8 (`_id`, `_public_id`, `_row_version`, `_sync_status`, `_last_synced`, `_last_error`, `_updated_at`, `_sync_source`) — replaces the previous 4-column set; (b) tabs categorized into Content / Master Data / Transaction Data; (c) archival policy declared per tab; (d) `Active` clarified as a user column (not system) present only where soft-delete makes sense. |
+| 2026-07-17 | Rewritten for the CMS-first architecture (18 tabs, ownership per tab). |
+| 2026-07-17 | Owner-approved refinements: 8 system columns; Content / Master Data / Transaction Data categorization; per-tab archival policies; `Active` clarified as a user column. |
+| 2026-07-17 | **Full column contract**: every column now carries type, required flag, and validation rule (architecture-review deliverable 3). Tabs regrouped by category; `Donate` two-row-shape discrimination documented; Website Settings known-key registry with per-key validation. |

@@ -10,6 +10,109 @@ CHANGELOG 2026-07-17) and is now closed; the files match what's actually live.
 > infrastructure introduced in migration `0006`, per [CMS_ARCHITECTURE.md](CMS_ARCHITECTURE.md).
 > Read that document first for the full design; this schema doc is the per-column reference.
 
+## 0. Entity-relationship overview
+
+Two diagrams: the sync/CMS infrastructure, then the domain core. The nine `content_*` tables
+share one shape (sync-metadata block + section discriminator + `data jsonb`), so one exemplar
+(`content_home`) stands in for all of them.
+
+### 0.1 Sync infrastructure
+
+```mermaid
+erDiagram
+  tab_config ||..o{ sync_jobs : "gates / configures"
+  sync_jobs  ||--o{ sync_conflicts   : "raises"
+  sync_jobs  ||--o{ content_audit_log : "writes diffs"
+  sync_jobs  ||--o{ sync_log          : "summarized in"
+
+  tab_config {
+    text  tab_name PK
+    text  category  "content | master_data | transaction_data"
+    text  direction "sheets_to_db | db_to_sheets"
+    text_arr db_tables
+    jsonb archive_policy "kind: none|status_based|time_window|size_threshold|manual"
+    text_arr revalidate_paths
+    bool  enabled "per-tab kill switch"
+  }
+  sync_jobs {
+    uuid  id PK
+    text  tab
+    text  direction
+    text  scope "full | incremental | row"
+    uuid  row_id "when scope=row"
+    text  state "queued|running|succeeded|failed|conflict"
+    int   attempt
+    timestamptz next_run_at "retry backoff"
+    timestamptz heartbeat_at "5-min lease TTL"
+    text  triggered_by "cron|admin|trigger|apps_script|compat_shim"
+  }
+  sync_conflicts {
+    uuid  id PK
+    text  type "row_version_mismatch|broken_media|unresolved_fk|duplicate_public_id"
+    jsonb sheet_payload
+    jsonb db_payload
+    text  resolution "null until admin resolves"
+  }
+  content_audit_log {
+    bigserial id PK
+    text  table_name
+    uuid  row_id
+    text  operation "insert|update|soft_delete|archive|unarchive"
+    text  source "sheets|app|trigger|system"
+    jsonb diff "field: old/new — append-only, trigger-enforced"
+  }
+```
+
+Every Sheets→DB synced table also has a `stg_<table>` staging mirror (not drawn — same columns
+plus `sync_job_id`; RLS-sealed to the service role).
+
+### 0.2 Domain core
+
+```mermaid
+erDiagram
+  animals ||--o{ animal_photos : ""
+  animals ||--o{ animal_medical_events : ""
+  animals ||--o{ animal_vaccinations : ""
+  animals ||--o{ animal_sterilizations : ""
+  animals ||--o{ animal_health_records : ""
+  animals ||--o{ animal_sightings : ""
+  animals ||--o{ qr_tags : ""
+  qr_tags ||--o{ qr_scans : ""
+  animals ||--o{ adoption_applications : ""
+  donation_campaigns ||--o{ donation_confirmations : ""
+  donation_campaigns ||--o{ campaign_expenses : ""
+  donation_campaigns ||--o{ campaign_updates : ""
+  stories ||--o{ story_media : ""
+  rescue_reports ||--o{ report_updates : ""
+  volunteers ||--o{ volunteer_assignments : ""
+  drive_assets }o..o| animals : "media link (nullable)"
+  drive_assets }o..o| stories : "media link (nullable)"
+
+  animals {
+    uuid id PK
+    text public_id UK "DOG00023 - printed on QR tags"
+    text slug UK
+    text sheet_row_id UK "sync key (_id in the Sheet)"
+    int  row_version "conflict detection"
+    text sync_source "sheets | app"
+    timestamptz archived_at "null = in the sheet view"
+  }
+  content_home {
+    uuid id PK
+    text sheet_row_id UK
+    text section "hero|mission|stats|... (exemplar of all 9 content_* tables)"
+    jsonb data "section-specific payload"
+    bool is_active "Active column"
+  }
+  drive_assets {
+    uuid id PK
+    text drive_file_id UK
+    text storage_path
+    jsonb variants "responsive ladder (M-CMS-3)"
+    text checksum "md5 - idempotent re-ingest"
+  }
+```
+
 ---
 
 ## 1. Migration `0001_initial_schema.sql` — ✅ **applied to the live project** (2026-07-16)
