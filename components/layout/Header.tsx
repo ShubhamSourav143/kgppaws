@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, Siren, LayoutDashboard, LogIn } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Menu, X, Siren, LayoutDashboard, LogIn, ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
+import { Magnetic } from "@/components/fx/Magnetic";
 import { useSession } from "@/hooks/use-demo-session";
 import { cn } from "@/lib/utils";
-
 
 export interface HeaderNavItem {
   href: string;
@@ -16,26 +16,7 @@ export interface HeaderNavItem {
   openInNewTab?: boolean;
 }
 
-function Squiggle({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 56 6"
-      aria-hidden="true"
-      className={cn("absolute -bottom-1.5 left-0 h-[6px] w-full", className)}
-      preserveAspectRatio="none"
-    >
-      <path
-        d="M2 4 C 12 1, 22 6, 32 3 S 50 2, 54 3.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
-  );
-}
-
-function NavLink({ href, label }: { href: string; label: string }) {
+function NavLink({ href, label, light }: { href: string; label: string; light: boolean }) {
   const pathname = usePathname();
   const active = pathname === href || pathname.startsWith(href + "/");
   return (
@@ -43,15 +24,18 @@ function NavLink({ href, label }: { href: string; label: string }) {
       href={href}
       className={cn(
         "group relative px-1 py-2 text-sm font-semibold transition-colors",
-        active ? "text-terracotta-deep" : "text-forest hover:text-terracotta-deep"
+        light
+          ? active ? "text-marigold" : "text-ivory/90 hover:text-marigold"
+          : active ? "text-saffron-deep" : "text-forest hover:text-saffron-deep"
       )}
     >
       {label}
-      <Squiggle
+      <span
         className={cn(
-          "text-terracotta transition-opacity duration-300",
-          active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          "absolute inset-x-0 -bottom-0.5 h-[2.5px] origin-left rounded-full bg-gradient-to-r from-saffron to-marigold transition-transform duration-300 ease-out",
+          active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
         )}
+        aria-hidden="true"
       />
     </Link>
   );
@@ -63,21 +47,28 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { user } = useSession();
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // close drawer on navigation — adjust state during render rather than in
-  // an effect (see https://react.dev/learn/you-might-not-need-an-effect)
+  // close the overlay on navigation — state-during-render, no effect needed
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
     setOpen(false);
   }
+
+  useEffect(() => {
+    document.documentElement.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.documentElement.style.overflow = "";
+    };
+  }, [open]);
 
   const dashboardHref =
     user?.role === "admin" || user?.role === "super_admin"
@@ -86,122 +77,167 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
         ? "/dashboard/volunteer"
         : "/dashboard";
 
+  const overlayLinks = [
+    { href: "/", label: "Home" },
+    ...NAV,
+    { href: "/gallery", label: "Gallery" },
+  ].filter(
+    (l, i, arr) => arr.findIndex((x) => x.href === l.href) === i
+  );
+
+  // Marketing pages open with a dark cinematic top — the transparent header
+  // renders light there. Utility/flow pages have light tops, so the glass
+  // pill is used from the very start.
+  const lightTop = !["/report", "/admin", "/dashboard", "/login", "/signup", "/faq", "/offline", "/scan-not-found", "/adopt/apply"].some(
+    (p) => pathname.startsWith(p)
+  );
+  const pill = scrolled || !lightTop;
+  const light = lightTop && !scrolled;
+
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 transition-all duration-300",
-        scrolled
-          ? "border-b border-line bg-cream/90 shadow-soft backdrop-blur-md"
-          : "bg-transparent"
-      )}
-    >
-      <div className="container-page flex h-16 items-center justify-between gap-4 md:h-20">
-        <Logo />
-
-        <nav aria-label="Primary" className="hidden items-center gap-5 lg:flex xl:gap-7">
-          {NAV.map((item) => (
-            <NavLink key={item.href} href={item.href} label={item.label} />
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          {user ? (
-            <Link
-              href={dashboardHref}
-              className="hidden items-center gap-2 rounded-full border border-forest/20 px-4 py-2 text-sm font-semibold text-forest transition-colors hover:bg-mist md:inline-flex"
-            >
-              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-              {user.name.split(" ")[0]}
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="hidden items-center gap-2 rounded-full border border-forest/20 px-4 py-2 text-sm font-semibold text-forest transition-colors hover:bg-mist md:inline-flex"
-            >
-              <LogIn className="h-4 w-4" aria-hidden="true" />
-              Sign in
-            </Link>
+    <>
+      <header className="fixed inset-x-0 top-0 z-50">
+        <div
+          className={cn(
+            "mx-auto flex items-center justify-between gap-4 transition-all duration-500",
+            pill
+              ? "mt-3 h-14 w-[min(76rem,calc(100%-1.5rem))] rounded-full glass px-4 shadow-soft sm:px-6"
+              : "mt-0 h-16 w-full bg-transparent px-5 sm:px-8 md:h-20 lg:px-12"
           )}
+        >
+          <Logo compact={pill} variant={light ? "light" : "dark"} />
 
-          <Link
-            href="/report"
-            className="inline-flex items-center gap-2 rounded-full bg-terracotta px-4 py-2.5 text-sm font-bold text-parchment shadow-soft transition-all hover:-translate-y-px hover:bg-terracotta-deep sm:px-5"
-          >
-            <Siren className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Report an Animal</span>
-            <span className="sm:hidden">Report</span>
-          </Link>
+          <nav aria-label="Primary" className="hidden items-center gap-5 lg:flex xl:gap-7">
+            {NAV.map((item) => (
+              <NavLink key={item.href} href={item.href} label={item.label} light={light} />
+            ))}
+          </nav>
 
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="grid h-11 w-11 place-items-center rounded-full text-forest transition-colors hover:bg-mist lg:hidden"
-            aria-label="Open menu"
-            aria-expanded={open}
-          >
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {user ? (
+              <Link
+                href={dashboardHref}
+                className={cn(
+                  "hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors md:inline-flex",
+                  light
+                    ? "border-ivory/25 bg-ivory/10 text-ivory hover:bg-ivory/20"
+                    : "border-forest/15 bg-ivory/60 text-forest hover:bg-ivory"
+                )}
+              >
+                <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                {user.name.split(" ")[0]}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className={cn(
+                  "hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors md:inline-flex",
+                  light
+                    ? "border-ivory/25 bg-ivory/10 text-ivory hover:bg-ivory/20"
+                    : "border-forest/15 bg-ivory/60 text-forest hover:bg-ivory"
+                )}
+              >
+                <LogIn className="h-4 w-4" aria-hidden="true" />
+                Sign in
+              </Link>
+            )}
+
+            <Magnetic strength={0.25} className="hidden sm:inline-block">
+              <Link
+                href="/report"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep to-saffron px-5 py-2.5 text-sm font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
+              >
+                <Siren className="h-4 w-4" aria-hidden="true" />
+                Report an Animal
+              </Link>
+            </Magnetic>
+
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className={cn(
+                "grid h-11 w-11 place-items-center rounded-full transition-colors lg:hidden",
+                light ? "text-ivory hover:bg-ivory/10" : "text-forest hover:bg-mist"
+              )}
+              aria-label="Open menu"
+              aria-expanded={open}
+            >
+              <Menu className="h-6 w-6" aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile drawer */}
+      {/* Full-screen menu */}
       <AnimatePresence>
         {open && (
-          <>
-            <motion.button
-              type="button"
-              aria-label="Close menu"
-              className="fixed inset-0 z-40 bg-charcoal/50 lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-            />
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-label="Site menu"
-              className="fixed right-0 top-0 z-50 flex h-dvh w-[min(20rem,85vw)] flex-col bg-parchment shadow-lift lg:hidden"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "tween", duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site menu"
+            className="aurora fixed inset-0 z-[60] flex flex-col bg-night text-ivory lg:hidden"
+            initial={reduced ? { opacity: 0 } : { clipPath: "circle(0% at calc(100% - 3.5rem) 2.5rem)" }}
+            animate={reduced ? { opacity: 1 } : { clipPath: "circle(150% at calc(100% - 3.5rem) 2.5rem)" }}
+            exit={reduced ? { opacity: 0 } : { clipPath: "circle(0% at calc(100% - 3.5rem) 2.5rem)" }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="flex h-16 items-center justify-between px-5">
+              <Logo variant="light" compact />
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="grid h-11 w-11 place-items-center rounded-full text-ivory hover:bg-ivory/10"
+                aria-label="Close menu"
+              >
+                <X className="h-6 w-6" aria-hidden="true" />
+              </button>
+            </div>
+
+            <motion.nav
+              aria-label="Mobile"
+              className="flex flex-1 flex-col justify-center gap-1 overflow-y-auto px-8 pb-8"
+              initial="hidden"
+              animate="show"
+              transition={{ staggerChildren: 0.06, delayChildren: 0.18 }}
             >
-              <div className="flex items-center justify-between border-b border-line p-5">
-                <Logo compact />
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="grid h-11 w-11 place-items-center rounded-full text-forest hover:bg-mist"
-                  aria-label="Close menu"
-                >
-                  <X className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </div>
-              <nav aria-label="Mobile" className="flex flex-col gap-1 p-4">
-                {NAV.map((item) => {
-                  const active =
-                    pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
+              {overlayLinks.map((item) => {
+                const active =
+                  pathname === item.href ||
+                  (item.href !== "/" && pathname.startsWith(item.href + "/"));
+                return (
+                  <motion.div
+                    key={item.href}
+                    variants={{
+                      hidden: { opacity: 0, y: 28 },
+                      show: { opacity: 1, y: 0 },
+                    }}
+                    transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     <Link
-                      key={item.href}
                       href={item.href}
                       className={cn(
-                        "rounded-xl px-4 py-3 font-display text-lg font-semibold transition-colors",
-                        active
-                          ? "bg-mist text-forest"
-                          : "text-charcoal hover:bg-mist hover:text-forest"
+                        "group flex items-baseline gap-3 py-2 font-display text-4xl font-semibold tracking-tight",
+                        active ? "text-marigold" : "text-ivory hover:text-gold-soft"
                       )}
                     >
                       {item.label}
+                      <ArrowUpRight
+                        className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-70"
+                        aria-hidden="true"
+                      />
                     </Link>
-                  );
-                })}
-              </nav>
-              <div className="mt-auto space-y-3 border-t border-line p-5">
+                  </motion.div>
+                );
+              })}
+
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0 } }}
+                transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-8 flex flex-wrap gap-3"
+              >
                 <Link
                   href="/report"
-                  className="flex items-center justify-center gap-2 rounded-full bg-terracotta px-5 py-3.5 font-bold text-parchment"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep to-saffron px-6 py-3.5 font-bold text-ivory shadow-ember"
                 >
                   <Siren className="h-5 w-5" aria-hidden="true" />
                   Report an Animal
@@ -209,32 +245,25 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
                 {user ? (
                   <Link
                     href={dashboardHref}
-                    className="flex items-center justify-center gap-2 rounded-full border border-forest/25 px-5 py-3 font-semibold text-forest"
+                    className="inline-flex items-center gap-2 rounded-full border border-ivory/25 px-6 py-3.5 font-semibold text-ivory"
                   >
                     <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                     My dashboard
                   </Link>
                 ) : (
-                  <div className="flex gap-3">
-                    <Link
-                      href="/login"
-                      className="flex-1 rounded-full border border-forest/25 px-5 py-3 text-center font-semibold text-forest"
-                    >
-                      Sign in
-                    </Link>
-                    <Link
-                      href="/signup"
-                      className="flex-1 rounded-full bg-forest px-5 py-3 text-center font-semibold text-cream"
-                    >
-                      Join
-                    </Link>
-                  </div>
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 rounded-full border border-ivory/25 px-6 py-3.5 font-semibold text-ivory"
+                  >
+                    <LogIn className="h-4 w-4" aria-hidden="true" />
+                    Sign in
+                  </Link>
                 )}
-              </div>
-            </motion.div>
-          </>
+              </motion.div>
+            </motion.nav>
+          </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </>
   );
 }

@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 import { SITE } from "@/lib/config";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { ReportFab } from "@/components/layout/ReportFab";
+import { MobileDock } from "@/components/layout/MobileDock";
+import { SmoothScroll } from "@/components/fx/SmoothScroll";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 import { getSettings } from "@/services/content";
 import "./globals.css";
@@ -90,11 +91,14 @@ export default function RootLayout({
           Skip to main content
         </a>
         <SiteChrome>
-          <main id="main-content" className="flex-1">
+          {/* the fixed header floats over content; pages with a cinematic
+              hero pull themselves underneath it with -mt-16 md:-mt-20 */}
+          <main id="main-content" className="flex-1 pt-16 md:pt-20">
             {children}
           </main>
         </SiteChrome>
-        <ReportFab />
+        <MobileDock />
+        <SmoothScroll />
         <ServiceWorker />
       </body>
     </html>

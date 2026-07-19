@@ -50,12 +50,14 @@ function Block({ block }: { block: StoryBlock }) {
       );
     case "quote":
       return (
-        <figure className="my-10 border-l-4 border-terracotta pl-6">
-          <blockquote className="font-display text-2xl font-medium italic leading-snug text-forest-deep">
-            “{block.text}”
+        <figure className="relative my-12 pl-8">
+          <span aria-hidden="true" className="absolute left-0 top-0 h-full w-1.5 rounded-full bg-gradient-to-b from-saffron to-marigold" />
+          <span aria-hidden="true" className="absolute -left-2 -top-6 font-display text-7xl italic text-saffron/25">“</span>
+          <blockquote className="font-display text-2xl font-medium italic leading-snug text-forest-deep sm:text-3xl">
+            {block.text}
           </blockquote>
           {block.by && (
-            <figcaption className="mt-3 text-sm font-bold text-moss">
+            <figcaption className="mt-4 text-sm font-bold uppercase tracking-wider text-saffron-deep">
               — {block.by}
             </figcaption>
           )}
@@ -81,14 +83,20 @@ function Block({ block }: { block: StoryBlock }) {
       );
     case "timeline":
       return (
-        <ol className="my-10 space-y-4 rounded-3xl border border-line bg-parchment p-6 sm:p-8">
-          {block.items.map((item) => (
-            <li key={item.date + item.text} className="flex gap-4">
-              <span className="w-16 shrink-0 pt-0.5 text-xs font-black uppercase tracking-wide text-terracotta-deep">
-                {item.date}
+        <ol className="paper my-12 space-y-0 rounded-3xl border border-line p-6 shadow-soft sm:p-8">
+          {block.items.map((item, idx) => (
+            <li key={item.date + item.text} className="relative flex gap-5 pb-6 last:pb-0">
+              <span className="flex flex-col items-center">
+                <span className="mt-1 grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-marigold ring-4 ring-gold-soft/40" />
+                {idx < block.items.length - 1 && <span className="mt-1 w-px flex-1 bg-line" />}
               </span>
-              <span className="border-l-2 border-line pl-4 text-sm leading-relaxed text-charcoal/85">
-                {item.text}
+              <span className="min-w-0 pb-1">
+                <span className="block text-xs font-black uppercase tracking-wide text-saffron-deep">
+                  {item.date}
+                </span>
+                <span className="mt-1 block text-sm leading-relaxed text-charcoal/85">
+                  {item.text}
+                </span>
               </span>
             </li>
           ))}
@@ -122,13 +130,13 @@ export default async function StoryPage({
     <article>
       {/* cinematic hero */}
       <header
-        className="grain relative overflow-hidden text-cream"
+        className="grain relative -mt-16 overflow-hidden text-cream md:-mt-20"
         style={{
           background: `linear-gradient(160deg, ${story.heroPalette[0]}, ${story.heroPalette[1]})`,
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/50 to-transparent" aria-hidden="true" />
-        <div className="container-page relative flex min-h-[52vh] flex-col justify-end py-14">
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/55 via-transparent to-charcoal/25" aria-hidden="true" />
+        <div className="container-page relative flex min-h-[62vh] flex-col justify-end pb-14 pt-32">
           <div className="flex flex-wrap items-center gap-3">
             <Chip tone="sand">{STORY_CATEGORY_LABELS[story.category]}</Chip>
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-cream/85">

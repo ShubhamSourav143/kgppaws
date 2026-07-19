@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ————— KGP PAWS design tokens ————— */
+/* ————— KGP PAWS design tokens · v2 "Aurora" ————— */
 
 @theme inline {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -8,25 +8,44 @@
 }
 
 @theme {
-  /* Earthy premium palette */
-  --color-forest: #173f35;
-  --color-forest-deep: #0e2b23;
-  --color-forest-bright: #2e6b56;
+  /* Heritage palette (v1) — kept live so operational surfaces stay coherent */
+  --color-forest: #14402f;
+  --color-forest-deep: #0b2a1e;
+  --color-forest-bright: #1f6b4a;
   --color-mist: #e7eee8;
-  --color-cream: #f7f1e7;
-  --color-parchment: #fcf8f0;
-  --color-sand: #dcc9a3;
-  --color-sand-light: #efe6d2;
+  --color-cream: #faf5ea;
+  --color-parchment: #fdfbf4;
+  --color-sand: #e3d2ab;
+  --color-sand-light: #f1e8d3;
   --color-terracotta: #c96745;
   --color-terracotta-deep: #a8502f;
   --color-clay: #f1ddcc;
-  --color-charcoal: #202421;
+  --color-charcoal: #1d211d;
   --color-moss: #5b6a5d;
-  --color-line: #e3d9c5;
+  --color-line: #e6dcc4;
 
-  --shadow-soft: 0 2px 24px -8px rgb(32 36 33 / 0.14);
-  --shadow-lift: 0 16px 44px -14px rgb(32 36 33 / 0.25);
-  --shadow-glow: 0 0 0 1px rgb(23 63 53 / 0.06), 0 20px 60px -20px rgb(23 63 53 / 0.35);
+  /* Aurora palette (v2) — India, blended not striped */
+  --color-saffron: #e8813a;
+  --color-saffron-deep: #c25f1e;
+  --color-saffron-glow: #f5a35b;
+  --color-marigold: #e9b84c;
+  --color-gold-soft: #f3dda6;
+  --color-sage: #7fa08c;
+  --color-chakra: #2563a8;
+  --color-chakra-ink: #123056;
+  --color-earth: #8a6a4f;
+  --color-night: #0a120e;
+  --color-night-soft: #122019;
+  --color-ivory: #fdfbf6;
+
+  --shadow-soft: 0 2px 24px -8px rgb(29 33 29 / 0.14);
+  --shadow-lift: 0 16px 44px -14px rgb(29 33 29 / 0.25);
+  --shadow-glow: 0 0 0 1px rgb(20 64 47 / 0.06), 0 20px 60px -20px rgb(20 64 47 / 0.35);
+  --shadow-ember: 0 12px 40px -12px rgb(232 129 58 / 0.45);
+  --shadow-card: 0 1px 2px rgb(29 33 29 / 0.05), 0 12px 32px -16px rgb(29 33 29 / 0.22);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ————— Base ————— */
@@ -45,12 +64,12 @@ body {
 }
 
 ::selection {
-  background: var(--color-terracotta);
-  color: var(--color-parchment);
+  background: var(--color-saffron);
+  color: var(--color-ivory);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-terracotta);
+  outline: 2px solid var(--color-saffron-deep);
   outline-offset: 3px;
   border-radius: 4px;
 }
@@ -59,6 +78,12 @@ h1, h2, h3 {
   font-family: var(--font-display);
   letter-spacing: -0.015em;
 }
+
+/* Lenis smooth scroll */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
 
 /* ————— Utilities ————— */
 
@@ -71,12 +96,44 @@ h1, h2, h3 {
   @media (min-width: 1024px) { padding-inline: 3rem; }
 }
 
+@utility container-wide {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 96rem;
+  padding-inline: 1.25rem;
+  @media (min-width: 640px) { padding-inline: 2rem; }
+  @media (min-width: 1024px) { padding-inline: 3rem; }
+}
+
 @utility eyebrow {
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;
+}
+
+/* Frosted glass panels */
+@utility glass {
+  background: rgb(253 251 246 / 0.72);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgb(253 251 246 / 0.55);
+}
+
+@utility glass-dark {
+  background: rgb(10 18 14 / 0.55);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid rgb(253 251 246 / 0.12);
+}
+
+/* Sunrise / dusk gradient text */
+@utility text-sunrise {
+  background: linear-gradient(100deg, var(--color-saffron-deep), var(--color-saffron) 40%, var(--color-marigold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* soft grain texture for illustrated surfaces */
@@ -94,8 +151,91 @@ h1, h2, h3 {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
 }
 
-/* ————— Idle animation keyframes (hero & microinteractions) ————— */
+/* Aurora wash — animated blended gradient for dark sections */
+@utility aurora {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.aurora::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 42% at 22% 28%, rgb(232 129 58 / 0.20), transparent 70%),
+    radial-gradient(42% 46% at 78% 22%, rgb(37 99 168 / 0.16), transparent 70%),
+    radial-gradient(46% 50% at 55% 82%, rgb(31 107 74 / 0.24), transparent 70%),
+    radial-gradient(30% 34% at 85% 70%, rgb(233 184 76 / 0.12), transparent 70%);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
 
+/* Paper texture for scrapbook surfaces */
+@utility paper {
+  background-color: var(--color-ivory);
+  background-image:
+    radial-gradient(rgb(29 33 29 / 0.035) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Horizontal scroller with hidden scrollbar */
+@utility scroller-x {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.scroller-x::-webkit-scrollbar { display: none; }
+
+/* Shimmer skeleton */
+@utility skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgb(29 33 29 / 0.06);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(253 251 246 / 0.65), transparent);
+  animation: shimmer 1.8s infinite;
+}
+
+/* ————— Keyframes ————— */
+
+@keyframes aurora-drift {
+  0% { transform: translate3d(-4%, -2%, 0) rotate(0deg) scale(1); }
+  100% { transform: translate3d(4%, 3%, 0) rotate(8deg) scale(1.12); }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes drift-x {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(28px) translateY(-10px); }
+}
+@keyframes sway {
+  0%, 100% { transform: rotate(-2.2deg); }
+  50% { transform: rotate(2.2deg); }
+}
+@keyframes ray-sweep {
+  0%, 100% { opacity: 0.45; transform: rotate(-1.5deg) scaleY(1); }
+  50% { opacity: 0.8; transform: rotate(1.5deg) scaleY(1.04); }
+}
+@keyframes fall-leaf {
+  0% { transform: translateY(-8vh) translateX(0) rotate(0deg); opacity: 0; }
+  8% { opacity: 0.9; }
+  50% { transform: translateY(45vh) translateX(-6vw) rotate(140deg); }
+  92% { opacity: 0.85; }
+  100% { transform: translateY(96vh) translateX(4vw) rotate(320deg); opacity: 0; }
+}
 @keyframes breathe {
   0%, 100% { transform: scaleY(1) scaleX(1); }
   50% { transform: scaleY(1.018) scaleX(1.006); }
@@ -129,6 +269,40 @@ h1, h2, h3 {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.55; }
 }
+@keyframes scroll-hint {
+  0% { transform: translateY(0); opacity: 0; }
+  25% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { transform: translateY(14px); opacity: 0; }
+}
+@keyframes fly-across {
+  0% { transform: translateX(-12vw) translateY(0) scale(var(--fly-scale, 1)); }
+  50% { transform: translateX(44vw) translateY(-6vh) scale(var(--fly-scale, 1)); }
+  100% { transform: translateX(112vw) translateY(-2vh) scale(var(--fly-scale, 1)); }
+}
+@keyframes flap {
+  0%, 100% { d: path("M0 6 Q 7 0 14 6 Q 21 0 28 6"); }
+  50% { d: path("M0 2 Q 7 9 14 2 Q 21 9 28 2"); }
+}
+@keyframes kenburns {
+  0% { transform: scale(1.02) translate(0, 0); }
+  100% { transform: scale(1.14) translate(-1.5%, -2%); }
+}
+@keyframes fly-across {
+  0% { transform: translateX(-12vw) translateY(0) scale(0.9); opacity: 0; }
+  6% { opacity: 0.85; }
+  50% { transform: translateX(50vw) translateY(-5vh) scale(1); }
+  94% { opacity: 0.8; }
+  100% { transform: translateX(112vw) translateY(-2vh) scale(0.95); opacity: 0; }
+}
+@keyframes wing-flap {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.35); }
+}
+@keyframes kenburns {
+  0% { transform: scale(1.05) translate(0, 0); }
+  100% { transform: scale(1.16) translate(-1.5%, -1.5%); }
+}
 
 .anim-breathe { animation: breathe 4.2s ease-in-out infinite; transform-origin: 50% 85%; }
 .anim-blink { animation: blink 5.5s ease-in-out infinite; transform-origin: center 60%; }
@@ -138,13 +312,29 @@ h1, h2, h3 {
 .anim-float { animation: float-y 5s ease-in-out infinite; }
 .anim-swing { animation: tag-swing 3.2s ease-in-out infinite; transform-origin: 50% 0%; }
 .anim-pulse-soft { animation: pulse-soft 2.4s ease-in-out infinite; }
+.anim-sway { animation: sway 6s ease-in-out infinite; transform-origin: 50% 100%; }
+.anim-drift { animation: drift-x 18s ease-in-out infinite; }
+.anim-ray { animation: ray-sweep 9s ease-in-out infinite; transform-origin: 50% 0%; }
+.anim-marquee { animation: marquee-x var(--marquee-duration, 40s) linear infinite; }
+.anim-scroll-hint { animation: scroll-hint 2.2s ease-in-out infinite; }
+.anim-fly { animation: fly-across var(--fly-duration, 34s) linear infinite; }
+.anim-flap { animation: flap 0.6s ease-in-out infinite; }
+.anim-kenburns { animation: kenburns 16s ease-out infinite alternate; }
+.anim-leaf { animation: fall-leaf var(--leaf-duration, 13s) linear infinite; }
+.anim-fly { animation: fly-across var(--fly-duration, 26s) linear infinite; }
+.anim-flap { animation: wing-flap 0.55s ease-in-out infinite; transform-origin: 50% 40%; }
+.anim-kenburns { animation: kenburns 14s ease-in-out infinite alternate; }
+.anim-leaf { animation: fall-leaf var(--leaf-duration, 13s) linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .anim-breathe, .anim-blink, .anim-ear, .anim-head,
-  .anim-tail, .anim-float, .anim-swing, .anim-pulse-soft {
+  .anim-tail, .anim-float, .anim-swing, .anim-pulse-soft,
+  .anim-sway, .anim-drift, .anim-ray, .anim-marquee, .anim-scroll-hint,
+  .anim-fly, .anim-flap, .anim-kenburns, .anim-leaf {
     animation: none;
   }
+  .aurora::before { animation: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;

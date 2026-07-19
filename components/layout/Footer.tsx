@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Mail, Siren } from "lucide-react";
-import { Logo } from "@/components/brand/Logo";
+import { Mail, Siren, ArrowUpRight } from "lucide-react";
+import { Logo, Seal } from "@/components/brand/Logo";
+import { Marquee } from "@/components/fx/Marquee";
+import { Reveal } from "@/components/fx/Reveal";
 import { SITE, isSupabaseConfigured } from "@/lib/config";
 import type { FooterItem } from "@/services/content";
 
@@ -32,8 +34,6 @@ function XIcon({ className }: { className?: string }) {
 
 function iconFor(name: string | null | undefined, className: string) {
   switch ((name ?? "").toLowerCase()) {
-    case "instagram":
-      return <InstagramIcon className={className} />;
     case "facebook":
       return <FacebookIcon className={className} />;
     case "x":
@@ -44,11 +44,12 @@ function iconFor(name: string | null | undefined, className: string) {
   }
 }
 
-
 const LEGAL = [
   { href: "/about#privacy", label: "Privacy Policy" },
   { href: "/about#animal-data", label: "Animal Data Policy" },
 ];
+
+const MANTRA = ["Rescue", "Heal", "Protect", "Remember"];
 
 export interface FooterSections {
   socialLinks: FooterItem[];
@@ -57,7 +58,6 @@ export interface FooterSections {
   copyright: string | null;
   newsletterBlurb?: string | null;
 }
-
 
 export function Footer({
   sections,
@@ -77,11 +77,50 @@ export function Footer({
   const email = emergencyEmail ?? SITE.email;
 
   return (
-    <footer className="bg-forest-deep text-cream">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-2 md:py-16 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
-        <div className="max-w-sm space-y-4">
+    <footer className="aurora relative overflow-hidden bg-night pb-24 text-ivory md:pb-0">
+      {/* mantra marquee */}
+      <div className="border-b border-ivory/10 py-5">
+        <Marquee duration={28} className="select-none">
+          {MANTRA.map((word) => (
+            <span key={word} className="flex items-center gap-10">
+              <span className="font-display text-2xl font-semibold italic text-gold-soft/90">
+                {word}
+              </span>
+              <span aria-hidden="true" className="text-saffron/70">✦</span>
+            </span>
+          ))}
+        </Marquee>
+      </div>
+
+      {/* big CTA */}
+      <div className="container-page grid gap-10 py-16 md:grid-cols-[1.5fr_1fr] md:items-center md:py-24">
+        <Reveal effect="blur">
+          <h2 className="max-w-xl text-balance font-display text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
+            Every paw has a story.{" "}
+            <span className="italic text-marigold">Be part of the next one.</span>
+          </h2>
+        </Reveal>
+        <Reveal delay={0.15} className="flex flex-wrap gap-4 md:justify-end">
+          <Link
+            href="/adopt"
+            className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep to-saffron px-7 py-4 font-bold text-ivory shadow-ember transition-transform hover:-translate-y-0.5"
+          >
+            Meet the paws
+            <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
+          </Link>
+          <Link
+            href="/donate"
+            className="inline-flex items-center gap-2 rounded-full border border-ivory/25 px-7 py-4 font-semibold text-ivory transition-colors hover:bg-ivory/10"
+          >
+            Donate
+          </Link>
+        </Reveal>
+      </div>
+
+      <div className="container-page grid gap-10 border-t border-ivory/10 py-14 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+        <div className="max-w-sm space-y-5">
           <Logo variant="light" />
-          <p className="text-sm leading-relaxed text-sand">
+          <p className="text-sm leading-relaxed text-ivory/70">
             Animal Welfare Society, IIT Kharagpur. Rescue, heal, protect —
             and a digital identity for every paw on campus.
           </p>
@@ -90,7 +129,7 @@ export function Footer({
               <a
                 key={s.label}
                 href={s.url}
-                className="grid h-10 w-10 place-items-center rounded-full border border-cream/20 transition-colors hover:bg-cream/10"
+                className="grid h-10 w-10 place-items-center rounded-full border border-ivory/20 transition-all hover:border-saffron hover:bg-saffron/15 hover:text-saffron-glow"
                 aria-label={`KGP PAWS on ${s.label}`}
               >
                 {iconFor(s.icon, "h-4 w-4")}
@@ -100,24 +139,29 @@ export function Footer({
         </div>
 
         <nav aria-label="Explore">
-          <h2 className="eyebrow mb-4 text-sand">Explore</h2>
+          <h2 className="eyebrow mb-4 text-gold-soft/80">Explore</h2>
           <ul className="space-y-2.5">
             {quickLinks.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="text-sm text-cream/85 transition-colors hover:text-cream">
+                <Link href={l.href} className="text-sm text-ivory/75 transition-colors hover:text-marigold">
                   {l.label}
                 </Link>
               </li>
             ))}
+            <li>
+              <Link href="/gallery" className="text-sm text-ivory/75 transition-colors hover:text-marigold">
+                Gallery
+              </Link>
+            </li>
           </ul>
         </nav>
 
         <nav aria-label="Take action">
-          <h2 className="eyebrow mb-4 text-sand">Take Action</h2>
+          <h2 className="eyebrow mb-4 text-gold-soft/80">Take Action</h2>
           <ul className="space-y-2.5">
             {acts.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="text-sm text-cream/85 transition-colors hover:text-cream">
+                <Link href={l.href} className="text-sm text-ivory/75 transition-colors hover:text-marigold">
                   {l.label}
                 </Link>
               </li>
@@ -126,23 +170,23 @@ export function Footer({
         </nav>
 
         <div className="space-y-4">
-          <h2 className="eyebrow text-sand">Emergency</h2>
+          <h2 className="eyebrow text-gold-soft/80">Emergency</h2>
           <Link
             href="/report"
-            className="inline-flex items-center gap-2 rounded-full bg-terracotta px-5 py-3 text-sm font-bold text-parchment transition-colors hover:bg-terracotta-deep"
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep to-saffron px-5 py-3 text-sm font-bold text-ivory shadow-ember transition-transform hover:-translate-y-0.5"
           >
             <Siren className="h-4 w-4" aria-hidden="true" />
             Report an Animal
           </Link>
-          <p className="flex items-center gap-2 text-sm text-cream/85">
+          <p className="flex items-center gap-2 text-sm text-ivory/75">
             <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <a href={`mailto:${email}`} className="hover:text-cream">
+            <a href={`mailto:${email}`} className="hover:text-marigold">
               {email}
             </a>
           </p>
           {emergencyPhone ? (
-            <p className="text-sm text-cream/85">
-              <a href={`tel:${emergencyPhone}`} className="hover:text-cream">
+            <p className="text-sm text-ivory/75">
+              <a href={`tel:${emergencyPhone}`} className="hover:text-marigold">
                 {emergencyPhone}
               </a>
             </p>
@@ -150,7 +194,7 @@ export function Footer({
           <ul className="space-y-2 pt-2">
             {LEGAL.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="text-xs text-cream/60 transition-colors hover:text-cream/90">
+                <Link href={l.href} className="text-xs text-ivory/45 transition-colors hover:text-ivory/80">
                   {l.label}
                 </Link>
               </li>
@@ -159,15 +203,20 @@ export function Footer({
         </div>
       </div>
 
-      <div className="border-t border-cream/10">
-        <div className="container-page flex flex-col items-center gap-3 py-6 text-center md:flex-row md:justify-between md:text-left">
-          <p className="font-display text-sm italic text-sand">
-            &ldquo;{newsletterBlurb}&rdquo;
-          </p>
-          <p className="text-xs text-cream/50">
+      <div className="border-t border-ivory/10">
+        <div className="container-page flex flex-col items-center gap-4 py-6 text-center md:flex-row md:justify-between md:text-left">
+          <div className="flex items-center gap-3">
+            <Seal variant="light" size={40} className="h-9 w-9 opacity-80" />
+            {newsletterBlurb ? (
+              <p className="font-display text-sm italic text-gold-soft/80">
+                &ldquo;{newsletterBlurb}&rdquo;
+              </p>
+            ) : null}
+          </div>
+          <p className="text-xs text-ivory/40">
             {copyright}
             {!isSupabaseConfigured && (
-              <span className="ml-2 rounded-full border border-cream/20 px-2 py-0.5">
+              <span className="ml-2 rounded-full border border-ivory/20 px-2 py-0.5">
                 Demo mode — sample data
               </span>
             )}
