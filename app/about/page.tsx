@@ -12,7 +12,7 @@ import {
 import { Reveal } from "@/components/motion/Reveal";
 import { SectionHeading, DemoNotice } from "@/components/ui/Section";
 import { ButtonLink } from "@/components/ui/Button";
-import { PawMark } from "@/components/brand/Logo";
+import { PawMark, Seal } from "@/components/brand/Logo";
 
 export const metadata: Metadata = {
   title: "About",
@@ -86,18 +86,26 @@ export default function AboutPage() {
     <div>
       {/* hero */}
       <header className="bg-forest py-16 text-cream sm:py-24">
-        <div className="container-page max-w-3xl">
-          <p className="eyebrow mb-4 text-sand">About KGP PAWS</p>
-          <h1 className="text-balance font-display text-4xl font-bold leading-[1.06] sm:text-5xl lg:text-6xl">
-            Care that outlasts every batch.
-          </h1>
-          <p className="mt-6 text-lg leading-relaxed text-cream/85">
-            KGP PAWS is the Animal Welfare Society of IIT Kharagpur — a
-            volunteer-run community of students, scholars, staff and faculty
-            who look after the animals that call this campus home. Students
-            graduate every year. The animals stay. Our job is to make sure
-            the care stays too.
-          </p>
+        <div className="container-page flex items-center gap-12">
+          <div className="max-w-3xl">
+            <p className="eyebrow mb-4 text-sand">About KGP PAWS</p>
+            <h1 className="text-balance font-display text-4xl font-bold leading-[1.06] sm:text-5xl lg:text-6xl">
+              Care that outlasts every batch.
+            </h1>
+            <p className="mt-6 text-lg leading-relaxed text-cream/85">
+              KGP PAWS is the Animal Welfare Society of IIT Kharagpur — a
+              volunteer-run community of students, scholars, staff and faculty
+              who look after the animals that call this campus home. Students
+              graduate every year. The animals stay. Our job is to make sure
+              the care stays too.
+            </p>
+          </div>
+          <Seal
+            variant="light"
+            size={256}
+            alt="Official seal of the Kharagpur Pradyogiki Animal Welfare Society"
+            className="ml-auto hidden h-56 w-56 shrink-0 opacity-90 lg:block xl:h-64 xl:w-64"
+          />
         </div>
       </header>
 

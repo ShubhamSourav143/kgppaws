@@ -1,5 +1,34 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
+import sealInk from "@/public/images/branding/seal-ink.png";
+import sealInkCream from "@/public/images/branding/seal-ink-cream.png";
+
+/**
+ * The official society seal (Kharagpur Pradyogiki Animal Welfare Society),
+ * as transparent ink — dark for light backgrounds, cream for dark ones.
+ */
+export function Seal({
+  variant = "dark",
+  size = 44,
+  className,
+  alt = "",
+}: {
+  variant?: "dark" | "light";
+  size?: number;
+  className?: string;
+  alt?: string;
+}) {
+  return (
+    <Image
+      src={variant === "dark" ? sealInk : sealInkCream}
+      alt={alt}
+      width={size}
+      height={size}
+      className={className}
+    />
+  );
+}
 
 export function PawMark({ className }: { className?: string }) {
   return (
@@ -36,14 +65,11 @@ export function Logo({
       )}
       aria-label="KGP PAWS — home"
     >
-      <span
-        className={cn(
-          "grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition-transform duration-300 group-hover:-rotate-6",
-          variant === "dark" ? "bg-forest text-cream" : "bg-cream text-forest"
-        )}
-      >
-        <PawMark className="h-6 w-6" />
-      </span>
+      <Seal
+        variant={variant}
+        size={48}
+        className="h-11 w-11 shrink-0 transition-transform duration-300 group-hover:-rotate-6"
+      />
       <span className="leading-none">
         <span className="block font-display text-xl font-bold tracking-tight">
           KGP PAWS

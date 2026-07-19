@@ -78,6 +78,13 @@ server; client components are used only where interaction demands it
 - **Type**: Fraunces (editorial display) + Manrope (UI), via `next/font`.
 - **Motion**: Framer Motion + CSS keyframes. Every animation respects
   `prefers-reduced-motion`.
+- **Brand assets**: the official society seal (dark ink on cream) lives in
+  `public/images/branding/` — `logo-source.jpg` (canonical source) plus derived
+  `seal-ink.png` / `seal-ink-cream.png` (transparent, for light/dark surfaces)
+  and `seal-badge.png` (cream disc). Favicon, PWA icons, `app/icon.png` and the
+  OG card are all derived from it; regenerate with
+  `node scripts/generate-brand-assets.mjs` (bump `VERSION` in `public/sw.js`
+  afterwards — `/icons` is cached cache-first).
 - **Animal portraits**: a parameterized SVG illustration system
   (`components/animals/Portrait.tsx`) gives every animal a cohesive branded
   portrait — including the PAWS collar — until real photos are uploaded via
