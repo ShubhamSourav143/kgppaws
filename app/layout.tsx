@@ -60,9 +60,8 @@ export async function generateMetadata(): Promise<Metadata> {
       title: siteName,
       statusBarStyle: "default",
     },
-    icons: {
-      apple: "/icons/apple-touch-icon.png",
-    },
+    // icons come from the app/favicon.ico, app/icon.png and app/apple-icon.png
+    // file conventions — an explicit `icons` field here would suppress them.
   };
 }
 

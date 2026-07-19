@@ -11,7 +11,7 @@
  * personalised responses must not persist on a shared/borrowed phone.
  */
 
-const VERSION = "v1";
+const VERSION = "v2"; // v2: official society seal replaced placeholder icons
 const PAGE_CACHE = `kgppaws-pages-${VERSION}`;
 const ASSET_CACHE = `kgppaws-assets-${VERSION}`;
 const OFFLINE_URL = "/offline";
