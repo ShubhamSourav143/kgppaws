@@ -7,43 +7,49 @@ import { AnimalCard } from "@/components/animals/AnimalCard";
 import { ageInYears, cn } from "@/lib/utils";
 import type { Animal } from "@/types";
 
+type Kind = "all" | "dog" | "cat" | "puppy" | "kitten";
+
 interface Filters {
-  species: "all" | "dog" | "cat";
-  availability: "all" | "available" | "foster_needed";
-  age: "all" | "puppy" | "young" | "adult" | "senior";
-  size: "all" | "small" | "medium" | "large";
-  sex: "all" | "male" | "female";
+  kind: Kind;
+  breed: string; // "all" or animal.color exact match
+  age: "all" | "young" | "adult" | "senior";
+  gender: "all" | "male" | "female";
   vaccinated: boolean;
-  sterilized: boolean;
-  goodWithPeople: boolean;
-  goodWithAnimals: boolean;
-  specialCare: boolean;
 }
 
 const DEFAULT_FILTERS: Filters = {
-  species: "all",
-  availability: "all",
+  kind: "all",
+  breed: "all",
   age: "all",
-  size: "all",
-  sex: "all",
+  gender: "all",
   vaccinated: false,
-  sterilized: false,
-  goodWithPeople: false,
-  goodWithAnimals: false,
-  specialCare: false,
 };
 
 function inAgeBand(a: Animal, band: Filters["age"]) {
   const y = ageInYears(a.ageLabel);
   switch (band) {
-    case "puppy":
-      return y < 1;
     case "young":
       return y >= 1 && y < 3;
     case "adult":
       return y >= 3 && y < 6;
     case "senior":
       return y >= 6;
+    default:
+      return true;
+  }
+}
+
+function matchesKind(a: Animal, kind: Kind) {
+  const y = ageInYears(a.ageLabel);
+  switch (kind) {
+    case "dog":
+      return a.species === "dog";
+    case "cat":
+      return a.species === "cat";
+    case "puppy":
+      return a.species === "dog" && y < 1;
+    case "kitten":
+      return a.species === "cat" && y < 1;
     default:
       return true;
   }
@@ -112,9 +118,11 @@ function Toggle({
 function FilterPanel({
   filters,
   setFilters,
+  breeds,
 }: {
   filters: Filters;
   setFilters: (f: Filters) => void;
+  breeds: string[];
 }) {
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) =>
     setFilters({ ...filters, [k]: v });
@@ -122,31 +130,42 @@ function FilterPanel({
   return (
     <div className="space-y-6">
       <OptionRow
-        label="Species"
-        value={filters.species}
+        label="I'm looking for"
+        value={filters.kind}
         options={[
           { id: "all", label: "All" },
-          { id: "dog", label: "Dogs" },
-          { id: "cat", label: "Cats" },
+          { id: "dog", label: "Dog" },
+          { id: "cat", label: "Cat" },
+          { id: "puppy", label: "Puppy" },
+          { id: "kitten", label: "Kitten" },
         ]}
-        onChange={(v) => set("species", v)}
+        onChange={(v) => set("kind", v)}
       />
-      <OptionRow
-        label="Availability"
-        value={filters.availability}
-        options={[
-          { id: "all", label: "Everyone" },
-          { id: "available", label: "For Adoption" },
-          { id: "foster_needed", label: "Needs Foster" },
-        ]}
-        onChange={(v) => set("availability", v)}
-      />
+      <fieldset>
+        <legend className="mb-2 text-xs font-bold uppercase tracking-wider text-moss">
+          Breed / colour
+        </legend>
+        <div className="relative">
+          <select
+            value={filters.breed}
+            onChange={(e) => set("breed", e.target.value)}
+            className="w-full appearance-none rounded-full border border-forest/20 bg-cream px-4 py-2.5 text-xs font-bold text-forest transition-colors hover:bg-mist focus:border-saffron focus:outline-none focus:ring-2 focus:ring-saffron/25"
+            aria-label="Filter by breed or colour"
+          >
+            <option value="all">Any</option>
+            {breeds.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+      </fieldset>
       <OptionRow
         label="Age"
         value={filters.age}
         options={[
           { id: "all", label: "Any" },
-          { id: "puppy", label: "< 1 yr" },
           { id: "young", label: "1–3 yrs" },
           { id: "adult", label: "3–6 yrs" },
           { id: "senior", label: "6+ yrs" },
@@ -154,35 +173,24 @@ function FilterPanel({
         onChange={(v) => set("age", v)}
       />
       <OptionRow
-        label="Size"
-        value={filters.size}
-        options={[
-          { id: "all", label: "Any" },
-          { id: "small", label: "Small" },
-          { id: "medium", label: "Medium" },
-          { id: "large", label: "Large" },
-        ]}
-        onChange={(v) => set("size", v)}
-      />
-      <OptionRow
-        label="Sex"
-        value={filters.sex}
+        label="Gender"
+        value={filters.gender}
         options={[
           { id: "all", label: "Any" },
           { id: "male", label: "Male" },
           { id: "female", label: "Female" },
         ]}
-        onChange={(v) => set("sex", v)}
+        onChange={(v) => set("gender", v)}
       />
-      <div className="space-y-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-moss">
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-moss">
           Must have
         </p>
-        <Toggle label="Vaccinated" checked={filters.vaccinated} onChange={(v) => set("vaccinated", v)} />
-        <Toggle label="Sterilized" checked={filters.sterilized} onChange={(v) => set("sterilized", v)} />
-        <Toggle label="Good with people" checked={filters.goodWithPeople} onChange={(v) => set("goodWithPeople", v)} />
-        <Toggle label="Good with other animals" checked={filters.goodWithAnimals} onChange={(v) => set("goodWithAnimals", v)} />
-        <Toggle label="Needs special care" checked={filters.specialCare} onChange={(v) => set("specialCare", v)} />
+        <Toggle
+          label="Vaccinated"
+          checked={filters.vaccinated}
+          onChange={(v) => set("vaccinated", v)}
+        />
       </div>
     </div>
   );
@@ -193,22 +201,30 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  // Adopt-only: campus residents ('not_available') never surface here.
+  // 'available' + 'foster_needed' both roll up to adoptable; 'adopted' stays
+  // in the list as a success story.
+  const adoptableAll = useMemo(
+    () => animals.filter((a) => a.adoption !== "not_available"),
+    [animals]
+  );
+
+  const breeds = useMemo(
+    () => Array.from(new Set(adoptableAll.map((a) => a.color))).sort(),
+    [adoptableAll]
+  );
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return animals.filter((a) => {
-      if (filters.species !== "all" && a.species !== filters.species) return false;
-      if (filters.availability !== "all" && a.adoption !== filters.availability) return false;
+    return adoptableAll.filter((a) => {
+      if (!matchesKind(a, filters.kind)) return false;
+      if (filters.breed !== "all" && a.color !== filters.breed) return false;
       if (!inAgeBand(a, filters.age)) return false;
-      if (filters.size !== "all" && a.size !== filters.size) return false;
-      if (filters.sex !== "all" && a.sex !== filters.sex) return false;
+      if (filters.gender !== "all" && a.sex !== filters.gender) return false;
       if (filters.vaccinated && !a.vaccinated) return false;
-      if (filters.sterilized && !a.sterilized) return false;
-      if (filters.goodWithPeople && !a.goodWithPeople) return false;
-      if (filters.goodWithAnimals && !a.goodWithAnimals) return false;
-      if (filters.specialCare && !a.specialCare) return false;
       if (
         q &&
-        ![a.name, a.tagline, ...a.personality, a.color]
+        ![a.name, a.tagline, a.color, a.species, ...a.personality]
           .join(" ")
           .toLowerCase()
           .includes(q)
@@ -216,7 +232,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
         return false;
       return true;
     });
-  }, [animals, query, filters]);
+  }, [adoptableAll, query, filters]);
 
   const activeCount = Object.values(filters).filter((v) =>
     typeof v === "boolean" ? v : v !== "all"
@@ -227,7 +243,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
       {/* desktop sidebar */}
       <aside className="hidden lg:block" aria-label="Adoption filters">
         <div className="glass sticky top-24 max-h-[calc(100vh-7rem)] space-y-6 overflow-y-auto rounded-3xl p-6 shadow-soft">
-          <FilterPanel filters={filters} setFilters={setFilters} />
+          <FilterPanel filters={filters} setFilters={setFilters} breeds={breeds} />
           <button
             type="button"
             onClick={() => setFilters(DEFAULT_FILTERS)}
@@ -250,7 +266,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name or personality — try “biscuit”"
+              placeholder="Search by name, breed or personality — try &ldquo;brindle&rdquo;"
               aria-label="Search adoptable animals"
               className="w-full rounded-full border border-line bg-ivory py-3 pl-11 pr-4 text-sm shadow-soft placeholder:text-moss/60 focus:border-saffron focus:outline-none focus:ring-2 focus:ring-saffron/25"
             />
@@ -272,7 +288,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
         </div>
 
         <p className="mt-4 text-sm text-moss" role="status">
-          {results.length} {results.length === 1 ? "paw" : "paws"} found
+          {results.length} {results.length === 1 ? "paw" : "paws"} waiting for a forever home
         </p>
 
         {/* results */}
@@ -291,8 +307,8 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
               No paws match those filters (yet).
             </p>
             <p className="max-w-sm text-sm text-moss">
-              Try widening your search — or check back soon. New residents are
-              added by volunteers all the time.
+              Try widening your search — or check back soon. New paws arrive as
+              rescues stabilise and volunteer teams post them.
             </p>
             <button
               type="button"
@@ -344,7 +360,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
                   <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
-              <FilterPanel filters={filters} setFilters={setFilters} />
+              <FilterPanel filters={filters} setFilters={setFilters} breeds={breeds} />
               <div className="mt-6 flex gap-3">
                 <button
                   type="button"

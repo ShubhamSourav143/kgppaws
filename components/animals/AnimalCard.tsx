@@ -26,7 +26,9 @@ export function AnimalCard({
   className?: string;
 }) {
   const sex = SEX_META[animal.sex];
+  // The whole platform is adoption-only — foster_needed rolls up to adoptable.
   const canAdopt = animal.adoption === "available" || animal.adoption === "foster_needed";
+  const isAdopted = animal.adoption === "adopted";
 
   const card = (
     <Link
@@ -109,17 +111,18 @@ export function AnimalCard({
         {/* explicit, always-visible adopt affordance */}
         <div
           className={cn(
-            "-mx-5 -mb-5 mt-3 flex items-center justify-between border-t border-line px-5 py-3.5 text-sm font-bold transition-colors",
+            "-mx-5 -mb-5 mt-3 flex items-center justify-between gap-2 border-t border-line px-5 py-3.5 text-sm font-bold transition-colors",
             canAdopt
               ? "text-saffron-deep group-hover:bg-saffron/8"
-              : "text-moss group-hover:bg-mist"
+              : isAdopted
+                ? "text-forest-bright"
+                : "text-moss group-hover:bg-mist"
           )}
         >
-          {canAdopt
-            ? animal.adoption === "available"
-              ? "Adopt me"
-              : "Foster me"
-            : "View profile"}
+          <span className="inline-flex items-center gap-1.5">
+            {canAdopt ? "🐾" : isAdopted ? "♥" : ""}
+            {canAdopt ? "Adopt Me" : isAdopted ? "Adopted — happy ending" : "View profile"}
+          </span>
           <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
         </div>
       </div>

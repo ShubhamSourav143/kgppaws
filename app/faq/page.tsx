@@ -19,7 +19,7 @@ const FALLBACK = [
     category: "Adoption",
     question: "Can students in hostels adopt?",
     answer:
-      "Typically no — hostel policies at IIT KGP don't permit resident pets, and abrupt returns are hardest on the animal. Faculty families, staff housing, and off-campus residents are welcome to apply. Fostering during breaks is a great alternative if you can't commit long-term.",
+      "Typically no — hostel policies at IIT KGP don't permit resident pets, and abrupt returns are hardest on the animal. Faculty families, staff housing, and off-campus residents are welcome to apply. If you can't commit long-term, supporting a campus resident through donations or volunteering is a great alternative.",
   },
   {
     category: "Donation",

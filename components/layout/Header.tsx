@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Menu, X, Siren, LayoutDashboard, LogIn, ArrowUpRight, Search } from "lucide-react";
+import { Menu, X, Siren, LayoutDashboard, LogIn, ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Magnetic } from "@/components/fx/Magnetic";
-import { SearchOverlay } from "@/components/search/SearchOverlay";
+import { InlineSearch, type InlineSearchHandle } from "@/components/search/InlineSearch";
 import { useSession } from "@/hooks/use-demo-session";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +46,7 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
   const NAV = items || [];
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const searchRef = useRef<InlineSearchHandle>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const { user } = useSession();
@@ -58,12 +59,12 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // global Cmd/Ctrl+K opens search from anywhere on the site
+  // global Cmd/Ctrl+K opens the inline search from anywhere
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setSearchOpen((v) => !v);
+        searchRef.current?.toggle();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -121,32 +122,30 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
               : "mt-0 h-16 w-full bg-transparent px-5 sm:px-8 md:h-20 lg:px-12"
           )}
         >
-          <Logo compact={pill} variant={light ? "light" : "dark"} />
+          <Logo compact={pill || searchOpen} variant={light ? "light" : "dark"} />
 
-          <nav aria-label="Primary" className="hidden items-center gap-5 lg:flex xl:gap-7">
+          <nav
+            aria-label="Primary"
+            aria-hidden={searchOpen}
+            className={cn(
+              "hidden items-center gap-5 transition-opacity duration-200 lg:flex xl:gap-7",
+              searchOpen && "pointer-events-none opacity-0"
+            )}
+          >
             {NAV.map((item) => (
               <NavLink key={item.href} href={item.href} label={item.label} light={light} />
             ))}
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              aria-label="Search (Ctrl+K)"
-              className={cn(
-                "grid h-11 w-11 place-items-center rounded-full transition-colors",
-                light ? "text-ivory hover:bg-ivory/10" : "text-forest hover:bg-mist"
-              )}
-            >
-              <Search className="h-5 w-5" aria-hidden="true" />
-            </button>
+            <InlineSearch ref={searchRef} light={light} onOpenChange={setSearchOpen} />
 
             {user ? (
               <Link
                 href={dashboardHref}
                 className={cn(
-                  "hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors md:inline-flex",
+                  "hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all md:inline-flex",
+                  searchOpen && "pointer-events-none scale-95 opacity-0",
                   light
                     ? "border-ivory/25 bg-ivory/10 text-ivory hover:bg-ivory/20"
                     : "border-forest/15 bg-ivory/60 text-forest hover:bg-ivory"
@@ -159,7 +158,8 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
               <Link
                 href="/login"
                 className={cn(
-                  "hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors md:inline-flex",
+                  "hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all md:inline-flex",
+                  searchOpen && "pointer-events-none scale-95 opacity-0",
                   light
                     ? "border-ivory/25 bg-ivory/10 text-ivory hover:bg-ivory/20"
                     : "border-forest/15 bg-ivory/60 text-forest hover:bg-ivory"
@@ -170,7 +170,12 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
               </Link>
             )}
 
-            <span className="hidden sm:inline-block">
+            <span
+              className={cn(
+                "hidden transition-all duration-200 sm:inline-block",
+                searchOpen && "pointer-events-none scale-95 opacity-0"
+              )}
+            >
               <Magnetic strength={0.25}>
                 <Link
                   href="/report"
@@ -295,7 +300,6 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
         )}
       </AnimatePresence>
 
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

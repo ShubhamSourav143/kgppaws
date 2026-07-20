@@ -71,10 +71,10 @@ export function DonateCta({ campaigns }: { campaigns: DonationCampaign[] }) {
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
               </Link>
               <Link
-                href="/donate#sponsor"
+                href="/adopt"
                 className="inline-flex items-center gap-2 rounded-full border border-ivory/25 px-8 py-4 font-semibold text-ivory transition-colors hover:bg-ivory/10"
               >
-                Sponsor an animal
+                Adopt a paw
               </Link>
             </div>
           </Reveal>

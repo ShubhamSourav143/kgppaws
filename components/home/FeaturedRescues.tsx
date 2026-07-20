@@ -11,7 +11,7 @@ import type { Animal } from "@/types";
 
 const AVAILABILITY: Record<Animal["adoption"], { label: string; cls: string }> = {
   available: { label: "Ready to adopt", cls: "bg-forest-bright/90 text-ivory" },
-  foster_needed: { label: "Foster needed", cls: "bg-chakra/85 text-ivory" },
+  foster_needed: { label: "Ready to adopt", cls: "bg-forest-bright/90 text-ivory" },
   adopted: { label: "Adopted ♥", cls: "bg-saffron/90 text-ivory" },
   not_available: { label: "Campus resident", cls: "bg-earth/85 text-ivory" },
 };
