@@ -170,7 +170,7 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
           />
           <div className="lg:mt-4">
             <p className="eyebrow text-[10px] text-terracotta-deep">
-              {animal.adoption === "available" ? "Adoption inquiry" : "Foster inquiry"}
+              Adoption inquiry
             </p>
             <p className="mt-1 font-display text-2xl font-bold text-forest-deep">
               {animal.name}
@@ -246,7 +246,6 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
                     <option>Independent house</option>
                     <option>Apartment</option>
                     <option>Campus quarters</option>
-                    <option>Hostel (foster arrangements only)</option>
                     <option>Other</option>
                   </Select>
                   <Select label="Do you own or rent?" required error={errors.ownOrRent?.message} {...register("ownOrRent")}>
@@ -284,7 +283,7 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
                     <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#173F35]" {...register("hadPetsBefore")} />
                     <span>
                       <strong className="text-forest-deep">I&apos;ve cared for animals before</strong>{" "}
-                      (pets, fosters, or community animals).
+                      (pets or community animals).
                     </span>
                   </label>
                   <Input

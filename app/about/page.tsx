@@ -50,7 +50,7 @@ const PILLARS = [
   {
     icon: Users,
     title: "Student volunteers",
-    text: "Students, scholars, staff and faculty run everything: feeding routes, rescue response, foster care, and this platform itself.",
+    text: "Students, scholars, staff and faculty run everything: feeding routes, rescue response, adoption coordination, and this platform itself.",
   },
 ];
 

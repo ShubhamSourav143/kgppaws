@@ -4,6 +4,50 @@ All notable changes to this project, newest first. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/). Every entry corresponds to a status change in
 [PRD.md](PRD.md) and, where relevant, a verification note in [TEST_REPORT.md](TEST_REPORT.md).
 
+## 2026-07-20 (later³) — Adoption-only refocus: strip foster/sponsor, inline navbar search
+
+### Changed
+- **Adopt-only platform**: every Foster/Sponsor/Temporary-Care surface removed —
+  `AdoptionChip` collapses `foster_needed` into "Available for adoption"; `AnimalCard`
+  footer bar reads **🐾 Adopt Me** (never "Foster me"); animal profile CTAs simplified to
+  "Adopt {name}" + "Start adoption inquiry" (Sponsor card removed); Stories inline CTA
+  drops the Adopt/Foster branch; ApplyFlow header + housing/experience copy scrubbed;
+  FAQ answer rewritten; `JoinPack` component deleted (orphaned + still hardcoded Foster).
+  All `not_available` (campus-resident) animals filtered out of `/adopt` — they still
+  appear on the home page's Com-Paw-Nions section as intended.
+- **AdoptExplorer** rewritten to the exact brief filter set: `I'm looking for`
+  (All/Dog/Cat/Puppy/Kitten) · Breed/Colour dropdown (derived from `animal.color`) ·
+  Age (1–3/3–6/6+) · Gender · Vaccinated toggle. Dropped: availability, size, sterilized,
+  good-with-people/animals, special-care.
+- **Inline expanding search** replaces the full-screen overlay (Apple/GitHub style):
+  new `InlineSearch` lives inside the header — search icon expands the input in-place
+  with a spring animation, results appear as a floating glass dropdown beneath the pill,
+  input collapses on Esc/blur. Primary nav + auxiliary buttons fade out (still occupy
+  space so the header doesn't jump) while search is open; Logo forces compact when open
+  so the layout never wraps. Cmd/Ctrl+K still opens/toggles.
+- **Nav order** to spec: Home · Adopt · Stories · Gallery · Donate · Volunteer · About,
+  with a Search icon on the trailing side. Sticky glass pill + shrink-on-scroll kept.
+- Home CTA on `DonateCta` swapped the "Sponsor an animal" secondary to **Adopt a paw** to
+  keep every route flowing back to adoption.
+
+### Fixed
+- InlineSearch: `onOpenChange` notification moved into a post-commit effect (was
+  triggering a "setState during render" React warning when called from inside the
+  state-updater).
+- `.next` cache carried a stale `dev/types/validator.ts` referencing a deleted route type
+  helper — cleared before the successful production build (documented quirk).
+
+### Verified
+- tsc + ESLint clean (0 errors), production build compiles all routes.
+- Nav order confirmed by DOM probe: **Home | Adopt | Stories | Gallery | Donate |
+  Volunteer | About**.
+- Inline search: icon click expands the input, Cmd/Ctrl+K toggles, `/api/search?q=brindle`
+  returns Bunti and the dropdown renders it (dev-server first-hit ~5s, sub-second in prod).
+- Adopt page: no "Foster"/"Sponsor" strings anywhere; cards render **🐾 Adopt Me** or
+  **♥ Adopted — happy ending**; simplified filter rail.
+
+---
+
 ## 2026-07-20 (later²) — Aurora v2 iteration: search, nav, palette rebalance, adopt card
 
 ### Added

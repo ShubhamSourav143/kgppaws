@@ -16,9 +16,8 @@ export function HealthChip({ status }: { status: Animal["healthStatus"] }) {
 export function AdoptionChip({ status }: { status: Animal["adoption"] }) {
   switch (status) {
     case "available":
-      return <Chip tone="terracotta">Available for Adoption</Chip>;
     case "foster_needed":
-      return <Chip tone="clay">Needs Foster</Chip>;
+      return <Chip tone="terracotta">Available for Adoption</Chip>;
     case "adopted":
       return <Chip tone="forest">Adopted</Chip>;
     default:

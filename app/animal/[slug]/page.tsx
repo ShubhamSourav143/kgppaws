@@ -23,7 +23,6 @@ import { Chip } from "@/components/ui/Chip";
 import { ButtonLink } from "@/components/ui/Button";
 import { DemoNotice } from "@/components/ui/Section";
 import { getAnimal, listAnimals } from "@/services/animals";
-import { listCampaigns } from "@/services/campaigns";
 import { zoneName } from "@/lib/demo/zones";
 import { formatDate } from "@/lib/utils";
 import { SITE } from "@/lib/config";
@@ -71,14 +70,10 @@ export default async function AnimalProfilePage({
   searchParams: Promise<{ via?: string }>;
 }) {
   const [{ slug }, { via }] = await Promise.all([params, searchParams]);
-  const [animal, campaigns] = await Promise.all([
-    getAnimal(slug),
-    listCampaigns(),
-  ]);
+  const animal = await getAnimal(slug);
   if (!animal) notFound();
 
   const fromQr = via === "qr";
-  const linkedCampaign = campaigns.find((c) => c.animalSlug === animal.slug);
   const banner = STATUS_BANNER[animal.healthStatus];
 
   const facts: { label: string; value: string }[] = [
@@ -155,7 +150,7 @@ export default async function AnimalProfilePage({
                   animal.adoption === "foster_needed") && (
                   <ButtonLink href={`/adopt/apply/${animal.slug}`} variant="accent" size="lg">
                     <Heart className="h-4 w-4" aria-hidden="true" />
-                    {animal.adoption === "available" ? `Adopt ${animal.name}` : `Foster ${animal.name}`}
+                    Adopt {animal.name}
                   </ButtonLink>
                 )}
                 <ShareButton
@@ -381,30 +376,21 @@ export default async function AnimalProfilePage({
                 Help this paw
               </h2>
               <div className="mt-4 space-y-3">
-                {linkedCampaign && (
-                  <ButtonLink
-                    href={`/donate#${linkedCampaign.slug}`}
-                    variant="accent"
-                    className="w-full"
-                  >
-                    <HandHeart className="h-4 w-4" aria-hidden="true" />
-                    Sponsor {animal.name}&apos;s care
-                  </ButtonLink>
-                )}
-                <ButtonLink href="/donate" variant="primary" className="w-full">
-                  Donate to KGP PAWS
-                </ButtonLink>
                 {(animal.adoption === "available" ||
                   animal.adoption === "foster_needed") && (
                   <ButtonLink
                     href={`/adopt/apply/${animal.slug}`}
-                    variant="outline"
+                    variant="accent"
                     className="w-full"
                   >
                     <Home className="h-4 w-4" aria-hidden="true" />
-                    {animal.adoption === "available" ? "Start adoption inquiry" : "Offer to foster"}
+                    Start adoption inquiry
                   </ButtonLink>
                 )}
+                <ButtonLink href="/donate" variant="primary" className="w-full">
+                  <HandHeart className="h-4 w-4" aria-hidden="true" />
+                  Fund care at KGP PAWS
+                </ButtonLink>
                 <ButtonLink href="/report" variant="ghost" className="w-full">
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                   Report a concern
