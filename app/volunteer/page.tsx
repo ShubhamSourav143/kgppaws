@@ -41,18 +41,20 @@ export default async function VolunteerPage() {
   const roles = (rolesContent?.data?.opportunities as Array<{ icon: string, role: string, description: string }>) ?? [];
 
   return (
-    <div className="container-page py-10 sm:py-14">
-      <header className="max-w-2xl">
-        <p className="eyebrow mb-3 text-terracotta-deep">Volunteer</p>
-        <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] text-forest-deep sm:text-5xl lg:text-6xl">
-          {intro?.title}
-        </h1>
-        <p className="mt-4 text-lg leading-relaxed text-moss">
-          {intro?.body}
-        </p>
+    <div className="pb-24">
+      <header className="aurora relative -mt-16 overflow-hidden bg-night pb-16 pt-32 text-ivory md:-mt-20 md:pt-40">
+        <div className="container-page max-w-3xl">
+          <p className="eyebrow mb-5 text-marigold">Join the pack</p>
+          <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
+            {intro?.title || "Every skill has a place in the pack."}
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ivory/70">
+            {intro?.body}
+          </p>
+        </div>
       </header>
 
-      <div className="mt-12 grid gap-12 lg:grid-cols-[1.2fr_1fr]">
+      <div className="container-page mt-12 grid gap-12 lg:grid-cols-[1.2fr_1fr]">
         {/* roles */}
         <section aria-labelledby="roles-h">
           <h2 id="roles-h" className="sr-only">
@@ -63,8 +65,8 @@ export default async function VolunteerPage() {
               const Icon = ICON_MAP[r.icon] ?? Soup;
               return (
                 <Reveal key={r.role} delay={Math.min(i * 0.06, 0.3)} className="h-full">
-                  <div className="flex h-full gap-4 rounded-3xl border border-line bg-parchment p-5">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-mist text-forest">
+                  <div className="group flex h-full gap-4 rounded-3xl border border-line bg-ivory p-5 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lift">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember transition-transform group-hover:scale-110">
                       <Icon className="h-5 w-5" aria-hidden="true" />
                     </span>
                     <div>

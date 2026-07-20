@@ -10,333 +10,327 @@ import {
   useTransform,
   useReducedMotion,
 } from "framer-motion";
-import { ChevronDown, QrCode, Siren } from "lucide-react";
-import { ButtonLink } from "@/components/ui/Button";
+import { ArrowDown, ArrowUpRight, QrCode, Siren } from "lucide-react";
+import { AnimalPortrait } from "@/components/animals/Portrait";
+import { ParticleField } from "@/components/fx/ParticleField";
+import { Magnetic } from "@/components/fx/Magnetic";
+import { TextReveal } from "@/components/fx/TextReveal";
+import { Seal } from "@/components/brand/Logo";
 import type { ContentSectionRow } from "@/services/content";
+import type { Animal } from "@/types";
 
-/* ————————————————————————————————————————————————————————————————
-   Illustrated campus dog scene.
-   Layered SVG with idle animation (breathing, blinking, ear + tail
-   movement), cursor parallax and gentle eye tracking. Serves as the
-   graceful, always-available visual; a React Three Fiber GLB scene can
-   be mounted in its place later (see README — 3D upgrade path).
-   ———————————————————————————————————————————————————————————————— */
+type HeroAnimal = Pick<Animal, "name" | "species" | "portrait" | "slug" | "tagline"> & {
+  photoUrl?: string;
+};
 
-function DogScene({
-  mx,
-  my,
-  idle,
-}: {
-  mx: ReturnType<typeof useSpring>;
-  my: ReturnType<typeof useSpring>;
-  idle: boolean;
-}) {
-  // parallax offsets per layer
-  const farX = useTransform(mx, [-1, 1], [6, -6]);
-  const midX = useTransform(mx, [-1, 1], [12, -12]);
-  const headRot = useTransform(mx, [-1, 1], [-2.5, 2.5]);
-  const pupilX = useTransform(mx, [-1, 1], [-2.2, 2.2]);
-  const pupilY = useTransform(my, [-1, 1], [-1.4, 1.8]);
+export interface HeroMediaItem {
+  src: string;
+  alt: string;
+  blurDataURL?: string;
+}
 
+/* ————— scenery bits ————— */
+
+function Bird({ delay, top, duration, scale }: { delay: number; top: string; duration: number; scale: number }) {
+  return (
+    <div
+      className="anim-fly absolute left-0"
+      style={{
+        top,
+        animationDelay: `${delay}s`,
+        ["--fly-duration" as string]: `${duration}s`,
+        ["--fly-scale" as string]: scale,
+      }}
+      aria-hidden="true"
+    >
+      <svg width="28" height="10" viewBox="0 0 28 10" fill="none" className="text-night/50">
+        <path d="M0 6 Q 7 0 14 6 Q 21 0 28 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="anim-flap" />
+      </svg>
+    </div>
+  );
+}
+
+function Leaf({ left, delay, duration, color }: { left: string; delay: number; duration: number; color: string }) {
+  return (
+    <div
+      className="anim-leaf absolute -top-6"
+      style={{ left, animationDelay: `${delay}s`, ["--leaf-duration" as string]: `${duration}s` }}
+      aria-hidden="true"
+    >
+      <svg width="16" height="18" viewBox="0 0 16 18" fill={color} opacity="0.75">
+        <path d="M8 0C12 4 16 8 14 13c-1.6 4-6 5-8 4.6C2.4 16.8-.6 12 .4 8 1.4 4 5 1.5 8 0Z" />
+        <path d="M8 2v13" stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" fill="none" />
+      </svg>
+    </div>
+  );
+}
+
+function GrassTuft({ className, delay = 0 }: { className?: string; delay?: number }) {
   return (
     <svg
-      viewBox="0 0 520 520"
-      role="img"
-      aria-label="Illustration of a campus dog wearing a KGP PAWS collar with a QR identity tag, in front of the IIT Kharagpur Main Building"
-      className="block h-full w-full"
+      viewBox="0 0 80 34"
+      className={`anim-sway ${className ?? ""}`}
+      style={{ animationDelay: `${delay}s` }}
+      fill="currentColor"
+      aria-hidden="true"
     >
-      {/* sky wash */}
-      <defs>
-        <linearGradient id="hero-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F1E8D8" />
-          <stop offset="100%" stopColor="#F7F1E7" />
-        </linearGradient>
-        <linearGradient id="hero-ground" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#E3D9BE" />
-          <stop offset="100%" stopColor="#D9CCA9" />
-        </linearGradient>
-      </defs>
-      <circle cx="260" cy="250" r="230" fill="url(#hero-sky)" />
-
-      {/* far layer: sun + Main Building silhouette */}
-      <motion.g style={{ x: farX }}>
-        <circle cx="150" cy="120" r="46" fill="#DCC9A3" opacity="0.65" />
-        <g fill="#173F35" opacity="0.1">
-          {/* simplified Main Building: wings + central tower */}
-          <rect x="120" y="208" width="290" height="52" rx="3" />
-          <rect x="215" y="168" width="100" height="92" rx="3" />
-          <rect x="243" y="128" width="44" height="60" rx="3" />
-          <path d="M243 128 L265 108 L287 128 Z" />
-          <rect x="150" y="222" width="14" height="24" rx="2" fill="#F7F1E7" />
-          <rect x="180" y="222" width="14" height="24" rx="2" fill="#F7F1E7" />
-          <rect x="340" y="222" width="14" height="24" rx="2" fill="#F7F1E7" />
-          <rect x="370" y="222" width="14" height="24" rx="2" fill="#F7F1E7" />
-          <rect x="256" y="140" width="18" height="30" rx="2" fill="#F7F1E7" />
-        </g>
-      </motion.g>
-
-      {/* mid layer: trees */}
-      <motion.g style={{ x: midX }}>
-        <g opacity="0.85">
-          <rect x="78" y="230" width="9" height="46" rx="4" fill="#8C6A4F" />
-          <circle cx="82" cy="212" r="34" fill="#2E6B56" opacity="0.35" />
-          <circle cx="64" cy="228" r="24" fill="#2E6B56" opacity="0.28" />
-          <rect x="428" y="222" width="10" height="56" rx="5" fill="#8C6A4F" />
-          <circle cx="433" cy="200" r="40" fill="#2E6B56" opacity="0.35" />
-          <circle cx="458" cy="222" r="26" fill="#2E6B56" opacity="0.28" />
-        </g>
-      </motion.g>
-
-      {/* ground */}
-      <ellipse cx="260" cy="468" rx="235" ry="52" fill="url(#hero-ground)" />
-      <ellipse cx="268" cy="474" rx="150" ry="28" fill="#20242112" />
-
-      {/* ——— the dog ——— */}
-      <g className={idle ? "anim-breathe" : undefined} style={{ transformBox: "fill-box" }}>
-        {/* tail */}
-        <g
-          className={idle ? "anim-tail" : undefined}
-          style={{ transformBox: "fill-box", transformOrigin: "85% 30%" }}
-        >
-          <path
-            d="M148 400 Q96 396 84 350 Q80 336 92 334 Q104 333 108 346 Q116 378 156 380 Z"
-            fill="#A96F35"
-          />
-        </g>
-
-        {/* haunch */}
-        <ellipse cx="205" cy="402" rx="92" ry="72" fill="#D9A05B" />
-        <ellipse cx="180" cy="440" rx="40" ry="22" fill="#C4883F" />
-        {/* hind paw */}
-        <ellipse cx="168" cy="466" rx="30" ry="13" fill="#E8C88F" />
-
-        {/* body + chest */}
-        <ellipse cx="292" cy="366" rx="88" ry="102" fill="#D9A05B" />
-        <ellipse cx="306" cy="398" rx="50" ry="68" fill="#F2E3C9" />
-
-        {/* front legs */}
-        <rect x="262" y="360" width="34" height="110" rx="17" fill="#D9A05B" />
-        <rect x="318" y="360" width="34" height="110" rx="17" fill="#CE9349" />
-        <ellipse cx="279" cy="468" rx="24" ry="12" fill="#E8C88F" />
-        <ellipse cx="335" cy="468" rx="24" ry="12" fill="#E8C88F" />
-
-        {/* head group — reacts subtly to cursor */}
-        <motion.g style={{ rotate: headRot, transformBox: "fill-box", transformOrigin: "50% 85%" }}>
-          {/* ears — indie half-pricked */}
-          <g
-            className={idle ? "anim-ear" : undefined}
-            style={{ transformBox: "fill-box", transformOrigin: "60% 90%" }}
-          >
-            <path d="M248 148 L252 84 L300 118 Z" fill="#A96F35" />
-            <path d="M252 84 L278 90 L270 108 Z" fill="#D9A05B" />
-          </g>
-          <path d="M372 148 L368 84 L320 118 Z" fill="#A96F35" />
-          <path d="M368 84 L342 90 L350 108 Z" fill="#D9A05B" />
-
-          {/* head */}
-          <ellipse cx="310" cy="176" rx="66" ry="60" fill="#D9A05B" />
-          {/* eye patch marking */}
-          <circle cx="285" cy="166" r="20" fill="#B37B41" opacity="0.8" />
-
-          {/* muzzle */}
-          <ellipse cx="310" cy="206" rx="32" ry="23" fill="#F2E3C9" />
-
-          {/* eyes with tracking pupils */}
-          <g className={idle ? "anim-blink" : undefined} style={{ transformBox: "fill-box" }}>
-            <ellipse cx="286" cy="168" rx="8" ry="9" fill="#FCF8F0" />
-            <ellipse cx="334" cy="168" rx="8" ry="9" fill="#FCF8F0" />
-            <motion.g style={{ x: pupilX, y: pupilY }}>
-              <circle cx="287" cy="169" r="5" fill="#202421" />
-              <circle cx="335" cy="169" r="5" fill="#202421" />
-              <circle cx="289" cy="167" r="1.6" fill="#FCF8F0" />
-              <circle cx="337" cy="167" r="1.6" fill="#FCF8F0" />
-            </motion.g>
-          </g>
-
-          {/* nose + mouth */}
-          <path
-            d="M301 196 L319 196 Q322 196 320 199.5 L313 209 Q310 213 307 209 L300 199.5 Q298 196 301 196 Z"
-            fill="#202421"
-          />
-          <g stroke="#202421" strokeWidth="2.4" strokeLinecap="round" fill="none">
-            <path d="M310 212 v6" />
-            <path d="M310 218 q-8 8 -16 3" />
-            <path d="M310 218 q8 8 16 3" />
-          </g>
-          <path d="M302 224 q8 -3 16 0 q0 13 -8 13 q-8 0 -8 -13 Z" fill="#E2917B" />
-        </motion.g>
-
-        {/* collar */}
-        <path
-          d="M258 252 Q310 278 362 250"
-          stroke="#C96745"
-          strokeWidth="16"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <circle cx="312" cy="268" r="5" fill="#E8C77D" />
-
-        {/* QR tag — the scroll zoom target */}
-        <g
-          id="hero-qr-tag"
-          className={idle ? "anim-swing" : undefined}
-          style={{ transformBox: "fill-box", transformOrigin: "50% 0%" }}
-        >
-          <rect x="296" y="272" width="32" height="38" rx="7" fill="#FCF8F0" stroke="#DCC9A3" strokeWidth="2.5" />
-          <circle cx="312" cy="278" r="2.2" fill="#DCC9A3" />
-          <g fill="#173F35">
-            <rect x="302" y="283" width="6" height="6" rx="1" />
-            <rect x="316" y="283" width="6" height="6" rx="1" />
-            <rect x="302" y="297" width="6" height="6" rx="1" />
-            <rect x="311" y="291" width="3" height="3" />
-            <rect x="316" y="295" width="3" height="3" />
-            <rect x="319" y="299" width="3" height="3" />
-            <rect x="311" y="299" width="3" height="3" />
-          </g>
-        </g>
-      </g>
+      <path d="M6 34C4 22 2 16 0 12c5 2 8 8 9 14C10 16 8 8 6 2c6 4 9 12 10 22C17 14 18 8 22 2c3 7 2 16 0 24 4-9 8-14 13-16-3 6-5 13-5 20 3-8 7-12 12-14-3 5-5 11-5 18h-31Z" />
+      <path d="M46 34c-1-9-3-15-6-20 5 2 8 7 10 13 0-8-1-14-4-20 6 3 9 10 10 19 1-8 3-13 7-17 1 6 0 12-2 19 3-6 7-9 11-10-3 5-4 10-4 16H46Z" opacity="0.85" />
     </svg>
   );
 }
 
-/* ————————————————————————————————————————————————————————————————
-   Hero — 220vh scroll stage:
-   phase 1: copy + idle dog · phase 2: camera zooms toward the collar
-   tag · phase 3: “One Scan. Their Entire Story.” takes over.
-   ———————————————————————————————————————————————————————————————— */
+/* ————— hero ————— */
 
-export function Hero({ cms }: { cms?: ContentSectionRow }) {
-  const stageRef = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
+export function Hero({
+  cms,
+  media = [],
+  dog,
+  cat,
+}: {
+  cms?: ContentSectionRow;
+  media?: HeroMediaItem[];
+  dog?: HeroAnimal;
+  cat?: HeroAnimal;
+}) {
+  const reduced = useReducedMotion();
+  const ref = useRef<HTMLElement>(null);
 
+  // pointer-driven camera
+  const px = useMotionValue(0);
+  const py = useMotionValue(0);
+  const cx = useSpring(px, { stiffness: 60, damping: 18, mass: 0.6 });
+  const cy = useSpring(py, { stiffness: 60, damping: 18, mass: 0.6 });
+  const skyX = useTransform(cx, (v) => v * -10);
+  const hillsX = useTransform(cx, (v) => v * -22);
+  const hillsY = useTransform(cy, (v) => v * -8);
+  const cardsX = useTransform(cx, (v) => v * 26);
+  const cardsY = useTransform(cy, (v) => v * 14);
+  const grassX = useTransform(cx, (v) => v * 38);
+
+  // scroll choreography
   const { scrollYProgress } = useScroll({
-    target: stageRef,
-    offset: ["start start", "end end"],
+    target: ref,
+    offset: ["start start", "end start"],
   });
+  const sceneScale = useTransform(scrollYProgress, [0, 1], [1, 1.08]);
+  const sceneY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const contentY = useTransform(scrollYProgress, [0, 0.7], [0, -80]);
+  const fade = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
 
-  // cursor parallax (mouse only)
-  const rawX = useMotionValue(0);
-  const rawY = useMotionValue(0);
-  const mx = useSpring(rawX, { stiffness: 60, damping: 18 });
-  const my = useSpring(rawY, { stiffness: 60, damping: 18 });
-
-  // choreography
-  const copyOpacity = useTransform(scrollYProgress, [0, 0.22], [1, 0]);
-  const copyY = useTransform(scrollYProgress, [0, 0.22], [0, -36]);
-  const sceneScale = useTransform(scrollYProgress, [0.15, 0.75], [1, 2.6]);
-  const sceneX = useTransform(scrollYProgress, [0.15, 0.75], ["0%", "-14%"]);
-  const sceneY = useTransform(scrollYProgress, [0.15, 0.75], ["0%", "-6%"]);
-  const scanOpacity = useTransform(scrollYProgress, [0.55, 0.8], [0, 1]);
-  const scanY = useTransform(scrollYProgress, [0.55, 0.8], [40, 0]);
-  const hintOpacity = useTransform(scrollYProgress, [0, 0.08], [1, 0]);
+  const title = cms?.title || "Every paw has a story.";
+  const sub =
+    cms?.subtitle ||
+    cms?.body ||
+    "Rescue, healing and a digital identity for every animal that calls IIT Kharagpur home.";
+  const ctaLabel = cms?.ctaLabel || "Meet the paws";
+  const ctaUrl = cms?.ctaUrl || "/adopt";
+  const heroPhoto = media[0];
 
   return (
     <section
-      ref={stageRef}
-      className={reduce ? "relative" : "relative h-[220vh]"}
-      aria-label="KGP PAWS — every paw has a story"
-      onMouseMove={(e) => {
-        if (reduce) return;
-        const r = stageRef.current?.getBoundingClientRect();
-        if (!r) return;
-        rawX.set(((e.clientX - r.left) / r.width) * 2 - 1);
-        rawY.set(((e.clientY - Math.max(r.top, 0)) / Math.min(r.height, window.innerHeight)) * 2 - 1);
+      ref={ref}
+      aria-label="Welcome"
+      className="relative -mt-16 flex min-h-[100svh] flex-col justify-center overflow-hidden bg-night md:-mt-20"
+      onPointerMove={(e) => {
+        if (e.pointerType !== "mouse" || reduced) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        px.set((e.clientX - r.left) / r.width - 0.5);
+        py.set((e.clientY - r.top) / r.height - 0.5);
+      }}
+      onPointerLeave={() => {
+        px.set(0);
+        py.set(0);
       }}
     >
-      <div
-        className={
-          reduce
-            ? "relative overflow-hidden"
-            : "sticky top-0 h-screen overflow-hidden"
-        }
+      {/* — scene — */}
+      <motion.div
+        aria-hidden="true"
+        className="absolute inset-0"
+        style={reduced ? undefined : { scale: sceneScale, y: sceneY }}
       >
-        <div className="container-page grid min-h-[calc(100vh-5rem)] items-center gap-8 py-10 lg:grid-cols-[1.05fr_1fr] lg:gap-4">
-          {/* copy */}
-          <motion.div
-            style={reduce ? undefined : { opacity: copyOpacity, y: copyY }}
-            className="relative z-10 order-2 max-w-xl lg:order-1"
-          >
-            <p className="eyebrow mb-4 text-terracotta-deep">
-              Animal Welfare Society · IIT Kharagpur
-            </p>
-            <h1 className="text-balance font-display text-5xl font-bold leading-[1.02] text-forest-deep sm:text-6xl xl:text-7xl">
-              {cms?.title}
-            </h1>
-            <p className="mt-5 font-display text-xl italic text-terracotta-deep sm:text-2xl">
-              {cms?.subtitle}
-            </p>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-moss sm:text-lg">
-              {cms?.body}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <ButtonLink href={cms?.ctaUrl ?? "/adopt"} size="lg">
-                {cms?.ctaLabel}
-              </ButtonLink>
-              <ButtonLink href="/report" variant="accent" size="lg">
-                <Siren className="h-4 w-4" aria-hidden="true" />
-                Help an Animal
-              </ButtonLink>
-              <ButtonLink href="/donate" variant="outline" size="lg">
-                Donate
-              </ButtonLink>
-            </div>
-          </motion.div>
-
-          {/* scene */}
-          <div className="order-1 lg:order-2">
-            <motion.div
-              style={
-                reduce
-                  ? undefined
-                  : { scale: sceneScale, x: sceneX, y: sceneY }
-              }
-              className="mx-auto aspect-square w-full max-w-[300px] sm:max-w-[420px] lg:max-w-[560px] [transform-origin:61%_56%]"
-            >
-              <DogScene mx={mx} my={my} idle={!reduce} />
-            </motion.div>
+        {/* sky */}
+        <motion.div
+          className="absolute inset-[-4%]"
+          style={{
+            x: reduced ? 0 : skyX,
+            background:
+              "linear-gradient(180deg, #12233f 0%, #274d7e 26%, #b06a3f 52%, #e8983f 64%, #f3dda6 78%, #faf5ea 100%)",
+          }}
+        />
+        {/* photographic backdrop (activates automatically once hero photos exist) */}
+        {heroPhoto && (
+          <div className="absolute inset-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={heroPhoto.src}
+              alt=""
+              className="anim-kenburns h-full w-full object-cover opacity-55"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-night/70 via-night/20 to-cream" />
           </div>
+        )}
+
+        {/* sun */}
+        <div className="anim-pulse-soft absolute left-[16%] top-[46%] h-56 w-56 -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(245,163,91,0.9),rgba(245,163,91,0.25)_45%,transparent_70%)] blur-[2px] sm:h-80 sm:w-80" />
+        {/* light rays */}
+        <div className="anim-ray absolute left-[16%] top-[38%] h-[60vh] w-[70vw] -translate-x-1/2 bg-[conic-gradient(from_180deg_at_50%_0%,transparent_38%,rgba(245,163,91,0.16)_44%,transparent_50%,rgba(243,221,166,0.2)_56%,transparent_62%)]" />
+
+        {/* clouds */}
+        <div className="anim-drift absolute left-[8%] top-[12%] h-14 w-64 rounded-full bg-ivory/25 blur-2xl" />
+        <div className="anim-drift absolute right-[14%] top-[20%] h-16 w-80 rounded-full bg-ivory/20 blur-2xl" style={{ animationDelay: "-6s", animationDuration: "24s" }} />
+        <div className="anim-drift absolute left-[38%] top-[6%] h-10 w-48 rounded-full bg-ivory/15 blur-xl" style={{ animationDelay: "-12s", animationDuration: "30s" }} />
+
+        {/* birds */}
+        {!reduced && (
+          <>
+            <Bird delay={0} top="18%" duration={38} scale={1} />
+            <Bird delay={-14} top="12%" duration={46} scale={0.7} />
+            <Bird delay={-26} top="24%" duration={42} scale={0.85} />
+          </>
+        )}
+
+        {/* hills + campus silhouette */}
+        <motion.div className="absolute inset-x-[-6%] bottom-0" style={reduced ? undefined : { x: hillsX, y: hillsY }}>
+          <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="block h-[38vh] w-full">
+            <path d="M0 210 Q 240 130 480 180 T 900 170 T 1440 190 V 320 H 0 Z" fill="#7fa08c" opacity="0.5" />
+            {/* campus silhouette */}
+            <g fill="#14402f" opacity="0.35">
+              <rect x="620" y="118" width="14" height="70" />
+              <rect x="600" y="150" width="120" height="44" />
+              <rect x="560" y="168" width="40" height="26" />
+              <rect x="720" y="168" width="40" height="26" />
+              <circle cx="627" cy="112" r="7" />
+              <rect x="820" y="158" width="60" height="36" rx="3" />
+              <rect x="480" y="160" width="52" height="34" rx="3" />
+            </g>
+            <path d="M0 250 Q 300 180 620 230 T 1440 240 V 320 H 0 Z" fill="#2c5c43" opacity="0.8" />
+            <path d="M0 292 Q 360 236 760 276 T 1440 282 V 320 H 0 Z" fill="#14402f" />
+          </svg>
+        </motion.div>
+
+        {/* falling leaves */}
+        {!reduced && (
+          <>
+            <Leaf left="12%" delay={0} duration={14} color="#e9b84c" />
+            <Leaf left="28%" delay={-5} duration={17} color="#c25f1e" />
+            <Leaf left="55%" delay={-9} duration={15} color="#7fa08c" />
+            <Leaf left="72%" delay={-3} duration={19} color="#e8813a" />
+            <Leaf left="88%" delay={-11} duration={16} color="#e9b84c" />
+          </>
+        )}
+
+        {/* particles / fireflies */}
+        <ParticleField className="absolute inset-0" />
+      </motion.div>
+
+      {/* — floating animal cards — */}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 hidden lg:block"
+        style={reduced ? undefined : { x: cardsX, y: cardsY, opacity: fade }}
+      >
+        {dog && (
+          <div className="anim-float absolute right-[9%] top-[24%] w-64 rotate-3 xl:w-72">
+            <div className="rounded-[1.75rem] bg-ivory/80 p-3 shadow-lift backdrop-blur-sm">
+              <AnimalPortrait animal={dog} photoUrl={dog.photoUrl} idle className="aspect-[4/5] w-full overflow-hidden rounded-3xl" />
+              <div className="flex items-center justify-between px-2 pb-1 pt-3">
+                <p className="font-display text-lg font-bold text-forest-deep">{dog.name}</p>
+                <QrCode className="h-4 w-4 text-moss" aria-hidden="true" />
+              </div>
+            </div>
+          </div>
+        )}
+        {cat && (
+          <div className="anim-float absolute right-[32%] top-[56%] w-44 -rotate-6 xl:w-52" style={{ animationDelay: "-2.2s" }}>
+            <div className="rounded-[1.5rem] bg-ivory/80 p-2.5 shadow-lift backdrop-blur-sm">
+              <AnimalPortrait animal={cat} photoUrl={cat.photoUrl} idle className="aspect-square w-full overflow-hidden rounded-2xl" />
+              <p className="px-2 pb-1 pt-2.5 font-display text-base font-bold text-forest-deep">{cat.name}</p>
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      {/* — content — */}
+      <motion.div
+        className="container-page relative z-10 pt-24 pb-36 md:pb-28"
+        style={reduced ? undefined : { y: contentY, opacity: fade }}
+      >
+        <div className="max-w-2xl">
+          <motion.p
+            initial={reduced ? false : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="glass-dark mb-6 inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gold-soft"
+          >
+            <Seal variant="light" size={22} className="h-5 w-5" />
+            Animal Welfare Society · IIT Kharagpur
+          </motion.p>
+
+          <TextReveal
+            as="h1"
+            text={title}
+            className="text-balance font-display text-5xl font-bold leading-[1.02] text-ivory drop-shadow-[0_2px_24px_rgba(10,18,14,0.35)] sm:text-6xl lg:text-7xl xl:text-[5.2rem]"
+          />
+
+          <motion.p
+            initial={reduced ? false : { opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-6 max-w-lg text-lg leading-relaxed text-ivory/85 sm:text-xl"
+          >
+            {sub}
+          </motion.p>
+
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-9 flex flex-wrap items-center gap-4"
+          >
+            <Magnetic strength={0.3}>
+              <Link
+                href={ctaUrl}
+                className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-8 py-4 text-base font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
+              >
+                {ctaLabel}
+                <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
+              </Link>
+            </Magnetic>
+            <Magnetic strength={0.25}>
+              <Link
+                href="/report"
+                className="glass-dark inline-flex items-center gap-2 rounded-full px-7 py-4 text-base font-semibold text-ivory transition-colors hover:bg-ivory/15"
+              >
+                <Siren className="h-5 w-5 text-saffron-glow" aria-hidden="true" />
+                Report an animal
+              </Link>
+            </Magnetic>
+          </motion.div>
         </div>
+      </motion.div>
 
-        {/* scan takeover */}
-        {!reduce && (
-          <motion.div
-            style={{ opacity: scanOpacity, y: scanY }}
-            className="pointer-events-none absolute inset-x-0 bottom-14 z-20 text-center"
-            aria-hidden="true"
-          >
-            <p className="inline-flex items-center gap-2 rounded-full bg-forest px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-cream shadow-lift">
-              <QrCode className="h-3.5 w-3.5" />
-              Paws digital identity
-            </p>
-            <p className="mt-4 text-balance px-6 font-display text-4xl font-bold text-forest-deep sm:text-5xl">
-              One Scan. Their Entire Story.
-            </p>
-          </motion.div>
-        )}
-
-        {/* scroll hint */}
-        {!reduce && (
-          <motion.div
-            style={{ opacity: hintOpacity }}
-            className="absolute bottom-5 left-1/2 -translate-x-1/2 text-moss"
-            aria-hidden="true"
-          >
-            <ChevronDown className="anim-float h-6 w-6" />
-          </motion.div>
-        )}
+      {/* grass foreground */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-10">
+        <motion.div style={reduced ? undefined : { x: grassX }} className="relative h-10">
+          <GrassTuft className="absolute -bottom-1 left-[2%] h-10 w-24 text-forest-deep" />
+          <GrassTuft className="absolute -bottom-1 left-[30%] h-8 w-20 text-forest" delay={-2} />
+          <GrassTuft className="absolute -bottom-1 left-[58%] h-11 w-24 text-forest-deep" delay={-4} />
+          <GrassTuft className="absolute -bottom-1 left-[84%] h-9 w-20 text-forest" delay={-1.4} />
+        </motion.div>
       </div>
 
-      {/* static heading for reduced-motion users (choreography text otherwise) */}
-      {reduce && (
-        <div className="container-page pb-16 text-center">
-          <p className="font-display text-3xl font-bold text-forest-deep">
-            One Scan. Their Entire Story.
-          </p>
-          <Link href="/animal/simba" className="mt-2 inline-block text-sm font-semibold text-terracotta-deep underline">
-            See a live animal profile
-          </Link>
-        </div>
-      )}
+      {/* scroll cue */}
+      <motion.div
+        aria-hidden="true"
+        style={reduced ? undefined : { opacity: fade }}
+        className="absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2 text-ivory/80 md:flex"
+      >
+        <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Scroll</span>
+        <span className="flex h-9 w-5 items-start justify-center rounded-full border border-ivory/40 p-1">
+          <ArrowDown className="anim-scroll-hint h-3 w-3" />
+        </span>
+      </motion.div>
     </section>
   );
 }

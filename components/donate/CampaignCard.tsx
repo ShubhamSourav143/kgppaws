@@ -17,7 +17,7 @@ export function CampaignCard({ campaign }: { campaign: DonationCampaign }) {
     <section
       id={campaign.slug}
       aria-labelledby={`c-${campaign.slug}`}
-      className="scroll-mt-28 rounded-3xl border border-line bg-parchment p-6 shadow-soft sm:p-8"
+      className="scroll-mt-28 rounded-3xl border border-line bg-ivory p-6 shadow-card transition-shadow duration-300 hover:shadow-lift sm:p-8"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Chip tone="mist">{CAMPAIGN_CATEGORY_LABELS[campaign.category]}</Chip>

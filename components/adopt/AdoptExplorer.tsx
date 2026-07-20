@@ -73,9 +73,9 @@ function OptionRow<T extends string>({
             onClick={() => onChange(o.id)}
             aria-pressed={value === o.id}
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors",
+              "rounded-full px-3.5 py-1.5 text-xs font-bold transition-all",
               value === o.id
-                ? "bg-forest text-cream"
+                ? "bg-gradient-to-r from-saffron-deep to-saffron text-ivory shadow-ember"
                 : "border border-forest/20 text-forest hover:bg-mist"
             )}
           >
@@ -103,7 +103,7 @@ function Toggle({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 accent-[#173F35]"
+        className="h-4 w-4 accent-[#c25f1e]"
       />
     </label>
   );
@@ -226,7 +226,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
     <div className="mt-10 grid gap-10 lg:grid-cols-[16rem_1fr]">
       {/* desktop sidebar */}
       <aside className="hidden lg:block" aria-label="Adoption filters">
-        <div className="sticky top-24 max-h-[calc(100vh-7rem)] space-y-6 overflow-y-auto rounded-3xl border border-line bg-parchment p-6 shadow-soft">
+        <div className="glass sticky top-24 max-h-[calc(100vh-7rem)] space-y-6 overflow-y-auto rounded-3xl p-6 shadow-soft">
           <FilterPanel filters={filters} setFilters={setFilters} />
           <button
             type="button"
@@ -252,7 +252,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or personality — try “biscuit”"
               aria-label="Search adoptable animals"
-              className="w-full rounded-full border border-line bg-parchment py-3 pl-11 pr-4 text-sm placeholder:text-moss/60 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15"
+              className="w-full rounded-full border border-line bg-ivory py-3 pl-11 pr-4 text-sm shadow-soft placeholder:text-moss/60 focus:border-saffron focus:outline-none focus:ring-2 focus:ring-saffron/25"
             />
           </div>
           <button
@@ -277,7 +277,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
 
         {/* results */}
         {results.length > 0 ? (
-          <ul className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {results.map((a) => (
               <li key={a.slug}>
                 <AnimalCard animal={a} className="h-full" />
