@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Menu, X, Siren, LayoutDashboard, LogIn, ArrowUpRight } from "lucide-react";
+import { Menu, X, Siren, LayoutDashboard, LogIn, ArrowUpRight, Search } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Magnetic } from "@/components/fx/Magnetic";
+import { SearchOverlay } from "@/components/search/SearchOverlay";
 import { useSession } from "@/hooks/use-demo-session";
 import { cn } from "@/lib/utils";
 
@@ -25,14 +26,14 @@ function NavLink({ href, label, light }: { href: string; label: string; light: b
       className={cn(
         "group relative px-1 py-2 text-sm font-semibold transition-colors",
         light
-          ? active ? "text-marigold" : "text-ivory/90 hover:text-marigold"
-          : active ? "text-saffron-deep" : "text-forest hover:text-saffron-deep"
+          ? active ? "text-chakra-glow" : "text-ivory/90 hover:text-chakra-glow"
+          : active ? "text-chakra" : "text-forest hover:text-chakra"
       )}
     >
       {label}
       <span
         className={cn(
-          "absolute inset-x-0 -bottom-0.5 h-[2.5px] origin-left rounded-full bg-gradient-to-r from-saffron to-marigold transition-transform duration-300 ease-out",
+          "absolute inset-x-0 -bottom-0.5 h-[2.5px] origin-left rounded-full bg-gradient-to-r from-chakra to-chakra-glow transition-transform duration-300 ease-out",
           active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
         )}
         aria-hidden="true"
@@ -45,6 +46,7 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
   const NAV = items || [];
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const { user } = useSession();
   const reduced = useReducedMotion();
@@ -54,6 +56,18 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // global Cmd/Ctrl+K opens search from anywhere on the site
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   // close the overlay on navigation — state-during-render, no effect needed
@@ -116,6 +130,18 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search (Ctrl+K)"
+              className={cn(
+                "grid h-11 w-11 place-items-center rounded-full transition-colors",
+                light ? "text-ivory hover:bg-ivory/10" : "text-forest hover:bg-mist"
+              )}
+            >
+              <Search className="h-5 w-5" aria-hidden="true" />
+            </button>
+
             {user ? (
               <Link
                 href={dashboardHref}
@@ -268,6 +294,8 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }
