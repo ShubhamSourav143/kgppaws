@@ -4,6 +4,39 @@ All notable changes to this project, newest first. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/). Every entry corresponds to a status change in
 [PRD.md](PRD.md) and, where relevant, a verification note in [TEST_REPORT.md](TEST_REPORT.md).
 
+## 2026-07-20 (later²) — Aurora v2 iteration: search, nav, palette rebalance, adopt card
+
+### Added
+- **Full-screen search overlay** (`components/search/SearchOverlay.tsx` + `app/api/search/route.ts`)
+  aggregating animals, stories and static pages. Opens from a new search icon in the header,
+  or globally via **Cmd/Ctrl+K**. Debounced fetch, keyboard navigation (arrows + Enter + Esc),
+  glass panel over aurora backdrop. Search is inner-component-mounted so opening it never
+  triggers a setState-in-effect cascade.
+- Chakra `Chip` tone for gender/nav accents (spec: blue for navigation/links/icons/statistics).
+
+### Changed
+- **Nav no longer surfaces Paws Map** — dropped from `DEMO_NAVIGATION`; the route stays live
+  (still linked from Compawnions section and search results). Gallery takes its place in the
+  header. Footer quick-link list swaps Campus Paws Map → Gallery.
+- **Palette rebalance toward the literal brief**: nav active/hover shifted from saffron →
+  Ashoka chakra blue; ImpactStats icons + hover borders → chakra glow. Saffron remains
+  reserved for CTAs, highlights and gradients per spec.
+- **Hero CTA trio**: replaced the CTA-plus-Report pair with **Meet Our Paws** (primary saffron),
+  **Donate** (chakra icon), **Volunteer** (forest icon). Report stays reachable via header
+  pill + mobile dock.
+- **`AnimalCard`**: breed/color descriptor line, **Vaccinated** chip (mist), **Male/Female**
+  chip (chakra) with Mars/Venus glyphs, and a bottom **Adopt me / Foster me / View profile**
+  bar that's visible without hover (spec's required card fields + explicit CTA).
+
+### Verified
+- tsc + ESLint clean (0 errors, 4 pre-existing warnings), `npm run build` compiles all routes.
+- Search: Cmd/Ctrl+K opens overlay; query "simba" surfaces the animal + linked story from the
+  live API; keyboard navigation confirmed by network+DOM probe.
+- Header nav reads **Adopt · Gallery · Stories · Donate · About · Volunteer** with Paws Map
+  absent.
+
+---
+
 ## 2026-07-20 (later) — "Aurora" — complete frontend redesign
 
 ### Changed (everything visible; zero backend/services/API changes)

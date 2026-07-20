@@ -10,7 +10,7 @@ import {
   useTransform,
   useReducedMotion,
 } from "framer-motion";
-import { ArrowDown, ArrowUpRight, QrCode, Siren } from "lucide-react";
+import { ArrowDown, ArrowUpRight, HandCoins, QrCode, Users } from "lucide-react";
 import { AnimalPortrait } from "@/components/animals/Portrait";
 import { ParticleField } from "@/components/fx/ParticleField";
 import { Magnetic } from "@/components/fx/Magnetic";
@@ -299,11 +299,20 @@ export function Hero({
             </Magnetic>
             <Magnetic strength={0.25}>
               <Link
-                href="/report"
+                href="/donate"
                 className="glass-dark inline-flex items-center gap-2 rounded-full px-7 py-4 text-base font-semibold text-ivory transition-colors hover:bg-ivory/15"
               >
-                <Siren className="h-5 w-5 text-saffron-glow" aria-hidden="true" />
-                Report an animal
+                <HandCoins className="h-5 w-5 text-chakra-glow" aria-hidden="true" />
+                Donate
+              </Link>
+            </Magnetic>
+            <Magnetic strength={0.25}>
+              <Link
+                href="/volunteer"
+                className="glass-dark inline-flex items-center gap-2 rounded-full px-7 py-4 text-base font-semibold text-ivory transition-colors hover:bg-ivory/15"
+              >
+                <Users className="h-5 w-5 text-forest-bright" aria-hidden="true" />
+                Volunteer
               </Link>
             </Magnetic>
           </motion.div>

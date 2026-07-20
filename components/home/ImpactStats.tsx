@@ -44,8 +44,8 @@ export function ImpactStats({
         <Stagger className="mt-14 grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-6" gap={0.07}>
           {STATS.map((s) => (
             <Item key={s.label} effect="rise" className="h-full">
-              <div className="group flex h-full flex-col gap-3 rounded-3xl border border-ivory/10 bg-ivory/[0.04] p-5 backdrop-blur-sm transition-colors duration-300 hover:border-saffron/40 hover:bg-saffron/10 sm:p-6">
-                <s.icon className="h-5 w-5 text-saffron-glow" aria-hidden="true" />
+              <div className="group flex h-full flex-col gap-3 rounded-3xl border border-ivory/10 bg-ivory/[0.04] p-5 backdrop-blur-sm transition-colors duration-300 hover:border-chakra-glow/40 hover:bg-chakra/10 sm:p-6">
+                <s.icon className="h-5 w-5 text-chakra-glow" aria-hidden="true" />
                 <p className="font-display text-3xl font-bold tabular-nums text-ivory sm:text-4xl">
                   <Counter value={s.value} />
                 </p>

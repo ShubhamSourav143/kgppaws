@@ -7,7 +7,8 @@ export type ChipTone =
   | "sand"
   | "mist"
   | "clay"
-  | "outline";
+  | "outline"
+  | "chakra";
 
 const TONES: Record<ChipTone, string> = {
   forest: "bg-forest text-cream",
@@ -16,6 +17,7 @@ const TONES: Record<ChipTone, string> = {
   mist: "bg-mist text-forest",
   clay: "bg-clay text-terracotta-deep",
   outline: "border border-forest/20 text-moss",
+  chakra: "bg-chakra/12 text-chakra-ink",
 };
 
 export function Chip({

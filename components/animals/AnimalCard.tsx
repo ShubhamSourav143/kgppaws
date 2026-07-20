@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, Mars, Venus, MapPin } from "lucide-react";
 import { AnimalPortrait } from "@/components/animals/Portrait";
 import { HealthChip, AdoptionChip } from "@/components/animals/chips";
 import { SaveButton } from "@/components/animals/SaveButton";
@@ -9,6 +9,12 @@ import { Tilt } from "@/components/fx/Tilt";
 import { zoneName } from "@/lib/demo/zones";
 import { cn } from "@/lib/utils";
 import type { Animal } from "@/types";
+
+const SEX_META: Record<Animal["sex"], { icon: typeof Mars; label: string } | null> = {
+  male: { icon: Mars, label: "Male" },
+  female: { icon: Venus, label: "Female" },
+  unknown: null,
+};
 
 export function AnimalCard({
   animal,
@@ -19,6 +25,9 @@ export function AnimalCard({
   tilt?: boolean;
   className?: string;
 }) {
+  const sex = SEX_META[animal.sex];
+  const canAdopt = animal.adoption === "available" || animal.adoption === "foster_needed";
+
   const card = (
     <Link
       href={`/animal/${animal.slug}`}
@@ -65,11 +74,29 @@ export function AnimalCard({
             {animal.pawsId}
           </span>
         </div>
+        <p className="text-xs font-bold uppercase tracking-wider text-moss">
+          {animal.species === "dog" ? "Indie Dog" : animal.species === "cat" ? "Indie Cat" : "Campus Animal"}
+          {" · "}
+          {animal.color}
+        </p>
         <p className="font-display text-[15px] italic leading-snug text-charcoal/65">
           &ldquo;{animal.tagline}&rdquo;
         </p>
+
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2">
           <HealthChip status={animal.healthStatus} />
+          {animal.vaccinated && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-mist px-2.5 py-1 text-[11px] font-bold text-forest">
+              <BadgeCheck className="h-3 w-3" aria-hidden="true" />
+              Vaccinated
+            </span>
+          )}
+          {sex && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-chakra/12 px-2.5 py-1 text-[11px] font-bold text-chakra-ink">
+              <sex.icon className="h-3 w-3" aria-hidden="true" />
+              {sex.label}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 rounded-full bg-mist px-2.5 py-1 text-[11px] font-bold text-forest">
             <MapPin className="h-3 w-3" aria-hidden="true" />
             {zoneName(animal.zoneId)}
@@ -77,6 +104,23 @@ export function AnimalCard({
           <span className="rounded-full bg-sand-light px-2.5 py-1 text-[11px] font-bold text-earth">
             {animal.ageLabel}
           </span>
+        </div>
+
+        {/* explicit, always-visible adopt affordance */}
+        <div
+          className={cn(
+            "-mx-5 -mb-5 mt-3 flex items-center justify-between border-t border-line px-5 py-3.5 text-sm font-bold transition-colors",
+            canAdopt
+              ? "text-saffron-deep group-hover:bg-saffron/8"
+              : "text-moss group-hover:bg-mist"
+          )}
+        >
+          {canAdopt
+            ? animal.adoption === "available"
+              ? "Adopt me"
+              : "Foster me"
+            : "View profile"}
+          <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
         </div>
       </div>
     </Link>
