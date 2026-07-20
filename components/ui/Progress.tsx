@@ -24,7 +24,7 @@ export function Progress({
       className={cn("h-2.5 w-full overflow-hidden rounded-full bg-sand-light", className)}
     >
       <motion.div
-        className="h-full rounded-full bg-gradient-to-r from-forest to-forest-bright"
+        className="h-full rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold"
         initial={reduce ? { width: `${v}%` } : { width: 0 }}
         whileInView={{ width: `${v}%` }}
         viewport={{ once: true, margin: "-40px" }}

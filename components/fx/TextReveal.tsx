@@ -2,6 +2,14 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
+const MOTION_TAGS = {
+  h1: motion.h1,
+  h2: motion.h2,
+  h3: motion.h3,
+  p: motion.p,
+  span: motion.span,
+} as const;
+
 /**
  * Editorial word-by-word reveal for display headlines.
  * Renders a plain element for reduced-motion users.
@@ -23,7 +31,7 @@ export function TextReveal({
   if (reduced) return <Tag className={className}>{text}</Tag>;
 
   const words = text.split(" ");
-  const MotionTag = motion.create(Tag);
+  const MotionTag = MOTION_TAGS[Tag];
 
   return (
     <MotionTag

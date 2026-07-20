@@ -86,11 +86,13 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
   );
 
   // Marketing pages open with a dark cinematic top — the transparent header
-  // renders light there. Utility/flow pages have light tops, so the glass
-  // pill is used from the very start.
-  const lightTop = !["/report", "/admin", "/dashboard", "/login", "/signup", "/faq", "/offline", "/scan-not-found", "/adopt/apply"].some(
-    (p) => pathname.startsWith(p)
-  );
+  // renders light there. Every other page keeps the glass pill from the start.
+  const lightTop =
+    !pathname.startsWith("/adopt/apply") &&
+    (pathname === "/" ||
+      ["/gallery", "/stories", "/about", "/adopt", "/donate", "/volunteer"].some(
+        (p) => pathname === p || pathname.startsWith(p + "/")
+      ));
   const pill = scrolled || !lightTop;
   const light = lightTop && !scrolled;
 
@@ -142,15 +144,17 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
               </Link>
             )}
 
-            <Magnetic strength={0.25} className="hidden sm:inline-block">
-              <Link
-                href="/report"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep to-saffron px-5 py-2.5 text-sm font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
-              >
-                <Siren className="h-4 w-4" aria-hidden="true" />
-                Report an Animal
-              </Link>
-            </Magnetic>
+            <span className="hidden sm:inline-block">
+              <Magnetic strength={0.25}>
+                <Link
+                  href="/report"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep to-saffron px-5 py-2.5 text-sm font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
+                >
+                  <Siren className="h-4 w-4" aria-hidden="true" />
+                  Report an Animal
+                </Link>
+              </Magnetic>
+            </span>
 
             <button
               type="button"

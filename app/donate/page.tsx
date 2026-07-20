@@ -28,18 +28,20 @@ export default async function DonatePage() {
   const intro = content.find(c => c.section === "intro");
 
   return (
-    <div className="container-page py-10 sm:py-14">
-      <header className="max-w-2xl">
-        <p className="eyebrow mb-3 text-terracotta-deep">Donate</p>
-        <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] text-forest-deep sm:text-5xl lg:text-6xl">
-          {intro?.title}
-        </h1>
-        <p className="mt-4 text-lg leading-relaxed text-moss">
-          {intro?.body}
-        </p>
+    <div className="pb-24">
+      <header className="aurora relative -mt-16 overflow-hidden bg-gradient-to-b from-night via-night-soft to-forest-deep pb-16 pt-32 text-ivory md:-mt-20 md:pt-40">
+        <div className="container-page max-w-3xl">
+          <p className="eyebrow mb-5 text-marigold">Fuel the care</p>
+          <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
+            {intro?.title || "Small help. Real impact."}
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ivory/70">
+            {intro?.body}
+          </p>
+        </div>
       </header>
 
-      <div className="mt-12 grid gap-10 lg:grid-cols-[1.6fr_1fr]">
+      <div className="container-page mt-12 grid gap-10 lg:grid-cols-[1.6fr_1fr]">
         {/* campaigns */}
         <div className="min-w-0 space-y-6">
           {campaigns.map((c, i) => (

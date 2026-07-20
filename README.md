@@ -70,14 +70,29 @@ supabase/
 server; client components are used only where interaction demands it
 (filters, forms, motion, dashboards).
 
-## Design system
+## Design system — "Aurora" (v2)
 
-- **Palette**: Deep Forest `#173F35` · Warm Cream `#F7F1E7` · Terracotta
-  `#C96745` · Soft Sand `#DCC9A3` · Charcoal `#202421` (Tailwind v4 tokens in
-  `app/globals.css`).
+- **Palette**: India-inspired, blended never striped — Saffron `#E8813A` ·
+  Marigold `#E9B84C` · Chakra Blue `#2563A8` · Deep Forest `#14402F` · Night
+  `#0A120E` · Cream `#FAF5EA`/Ivory `#FDFBF6`, layered over the heritage
+  forest/terracotta tokens (all in `app/globals.css`; old token names remain
+  valid so operational surfaces stay coherent).
 - **Type**: Fraunces (editorial display) + Manrope (UI), via `next/font`.
-- **Motion**: Framer Motion + CSS keyframes. Every animation respects
-  `prefers-reduced-motion`.
+- **Surfaces**: `glass`/`glass-dark` (frosted panels), `aurora` (animated
+  gradient wash for dark sections), `paper` (scrapbook), `grain`.
+- **Motion**: Framer Motion + CSS keyframes + Lenis inertial scroll
+  (`components/fx/` — Reveal/Stagger, TextReveal, Magnetic, Parallax, Tilt,
+  Counter, Marquee, ParticleField, BeforeAfter). Every animation respects
+  `prefers-reduced-motion`; Lenis disables itself for reduced-motion and
+  touch devices.
+- **3D**: React Three Fiber collar tag (`components/three/`) — lazy-loaded,
+  WebGL-probed, with the CSS flip tag as universal fallback.
+- **Media**: drop images into `public/images/<collection>/` and every surface
+  (hero montage, gallery, transformations via `x--before/x--after` pairs)
+  picks them up at the next build — `lib/media.ts` computes dimensions + blur
+  placeholders. CMS photos (Supabase) merge in at runtime; the gallery and
+  cards prefer real photography over the illustrated portrait system
+  automatically.
 - **Brand assets**: the official society seal (dark ink on cream) lives in
   `public/images/branding/` — `logo-source.jpg` (canonical source) plus derived
   `seal-ink.png` / `seal-ink-cream.png` (transparent, for light/dark surfaces)

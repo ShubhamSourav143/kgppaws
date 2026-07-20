@@ -26,12 +26,16 @@ export function Tag3D({
   const [webgl, setWebgl] = useState<boolean | null>(null);
 
   useEffect(() => {
-    try {
-      const canvas = document.createElement("canvas");
-      setWebgl(!!(canvas.getContext("webgl2") || canvas.getContext("webgl")));
-    } catch {
-      setWebgl(false);
-    }
+    // probe off the render path — the rAF callback is an external-system event
+    const id = requestAnimationFrame(() => {
+      try {
+        const canvas = document.createElement("canvas");
+        setWebgl(!!(canvas.getContext("webgl2") || canvas.getContext("webgl")));
+      } catch {
+        setWebgl(false);
+      }
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
 
   if (reduced || webgl === false) {

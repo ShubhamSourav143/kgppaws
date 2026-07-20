@@ -85,7 +85,7 @@ export default function AboutPage() {
   return (
     <div>
       {/* hero */}
-      <header className="bg-forest py-16 text-cream sm:py-24">
+      <header className="aurora relative -mt-16 overflow-hidden bg-night pb-16 pt-32 text-cream md:-mt-20 md:pt-40">
         <div className="container-page flex items-center gap-12">
           <div className="max-w-3xl">
             <p className="eyebrow mb-4 text-sand">About KGP PAWS</p>

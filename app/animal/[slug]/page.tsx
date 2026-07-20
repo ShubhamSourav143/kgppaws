@@ -17,7 +17,7 @@ import { MedicalTimeline } from "@/components/animals/MedicalTimeline";
 import { ShareButton } from "@/components/animals/ShareButton";
 import { SaveButton } from "@/components/animals/SaveButton";
 import { HealthChip, AdoptionChip, CareChips } from "@/components/animals/chips";
-import { QrTagFlip } from "@/components/qr/QrTagFlip";
+import { Tag3D } from "@/components/three/Tag3D";
 import { Reveal } from "@/components/motion/Reveal";
 import { Chip } from "@/components/ui/Chip";
 import { ButtonLink } from "@/components/ui/Button";
@@ -353,22 +353,20 @@ export default async function AnimalProfilePage({
           <Reveal delay={0.1}>
             <section
               aria-labelledby="tag-h"
-              className="rounded-3xl bg-forest-deep p-6 text-center"
+              className="aurora overflow-hidden rounded-3xl bg-night p-6 text-center"
             >
-              <h2 id="tag-h" className="eyebrow text-sand">
+              <h2 id="tag-h" className="eyebrow text-gold-soft">
                 {animal.name}&apos;s PAWS tag
               </h2>
-              <div className="mx-auto mt-4 max-w-[190px]">
-                <QrTagFlip
-                  name={animal.name}
-                  pawsId={animal.pawsId}
-                  qrToken={animal.qrToken}
-                  idleSwing={false}
-                />
-              </div>
-              <p className="mt-4 text-xs leading-relaxed text-cream/70">
+              <Tag3D
+                name={animal.name}
+                pawsId={animal.pawsId}
+                qrToken={animal.qrToken}
+                className="mx-auto mt-2 h-64 w-full"
+              />
+              <p className="mt-2 text-xs leading-relaxed text-cream/70">
                 This exact tag hangs from {animal.name}&apos;s collar on campus.
-                Scanning it opens this page.
+                Drag to spin — scanning the back opens this page.
               </p>
             </section>
           </Reveal>

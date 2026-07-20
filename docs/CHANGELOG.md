@@ -4,6 +4,51 @@ All notable changes to this project, newest first. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/). Every entry corresponds to a status change in
 [PRD.md](PRD.md) and, where relevant, a verification note in [TEST_REPORT.md](TEST_REPORT.md).
 
+## 2026-07-20 (later) — "Aurora" — complete frontend redesign
+
+### Changed (everything visible; zero backend/services/API changes)
+- **Design system v2** in `app/globals.css`: India-inspired palette (saffron, marigold,
+  chakra blue, deep forest, night, cream/ivory) blended over the heritage tokens (which stay
+  valid — admin/report/auth surfaces remain coherent). New `glass`, `aurora`, `paper`,
+  `grain`, `scroller-x`, `skeleton` utilities + a full keyframe library.
+- **Chrome**: fixed header (light-over-dark on cinematic pages, floating glass pill on
+  scroll), full-screen clip-path mobile menu, bottom `MobileDock` with raised Report action
+  (replaces `ReportFab`), redesigned night/aurora footer with mantra marquee, `template.tsx`
+  route transitions, Lenis smooth scroll.
+- **Home**: layered cinematic hero (dawn sky, sun rays, drifting clouds, flying birds,
+  falling leaves, swaying grass, firefly canvas, pointer-parallax camera, scroll
+  choreography, floating idle-animated portrait cards; a Ken-Burns photo montage activates
+  automatically once files land in `public/images/hero/`). New sections: Mission scrapbook,
+  ImpactStats odometer counters, FeaturedRescues snap carousel, IdentitySection with a
+  **real-3D R3F collar tag** (drag to spin, scannable QR back, CSS flip fallback),
+  Transformations before/after drag slider, Com-Paw-Nions polaroid wall, GalleryPreview
+  masonry, HelpBand, DonateCta with live campaign progress.
+- **New `/gallery`**: NatGeo-style masonry driven by `lib/media.ts` (filesystem manifest:
+  dimensions + blur placeholders at build) merged with CMS animal/story photos — category
+  pills, search, infinite scroll, full keyboard/swipe lightbox. Thousands of photos can be
+  added with zero code changes.
+- **Stories**: taped-scrapbook index (animated category filter, polaroid cards) + immersive
+  detail pages (full-bleed palette hero, gradient pull-quotes, dotted timeline).
+- **Adopt**: dark cinematic header, glass filter rail, saffron filter pills, redesigned
+  premium `AnimalCard`. **Animal profile**: 3D tag panel. **Donate/Volunteer/About**: aurora
+  headers, saffron progress bars, elevated cards.
+- deps: `lenis`, `three`, `@react-three/fiber`, `@react-three/drei` (3D chunk is
+  lazy-loaded only where used).
+
+### Fixed (during the redesign)
+- drei `<Text>` (troika) suspended the tag scene forever in some environments — replaced
+  with canvas-painted textures (also drops the font-worker bundle).
+- `Magnetic` inline `display` style silently defeated responsive `hidden` classes.
+- lucide-react ≥ 0.5x has no brand icons — Instagram glyph inlined (again).
+
+### Verified
+- `tsc` + ESLint clean (0 errors), full production build compiles all routes.
+- Playwright desktop (1440px) + mobile (390px) screenshot pass over home, adopt, donate,
+  volunteer, about, gallery, stories, animal profile; 3D tag render confirmed; all public
+  routes 200.
+
+---
+
 ## 2026-07-20 — Official society seal integrated as the site's brand identity
 
 ### Added
