@@ -74,15 +74,7 @@ export default async function AdoptPage() {
       {/* 2 · Why adoption matters */}
       <WhyAdopt />
 
-      {/* 3 · Real rescue stories */}
-      <RescueStories animals={animals} />
-
-      {/* 4 · Adoption process */}
-      <section id="how" className="scroll-mt-24">
-        <AdoptionProcess />
-      </section>
-
-      {/* 5 · Adoptable animals */}
+      {/* 3 · Adoptable animals */}
       <section id="animals" className="scroll-mt-24 bg-parchment py-20 sm:py-28">
         <div className="container-page">
           <div className="max-w-2xl">
@@ -104,6 +96,14 @@ export default async function AdoptPage() {
           <AdoptExplorer animals={animals} />
         </div>
       </section>
+
+      {/* 4 · Adoption process */}
+      <section id="how" className="scroll-mt-24">
+        <AdoptionProcess />
+      </section>
+
+      {/* 5 · Real rescue stories */}
+      <RescueStories animals={animals} />
 
       {/* 6 · Final call to action */}
       <FinalCta animals={animals} />
