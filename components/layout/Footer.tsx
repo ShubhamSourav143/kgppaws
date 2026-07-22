@@ -39,6 +39,9 @@ function iconFor(name: string | null | undefined, className: string) {
     case "x":
     case "twitter":
       return <XIcon className={className} />;
+    case "mail":
+    case "email":
+      return <Mail className={className} />;
     default:
       return <InstagramIcon className={className} />;
   }

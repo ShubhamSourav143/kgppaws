@@ -145,7 +145,7 @@ export const DEMO_FAQ: FaqItem[] = [];
 export const DEMO_FOOTER: FooterItem[] = [
   { id: "demo-f1", section: "social_link", displayOrder: 0, label: "Instagram", url: "https://instagram.com/kgppaws", icon: "instagram", value: null },
   { id: "demo-f2", section: "social_link", displayOrder: 1, label: "Facebook", url: "https://facebook.com/kgppaws", icon: "facebook", value: null },
-  { id: "demo-f3", section: "social_link", displayOrder: 2, label: "X", url: "https://twitter.com/kgppaws", icon: "x", value: null },
+  { id: "demo-f3", section: "social_link", displayOrder: 2, label: "Email", url: "mailto:hello@kgppaws.org", icon: "mail", value: null },
   { id: "demo-f4", section: "quick_link", displayOrder: 0, label: "Adopt a Paw", url: "/adopt", icon: null, value: null },
   { id: "demo-f5", section: "quick_link", displayOrder: 1, label: "Stories", url: "/stories", icon: null, value: null },
   { id: "demo-f6", section: "quick_link", displayOrder: 2, label: "Gallery", url: "/gallery", icon: null, value: null },
