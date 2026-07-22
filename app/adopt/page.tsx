@@ -35,6 +35,11 @@ export default async function AdoptPage() {
   // Real photos drop into public/images/adopt/. The filename (before any
   // "--caption" suffix) is the key: simba.jpg → "simba", hero.jpg → "hero".
   // Everything falls back to the illustrated portrait until a photo exists.
+  //
+  // NOTE: the files currently in public/images/adopt/ are TEMPORARY
+  // royalty-free stock placeholders (generic animals, not real KGP PAWS
+  // rescues). Swap them file-for-file with official photos — no code change
+  // needed. See public/images/adopt/README.md.
   const covers: Covers = {};
   for (const m of adoptMedia) {
     const file = m.src.split("/").pop() ?? "";
