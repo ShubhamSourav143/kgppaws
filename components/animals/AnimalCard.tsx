@@ -111,19 +111,36 @@ export function AnimalCard({
         {/* explicit, always-visible adopt affordance */}
         <div
           className={cn(
-            "-mx-5 -mb-5 mt-3 flex items-center justify-between gap-2 border-t border-line px-5 py-3.5 text-sm font-bold transition-colors",
+            "adopt-bar -mx-5 -mb-5 mt-3 flex items-center justify-between gap-2 border-t border-line px-5 py-3.5 text-sm font-bold transition-all duration-300",
             canAdopt
-              ? "text-saffron-deep group-hover:bg-saffron/8"
+              ? "text-saffron-deep group-hover:bg-gradient-to-r group-hover:from-saffron/10 group-hover:to-marigold/10"
               : isAdopted
-                ? "text-forest-bright"
+                ? "text-forest-bright group-hover:bg-forest-bright/5"
                 : "text-moss group-hover:bg-mist"
           )}
         >
           <span className="inline-flex items-center gap-1.5">
-            {canAdopt ? "🐾" : isAdopted ? "♥" : ""}
-            {canAdopt ? "Adopt Me" : isAdopted ? "Adopted — happy ending" : "View profile"}
+            <span className={cn(
+              "inline-block transition-transform duration-300",
+              canAdopt && "group-hover:scale-125 group-hover:animate-bounce"
+            )}>
+              {canAdopt ? "🐾" : isAdopted ? "♥" : ""}
+            </span>
+            <span className={cn(
+              "transition-all duration-300",
+              canAdopt && "group-hover:tracking-wide"
+            )}>
+              {canAdopt ? "Adopt Me" : isAdopted ? "Adopted — happy ending" : "View profile"}
+            </span>
           </span>
-          <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
+          <span className={cn(
+            "grid h-7 w-7 place-items-center rounded-full transition-all duration-300",
+            canAdopt
+              ? "group-hover:bg-saffron group-hover:text-ivory group-hover:shadow-ember"
+              : "group-hover:bg-forest/10"
+          )}>
+            <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
+          </span>
         </div>
       </div>
     </Link>
