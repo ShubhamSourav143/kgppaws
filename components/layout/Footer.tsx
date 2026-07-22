@@ -151,11 +151,6 @@ export function Footer({
                 </Link>
               </li>
             ))}
-            <li>
-              <Link href="/gallery" className="text-sm text-ivory/75 transition-colors hover:text-marigold">
-                Gallery
-              </Link>
-            </li>
           </ul>
         </nav>
 

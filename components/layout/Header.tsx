@@ -95,7 +95,6 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
   const overlayLinks = [
     { href: "/", label: "Home" },
     ...NAV,
-    { href: "/gallery", label: "Gallery" },
   ].filter(
     (l, i, arr) => arr.findIndex((x) => x.href === l.href) === i
   );

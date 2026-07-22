@@ -5,7 +5,6 @@ import { FeaturedRescues } from "@/components/home/FeaturedRescues";
 import { IdentitySection } from "@/components/home/IdentitySection";
 import { Transformations, buildTransformationPairs } from "@/components/home/Transformations";
 import { Compawnions } from "@/components/home/Compawnions";
-import { GalleryPreview, type GalleryPreviewPhoto } from "@/components/home/GalleryPreview";
 import { HelpBand } from "@/components/home/HelpBand";
 import { DonateCta } from "@/components/home/DonateCta";
 import { listAnimals } from "@/services/animals";
@@ -23,7 +22,6 @@ export default async function HomePage() {
     homeContent,
     helpContent,
     heroMedia,
-    galleryMedia,
     transformationMedia,
   ] = await Promise.all([
     listAnimals(),
@@ -32,7 +30,6 @@ export default async function HomePage() {
     getHomeContent(),
     getHelpContent(),
     listMedia("hero"),
-    listMedia("gallery"),
     listMedia("transformation"),
   ]);
 
@@ -51,16 +48,6 @@ export default async function HomePage() {
   const withPhoto = (a?: typeof heroDog) =>
     a && { ...a, photoUrl: a.photos.find((p) => p.url)?.url };
 
-  // Real (non-demo) photography only — nothing fictional appears in the gallery strip.
-  const cmsPhotos: GalleryPreviewPhoto[] = [
-    ...animals.flatMap((a) =>
-      a.photos.filter((p) => p.url).map((p) => ({ src: p.url!, alt: p.caption || a.name }))
-    ),
-    ...stories.flatMap((s) =>
-      s.photos.filter((p) => p.url).map((p) => ({ src: p.url, alt: p.caption || s.title }))
-    ),
-  ];
-
   const transformationPairs = buildTransformationPairs(transformationMedia, stories);
 
   return (
@@ -77,7 +64,6 @@ export default async function HomePage() {
       <IdentitySection animal={identityAnimal} />
       <Transformations pairs={transformationPairs} />
       <Compawnions animals={animals} />
-      <GalleryPreview media={galleryMedia} cmsPhotos={cmsPhotos} />
       <HelpBand cms={cmsHelp} />
       <DonateCta campaigns={campaigns} />
     </>
