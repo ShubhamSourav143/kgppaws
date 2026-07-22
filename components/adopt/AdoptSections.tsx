@@ -18,8 +18,13 @@ import type { Animal, PortraitConfig } from "@/types";
 
 type Subject = Pick<Animal, "name" | "species" | "portrait">;
 
+/** slug → real photo src map (empty until photos are dropped into
+ *  public/images/adopt/). Every image slot falls back to the illustrated
+ *  portrait system when a photo is missing, so nothing ever looks broken. */
+export type Covers = Record<string, string>;
+
 /* Synthetic portraits for two rescues that don't have live profiles yet —
-   kept on-brand with the illustrated portrait system used site-wide. */
+   used only as a fallback until real photos (romi.jpg / odin.jpg) exist. */
 const ROMI: Subject = {
   name: "Romi",
   species: "dog",
@@ -75,36 +80,68 @@ const WHY_POINTS = [
   },
 ];
 
-export function WhyAdopt() {
+export function WhyAdopt({ photo }: { photo?: string }) {
+  const header = (
+    <div className="max-w-2xl">
+      <Reveal effect="fade">
+        <p className="eyebrow mb-4 text-saffron-deep">Why it matters</p>
+      </Reveal>
+      <TextReveal
+        as="h2"
+        text="Why Adoption Matters"
+        className="font-display text-3xl font-bold leading-tight text-forest-deep sm:text-4xl lg:text-5xl"
+      />
+    </div>
+  );
+
+  const points = (
+    <Stagger
+      className={
+        photo
+          ? "mt-10 grid gap-5 sm:grid-cols-2"
+          : "mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+      }
+    >
+      {WHY_POINTS.map((p) => (
+        <Item key={p.title}>
+          <div className="flex h-full flex-col gap-4 rounded-3xl border border-line bg-ivory p-6 shadow-soft transition-shadow duration-300 hover:shadow-card">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-saffron/12 text-saffron-deep">
+              <p.icon className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <h3 className="font-display text-lg font-bold text-forest-deep">
+              {p.title}
+            </h3>
+            <p className="text-sm leading-relaxed text-charcoal/70">{p.body}</p>
+          </div>
+        </Item>
+      ))}
+    </Stagger>
+  );
+
   return (
     <section className="bg-cream py-20 sm:py-28">
       <div className="container-page">
-        <div className="max-w-2xl">
-          <Reveal effect="fade">
-            <p className="eyebrow mb-4 text-saffron-deep">Why it matters</p>
-          </Reveal>
-          <TextReveal
-            as="h2"
-            text="Why Adoption Matters"
-            className="font-display text-3xl font-bold leading-tight text-forest-deep sm:text-4xl lg:text-5xl"
-          />
-        </div>
-
-        <Stagger className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {WHY_POINTS.map((p) => (
-            <Item key={p.title}>
-              <div className="flex h-full flex-col gap-4 rounded-3xl border border-line bg-ivory p-6 shadow-soft transition-shadow duration-300 hover:shadow-card">
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-saffron/12 text-saffron-deep">
-                  <p.icon className="h-6 w-6" aria-hidden="true" />
-                </span>
-                <h3 className="font-display text-lg font-bold text-forest-deep">
-                  {p.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-charcoal/70">{p.body}</p>
-              </div>
-            </Item>
-          ))}
-        </Stagger>
+        {photo ? (
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-14">
+            <Reveal effect="scale">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo}
+                alt="A rescued street dog cared for by KGP PAWS volunteers"
+                className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-card"
+              />
+            </Reveal>
+            <div>
+              {header}
+              {points}
+            </div>
+          </div>
+        ) : (
+          <>
+            {header}
+            {points}
+          </>
+        )}
       </div>
     </section>
   );
@@ -112,35 +149,37 @@ export function WhyAdopt() {
 
 /* ————————————————————————— 3 · Every rescue has a story ————————————————————————— */
 
-function subjectFor(
-  animals: Animal[],
-  slug: string,
-  fallback: Subject
-): Subject {
+function subjectFor(animals: Animal[], slug: string, fallback: Subject): Subject {
   return animals.find((a) => a.slug === slug) ?? fallback;
 }
 
-export function RescueStories({ animals }: { animals: Animal[] }) {
+export function RescueStories({
+  animals,
+  covers = {},
+}: {
+  animals: Animal[];
+  covers?: Covers;
+}) {
   const stories: {
     name: string;
     tag: string;
     body: string;
     href: string;
-    subjects: Subject[];
+    subjects: { subject: Subject; photo?: string }[];
   }[] = [
     {
       name: "Romi",
       tag: "Labrador · rescued from neglect",
       body: "Years of neglect left Romi thin, frightened and alone. Rescued and treated by our volunteers, she's slowly learning that a raised hand can also mean a gentle one.",
       href: "/stories",
-      subjects: [ROMI],
+      subjects: [{ subject: ROMI, photo: covers.romi }],
     },
     {
       name: "Odin",
       tag: "Breed dog · rescued from exploitation",
       body: "Bred for profit and discarded once he was no longer useful, Odin came to us anxious and unwell. Today he's healthy, safe and still waiting for the family he was always owed.",
       href: "/stories",
-      subjects: [ODIN],
+      subjects: [{ subject: ODIN, photo: covers.odin }],
     },
     {
       name: "Muesli & Bunti",
@@ -148,8 +187,8 @@ export function RescueStories({ animals }: { animals: Animal[] }) {
       body: "Attacked by larger dogs as puppies, both survived — but their injuries left lasting damage and a lifelong need for patient, committed care.",
       href: "/animal/bunti",
       subjects: [
-        subjectFor(animals, "muesli", ROMI),
-        subjectFor(animals, "bunti", ODIN),
+        { subject: subjectFor(animals, "muesli", ROMI), photo: covers.muesli },
+        { subject: subjectFor(animals, "bunti", ODIN), photo: covers.bunti },
       ],
     },
   ];
@@ -173,10 +212,11 @@ export function RescueStories({ animals }: { animals: Animal[] }) {
             <Item key={s.name}>
               <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-glow">
                 <div className="relative flex aspect-[5/4] gap-0.5 overflow-hidden bg-mist">
-                  {s.subjects.map((subj, i) => (
+                  {s.subjects.map((x, i) => (
                     <AnimalPortrait
                       key={i}
-                      animal={subj}
+                      animal={x.subject}
+                      photoUrl={x.photo}
                       className="h-full flex-1 rounded-none transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                     />
                   ))}
@@ -234,7 +274,11 @@ const STEPS = [
   },
 ];
 
-export function AdoptionProcess() {
+/** Optional per-step photos (step-1.jpg … step-4.jpg). Falls back to the
+ *  numbered icon badge until a photo exists. */
+export function AdoptionProcess({ covers = {} }: { covers?: Covers }) {
+  const stepPhoto = (i: number) => covers[`step-${i + 1}`];
+
   return (
     <section className="bg-cream py-20 sm:py-28">
       <div className="container-page">
@@ -250,24 +294,41 @@ export function AdoptionProcess() {
         </div>
 
         <Stagger className="relative mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((step, i) => (
-            <Item key={step.title}>
-              <div className="flex h-full flex-col gap-4 rounded-3xl border border-line bg-ivory p-6 shadow-soft">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember font-display text-lg font-bold">
-                    {i + 1}
-                  </span>
-                  <step.icon className="h-5 w-5 text-forest-bright" aria-hidden="true" />
+          {STEPS.map((step, i) => {
+            const photo = stepPhoto(i);
+            return (
+              <Item key={step.title}>
+                <div className="flex h-full flex-col gap-4 rounded-3xl border border-line bg-ivory p-6 shadow-soft">
+                  {photo ? (
+                    <div className="relative -m-6 mb-0 aspect-[16/10] overflow-hidden rounded-t-3xl">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo}
+                        alt={step.title}
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember font-display text-base font-bold">
+                        {i + 1}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember font-display text-lg font-bold">
+                        {i + 1}
+                      </span>
+                      <step.icon className="h-5 w-5 text-forest-bright" aria-hidden="true" />
+                    </div>
+                  )}
+                  <h3 className="font-display text-lg font-bold text-forest-deep">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-charcoal/70">
+                    {step.body}
+                  </p>
                 </div>
-                <h3 className="font-display text-lg font-bold text-forest-deep">
-                  {step.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-charcoal/70">
-                  {step.body}
-                </p>
-              </div>
-            </Item>
-          ))}
+              </Item>
+            );
+          })}
         </Stagger>
       </div>
     </section>
@@ -276,17 +337,23 @@ export function AdoptionProcess() {
 
 /* ————————————————————————— 6 · Final call to action ————————————————————————— */
 
-export function FinalCta({ animals }: { animals: Animal[] }) {
+export function FinalCta({
+  animals,
+  covers = {},
+}: {
+  animals: Animal[];
+  covers?: Covers;
+}) {
   const bySlug = (slug: string) => animals.find((a) => a.slug === slug);
-  const collage: Subject[] = [
-    bySlug("bunti") ?? ODIN,
-    bySlug("muesli") ?? ROMI,
-    ROMI,
-    ODIN,
-    bySlug("simba") ?? ROMI,
-    bySlug("laika") ?? ODIN,
-    bySlug("percy") ?? ROMI,
-    bySlug("mishti") ?? ODIN,
+  const tiles: { subject: Subject; slug: string }[] = [
+    { subject: bySlug("bunti") ?? ODIN, slug: "bunti" },
+    { subject: bySlug("muesli") ?? ROMI, slug: "muesli" },
+    { subject: ROMI, slug: "romi" },
+    { subject: ODIN, slug: "odin" },
+    { subject: bySlug("simba") ?? ROMI, slug: "simba" },
+    { subject: bySlug("laika") ?? ODIN, slug: "laika" },
+    { subject: bySlug("percy") ?? ROMI, slug: "percy" },
+    { subject: bySlug("mishti") ?? ODIN, slug: "mishti" },
   ];
 
   return (
@@ -308,15 +375,16 @@ export function FinalCta({ animals }: { animals: Animal[] }) {
         </div>
 
         <Stagger className="mx-auto mt-12 grid max-w-4xl grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4">
-          {collage.map((subj, i) => (
+          {tiles.map((t, i) => (
             <Item key={i}>
               <figure className="overflow-hidden rounded-2xl bg-ivory/5 ring-1 ring-ivory/10">
                 <AnimalPortrait
-                  animal={subj}
+                  animal={t.subject}
+                  photoUrl={covers[t.slug]}
                   className="aspect-square w-full rounded-none"
                 />
                 <figcaption className="px-2 py-2 text-center text-xs font-bold text-ivory/70">
-                  {subj.name}
+                  {t.subject.name}
                 </figcaption>
               </figure>
             </Item>

@@ -3,15 +3,18 @@ import Link from "next/link";
 import { PawPrint, ArrowUpRight, ArrowDown } from "lucide-react";
 import { listAnimals } from "@/services/animals";
 import { getAdoptionContent } from "@/services/content";
+import { listMedia } from "@/lib/media";
 import { AdoptExplorer } from "@/components/adopt/AdoptExplorer";
 import {
   WhyAdopt,
   RescueStories,
   AdoptionProcess,
   FinalCta,
+  type Covers,
 } from "@/components/adopt/AdoptSections";
 import { Reveal } from "@/components/fx/Reveal";
 import { TextReveal } from "@/components/fx/TextReveal";
+import type { Animal } from "@/types";
 
 export const metadata: Metadata = {
   title: "Adopt, Don't Shop",
@@ -21,18 +24,53 @@ export const metadata: Metadata = {
 };
 
 export default async function AdoptPage() {
-  const [animals, content] = await Promise.all([
+  const [animals, content, adoptMedia] = await Promise.all([
     listAnimals(),
     getAdoptionContent(),
+    listMedia("adopt"),
   ]);
 
   const intro = content.find((c) => c.section === "intro");
+
+  // Real photos drop into public/images/adopt/. The filename (before any
+  // "--caption" suffix) is the key: simba.jpg → "simba", hero.jpg → "hero".
+  // Everything falls back to the illustrated portrait until a photo exists.
+  const covers: Covers = {};
+  for (const m of adoptMedia) {
+    const file = m.src.split("/").pop() ?? "";
+    const key = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
+    if (key && !(key in covers)) covers[key] = m.src;
+  }
+
+  const heroPhoto = covers.hero;
+  const whyPhoto = covers.why;
+
+  // Inject each animal's real cover photo (keyed by slug) so the existing
+  // AnimalCard renders it automatically — no card changes required.
+  const animalsWithPhotos: Animal[] = animals.map((a) =>
+    covers[a.slug]
+      ? {
+          ...a,
+          photos: [
+            { id: `cover-${a.slug}`, caption: a.name, date: "", url: covers[a.slug] },
+            ...a.photos,
+          ],
+        }
+      : a
+  );
 
   return (
     <div className="bg-cream">
       {/* 1 · Hero */}
       <header className="aurora relative -mt-16 overflow-hidden bg-night pb-20 pt-32 text-ivory md:-mt-20 md:pt-40">
-        <div className="container-page max-w-3xl">
+        {heroPhoto && (
+          <div className="absolute inset-0" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroPhoto} alt="" className="h-full w-full object-cover opacity-40" />
+            <div className="absolute inset-0 bg-gradient-to-b from-night/85 via-night/60 to-night" />
+          </div>
+        )}
+        <div className="container-page relative z-10 max-w-3xl">
           <Reveal effect="fade">
             <p className="eyebrow mb-5 inline-flex items-center gap-2 text-marigold">
               <PawPrint className="h-4 w-4" aria-hidden="true" />
@@ -72,7 +110,7 @@ export default async function AdoptPage() {
       </header>
 
       {/* 2 · Why adoption matters */}
-      <WhyAdopt />
+      <WhyAdopt photo={whyPhoto} />
 
       {/* 3 · Adoptable animals */}
       <section id="animals" className="scroll-mt-24 bg-parchment py-20 sm:py-28">
@@ -93,20 +131,20 @@ export default async function AdoptPage() {
               </p>
             </Reveal>
           </div>
-          <AdoptExplorer animals={animals} />
+          <AdoptExplorer animals={animalsWithPhotos} />
         </div>
       </section>
 
       {/* 4 · Adoption process */}
       <section id="how" className="scroll-mt-24">
-        <AdoptionProcess />
+        <AdoptionProcess covers={covers} />
       </section>
 
       {/* 5 · Real rescue stories */}
-      <RescueStories animals={animals} />
+      <RescueStories animals={animalsWithPhotos} covers={covers} />
 
       {/* 6 · Final call to action */}
-      <FinalCta animals={animals} />
+      <FinalCta animals={animalsWithPhotos} covers={covers} />
     </div>
   );
 }
