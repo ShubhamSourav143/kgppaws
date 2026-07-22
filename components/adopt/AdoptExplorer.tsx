@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Search, SlidersHorizontal, X, PawPrint } from "lucide-react";
+import { PawPrint } from "lucide-react";
 import { AnimalCard } from "@/components/animals/AnimalCard";
 import { ageInYears, cn } from "@/lib/utils";
 import type { Animal } from "@/types";
@@ -197,9 +196,7 @@ function FilterPanel({
 }
 
 export function AdoptExplorer({ animals }: { animals: Animal[] }) {
-  const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Adopt-only: campus residents ('not_available') never surface here.
   // 'available' + 'foster_needed' both roll up to adoptable; 'adopted' stays
@@ -215,28 +212,15 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
   );
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return adoptableAll.filter((a) => {
       if (!matchesKind(a, filters.kind)) return false;
       if (filters.breed !== "all" && a.color !== filters.breed) return false;
       if (!inAgeBand(a, filters.age)) return false;
       if (filters.gender !== "all" && a.sex !== filters.gender) return false;
       if (filters.vaccinated && !a.vaccinated) return false;
-      if (
-        q &&
-        ![a.name, a.tagline, a.color, a.species, ...a.personality]
-          .join(" ")
-          .toLowerCase()
-          .includes(q)
-      )
-        return false;
       return true;
     });
-  }, [adoptableAll, query, filters]);
-
-  const activeCount = Object.values(filters).filter((v) =>
-    typeof v === "boolean" ? v : v !== "all"
-  ).length;
+  }, [adoptableAll, filters]);
 
   return (
     <div className="mt-10 grid gap-10 lg:grid-cols-[16rem_1fr]">
@@ -255,39 +239,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
       </aside>
 
       <div>
-        {/* search + mobile filter trigger */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search
-              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-moss"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name, breed or personality — try &ldquo;brindle&rdquo;"
-              aria-label="Search adoptable animals"
-              className="w-full rounded-full border border-line bg-ivory py-3 pl-11 pr-4 text-sm shadow-soft placeholder:text-moss/60 focus:border-saffron focus:outline-none focus:ring-2 focus:ring-saffron/25"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setSheetOpen(true)}
-            className="inline-flex items-center gap-2 rounded-full border border-forest/25 px-4 py-3 text-sm font-bold text-forest lg:hidden"
-            aria-label="Open filters"
-          >
-            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-            Filters
-            {activeCount > 0 && (
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-terracotta text-[10px] text-parchment">
-                {activeCount}
-              </span>
-            )}
-          </button>
-        </div>
-
-        <p className="mt-4 text-sm text-moss" role="status">
+        <p className="text-sm text-moss" role="status">
           {results.length} {results.length === 1 ? "paw" : "paws"} waiting for a forever home
         </p>
 
@@ -312,10 +264,7 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
             </p>
             <button
               type="button"
-              onClick={() => {
-                setFilters(DEFAULT_FILTERS);
-                setQuery("");
-              }}
+              onClick={() => setFilters(DEFAULT_FILTERS)}
               className="rounded-full bg-forest px-5 py-2.5 text-sm font-bold text-cream"
             >
               Clear everything
@@ -324,63 +273,6 @@ export function AdoptExplorer({ animals }: { animals: Animal[] }) {
         )}
       </div>
 
-      {/* mobile bottom sheet */}
-      <AnimatePresence>
-        {sheetOpen && (
-          <>
-            <motion.button
-              type="button"
-              aria-label="Close filters"
-              className="fixed inset-0 z-40 bg-charcoal/50 lg:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSheetOpen(false)}
-            />
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-label="Adoption filters"
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[82dvh] overflow-y-auto rounded-t-3xl bg-parchment p-6 pb-10 shadow-lift lg:hidden"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "tween", duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <p className="font-display text-xl font-bold text-forest-deep">
-                  Filters
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSheetOpen(false)}
-                  className="grid h-10 w-10 place-items-center rounded-full text-moss hover:bg-mist"
-                  aria-label="Close filters"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </div>
-              <FilterPanel filters={filters} setFilters={setFilters} breeds={breeds} />
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFilters(DEFAULT_FILTERS)}
-                  className="flex-1 rounded-full border border-forest/25 px-5 py-3 text-sm font-bold text-forest"
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSheetOpen(false)}
-                  className="flex-1 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream"
-                >
-                  Show {results.length} paws
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
