@@ -347,44 +347,60 @@ html.lenis, html.lenis body { height: auto; }
 .backface-hidden { backface-visibility: hidden; }
 .perspective-1000 { perspective: 1000px; }
 
-/* —————————————————————————— custom paw cursor ——————————————————————————
+/* ———————————————————————— custom two-paw cursor ————————————————————————
    Mounted site-wide by <PawCursor>; only active for fine pointers (desktop).
-   The native cursor is hidden only while `paw-cursor-active` is set on <html>,
-   which the component adds after the first real mouse move. */
+   Two paw prints walk alongside the pointer. The native cursor is hidden
+   only while `paw-cursor-active` is set on <html>, which the component adds
+   after the first real mouse move. JS writes position/heading/step onto each
+   `.paw2-slot`; CSS owns the hover / press / colour states. */
 html.paw-cursor-active,
 html.paw-cursor-active * { cursor: none !important; }
 
-.paw-cursor {
+.paw-cursor2 {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+.paw2-slot {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 9999;
   opacity: 0;
-  pointer-events: none;
   will-change: transform;
   transition: opacity 0.25s ease;
 }
-.paw-cursor__center { display: block; transform: translate(-50%, -50%); }
-.paw-cursor__pop {
+.paw-cursor2.is-visible .paw2-slot { opacity: 1; }
+/* trailing paw a touch behind in feel: slightly delayed fade-in */
+.paw-cursor2.is-visible .paw2--b { transition-delay: 0.04s; }
+
+.paw2 { display: block; }
+.paw2__fx {
   display: block;
   transform: scale(1);
-  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.paw-cursor.is-hover .paw-cursor__pop {
-  transform: scale(1.45);
-  animation: paw-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+.paw-cursor2.is-hover .paw2__fx {
+  transform: scale(1.32);
+  animation: paw2-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.paw-cursor__svg {
+.paw-cursor2.is-down .paw2__fx { transform: scale(0.82); }
+
+.paw2__svg {
   display: block;
-  height: 34px;
-  width: 34px;
+  height: 24px;
+  width: 24px;
   color: var(--color-saffron-deep);
-  transform: rotate(-10deg);
-  transition: transform 0.12s ease, color 0.2s ease;
-  filter: drop-shadow(0 3px 5px rgba(23, 63, 53, 0.35));
+  transition: color 0.2s ease;
+  filter: drop-shadow(0 2px 4px rgba(23, 63, 53, 0.35));
 }
-.paw-cursor.is-hover .paw-cursor__svg { color: var(--color-forest-bright); }
-.paw-cursor.is-down .paw-cursor__svg { transform: rotate(-10deg) scale(0.78); }
+.paw-cursor2.is-hover .paw2__svg { color: var(--color-forest-bright); }
+/* the trailing paw reads as depth: smaller + softer */
+.paw2--b .paw2__svg {
+  height: 20px;
+  width: 20px;
+  opacity: 0.82;
+}
 
 .paw-ripple-layer {
   position: fixed;
@@ -402,10 +418,10 @@ html.paw-cursor-active * { cursor: none !important; }
   animation: paw-ripple 0.6s ease-out forwards;
 }
 
-@keyframes paw-bounce {
+@keyframes paw2-bounce {
   0% { transform: scale(1); }
-  55% { transform: scale(1.75); }
-  100% { transform: scale(1.45); }
+  55% { transform: scale(1.55); }
+  100% { transform: scale(1.32); }
 }
 @keyframes paw-ripple {
   from { transform: scale(0.4); opacity: 0.55; }

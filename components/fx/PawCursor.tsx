@@ -2,29 +2,53 @@
 
 import { useEffect, useRef, useState } from "react";
 
-/** Elements that should trigger the enlarged / highlighted paw state. */
+/** Elements that trigger the enlarged / highlighted paw state. */
 const INTERACTIVE =
   'a,button,input,textarea,select,label,summary,[role="button"],[role="link"],.group,[data-cursor="hover"]';
 
+// walk tuning
+const EASE = 0.2; // body follow
+const DIR_EASE = 0.15; // heading smoothing
+const ALONG = 8; // front/back stagger (px)
+const PERP = 10; // left/right footprint separation (px)
+const AMP = 0.14; // per-step scale pulse
+const SPLAY = 10; // resting toe-out (deg)
+const WOBBLE = 6; // per-step rotation wobble (deg)
+
+const Paw = ({ variant }: { variant: "a" | "b" }) => (
+  <span className={`paw2 paw2--${variant}`}>
+    <span className="paw2__fx">
+      <svg viewBox="0 0 40 40" className="paw2__svg" aria-hidden="true">
+        <ellipse cx="20" cy="27" rx="8.5" ry="7" fill="currentColor" />
+        <ellipse cx="8.5" cy="18.5" rx="3.1" ry="4.2" fill="currentColor" transform="rotate(-18 8.5 18.5)" />
+        <ellipse cx="15.5" cy="12.5" rx="3.2" ry="4.6" fill="currentColor" transform="rotate(-6 15.5 12.5)" />
+        <ellipse cx="24.5" cy="12.5" rx="3.2" ry="4.6" fill="currentColor" transform="rotate(6 24.5 12.5)" />
+        <ellipse cx="31.5" cy="18.5" rx="3.1" ry="4.2" fill="currentColor" transform="rotate(18 31.5 18.5)" />
+      </svg>
+    </span>
+  </span>
+);
+
 /**
- * KGP PAWS custom cursor — a paw print that trails the pointer with easing,
- * pops + highlights over interactive elements, and stamps a ripple on click.
+ * KGP PAWS custom cursor — a pair of paw prints that walk alongside the
+ * pointer. Both trail the mouse with easing; one leads and one trails
+ * (staggered along the travel line), and they alternate a stepping
+ * scale/rotation pulse so it reads as an animal padding along. They enlarge
+ * and turn brand-green over interactive elements, and stamp a ripple on
+ * click.
  *
- * - Desktop only: activates solely for a fine pointer with hover
- *   ((hover: hover) and (pointer: fine)); touch/coarse devices keep the
- *   native cursor and this renders nothing.
- * - Reduced motion: the paw still shows but follows instantly and the
- *   bounce/ripple are suppressed (the global reduced-motion rule in
- *   globals.css also neutralises any transitions).
- * - Never blocks input: everything is pointer-events:none and aria-hidden;
- *   the native cursor is only hidden after the first real mouse move.
+ * Desktop only ((hover: hover) and (pointer: fine)); touch keeps the native
+ * cursor. Reduced motion → paws follow instantly with no stepping/ripple.
+ * Everything is pointer-events:none + aria-hidden, and the native cursor is
+ * hidden only after the first real move.
  */
 export function PawCursor() {
   const [enabled, setEnabled] = useState(false);
-  const pawRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const pawARef = useRef<HTMLSpanElement | null>(null);
+  const pawBRef = useRef<HTMLSpanElement | null>(null);
   const rippleRef = useRef<HTMLDivElement | null>(null);
 
-  // Eligibility — precise pointer with hover (i.e. a real mouse).
   useEffect(() => {
     const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
     const apply = () => setEnabled(mq.matches);
@@ -35,9 +59,11 @@ export function PawCursor() {
 
   useEffect(() => {
     if (!enabled) return;
-    const paw = pawRef.current;
+    const root = rootRef.current;
+    const pawA = pawARef.current;
+    const pawB = pawBRef.current;
     const rippleLayer = rippleRef.current;
-    if (!paw || !rippleLayer) return;
+    if (!root || !pawA || !pawB || !rippleLayer) return;
 
     const reduceMq = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reduced = reduceMq.matches;
@@ -48,6 +74,11 @@ export function PawCursor() {
     let ty = -100;
     let cx = -100;
     let cy = -100;
+    let lcx = -100;
+    let lcy = -100;
+    let dirx = 0;
+    let diry = -1; // idle heading: up
+    let walk = 0;
     let started = false;
     let raf = 0;
 
@@ -56,30 +87,22 @@ export function PawCursor() {
       ty = e.clientY;
       if (!started) {
         started = true;
-        // Only now hide the native cursor — guarantees the paw is placed first.
         document.documentElement.classList.add("paw-cursor-active");
+        root.classList.add("is-visible");
         if (reduced) {
-          cx = tx;
-          cy = ty;
+          cx = lcx = tx;
+          cy = lcy = ty;
         }
-        paw.style.opacity = "1";
       }
     };
-
-    const onEnter = () => {
-      if (started) paw.style.opacity = "1";
-    };
-    const onLeave = () => {
-      paw.style.opacity = "0";
-    };
-
+    const onEnter = () => started && root.classList.add("is-visible");
+    const onLeave = () => root.classList.remove("is-visible");
     const onOver = (e: Event) => {
-      const target = e.target as Element | null;
-      paw.classList.toggle("is-hover", !!target?.closest?.(INTERACTIVE));
+      const t = e.target as Element | null;
+      root.classList.toggle("is-hover", !!t?.closest?.(INTERACTIVE));
     };
-
     const onDown = () => {
-      paw.classList.add("is-down");
+      root.classList.add("is-down");
       if (reduced) return;
       const ripple = document.createElement("span");
       ripple.className = "paw-ripple";
@@ -89,13 +112,45 @@ export function PawCursor() {
       ripple.addEventListener("animationend", () => ripple.remove());
       window.setTimeout(() => ripple.remove(), 800);
     };
-    const onUp = () => paw.classList.remove("is-down");
+    const onUp = () => root.classList.remove("is-down");
+
+    const writePaw = (el: HTMLElement, side: number, phase: number, angle: number, activity: number) => {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const along = side * ALONG;
+      const perp = side * PERP;
+      const px = cx + cos * along - sin * perp;
+      const py = cy + sin * along + cos * perp;
+      const step = 1 + AMP * activity * Math.sin(walk + phase);
+      const wob = WOBBLE * activity * Math.sin(walk + phase);
+      const rot = (angle * 180) / Math.PI + 90 + side * SPLAY + wob;
+      el.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%) rotate(${rot}deg) scale(${step})`;
+    };
 
     const loop = () => {
-      const ease = reduced ? 1 : 0.22;
+      const ease = reduced ? 1 : EASE;
       cx += (tx - cx) * ease;
       cy += (ty - cy) * ease;
-      paw.style.transform = `translate3d(${cx}px, ${cy}px, 0)`;
+
+      const mvx = cx - lcx;
+      const mvy = cy - lcy;
+      const speed = Math.hypot(mvx, mvy);
+
+      if (!reduced && speed > 0.35) {
+        const nx = mvx / speed;
+        const ny = mvy / speed;
+        dirx += (nx - dirx) * DIR_EASE;
+        diry += (ny - diry) * DIR_EASE;
+      }
+      const angle = reduced ? -Math.PI / 2 : Math.atan2(diry, dirx);
+      const activity = reduced ? 0 : Math.min(1, speed / 5);
+      walk += reduced ? 0 : speed * 0.09;
+
+      writePaw(pawA, 1, 0, angle, activity);
+      writePaw(pawB, -1, Math.PI, angle, activity);
+
+      lcx = cx;
+      lcy = cy;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -125,19 +180,12 @@ export function PawCursor() {
   return (
     <>
       <div ref={rippleRef} aria-hidden className="paw-ripple-layer" />
-      <div ref={pawRef} aria-hidden className="paw-cursor">
-        <span className="paw-cursor__center">
-          <span className="paw-cursor__pop">
-            <svg viewBox="0 0 40 40" className="paw-cursor__svg" aria-hidden="true">
-              {/* main pad */}
-              <ellipse cx="20" cy="27" rx="8.5" ry="7" fill="currentColor" />
-              {/* toe beans */}
-              <ellipse cx="8.5" cy="18.5" rx="3.1" ry="4.2" fill="currentColor" transform="rotate(-18 8.5 18.5)" />
-              <ellipse cx="15.5" cy="12.5" rx="3.2" ry="4.6" fill="currentColor" transform="rotate(-6 15.5 12.5)" />
-              <ellipse cx="24.5" cy="12.5" rx="3.2" ry="4.6" fill="currentColor" transform="rotate(6 24.5 12.5)" />
-              <ellipse cx="31.5" cy="18.5" rx="3.1" ry="4.2" fill="currentColor" transform="rotate(18 31.5 18.5)" />
-            </svg>
-          </span>
+      <div ref={rootRef} aria-hidden className="paw-cursor2">
+        <span ref={pawARef} className="paw2-slot">
+          <Paw variant="a" />
+        </span>
+        <span ref={pawBRef} className="paw2-slot">
+          <Paw variant="b" />
         </span>
       </div>
     </>
