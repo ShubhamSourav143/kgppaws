@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, PawPrint } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Magnetic } from "@/components/fx/Magnetic";
 import { Seal } from "@/components/brand/Logo";
 import type { ContentSectionRow } from "@/services/content";
@@ -20,30 +20,50 @@ export interface HeroMediaItem {
 }
 
 /**
- * Home hero — a photo mosaic. A warm content panel holds the left half
- * (headline / description / CTA); the right half is a grid of real rescue
- * photographs that reveal on a stagger and lift on hover.
+ * Home hero — a seamless, full-viewport editorial collage. Sixteen real
+ * rescue photographs tile the screen edge-to-edge with no gaps; the left
+ * half carries the message over the underlying photos through a dark
+ * gradient, so the collage never breaks.
  *
- * The grid photos are temporary royalty-free placeholders in
- * public/images/hero-grid/ — swap the files (grid-01…grid-08) to replace
- * them with official KGP PAWS photography; no code change needed.
- * See public/images/hero-grid/README.md.
+ * Every cell runs its own slow Ken Burns drift (desynced via negative
+ * delays), which is the hero's primary motion; hover adds only a whisper
+ * of light. All photos are temporary royalty-free placeholders in
+ * public/images/hero-grid/ (grid-01…grid-16) — swap files to replace,
+ * no code change. See public/images/hero-grid/README.md.
  */
-const GRID_PHOTOS = Array.from(
-  { length: 8 },
-  (_, i) => `/images/hero-grid/grid-0${i + 1}.jpg`
-);
 
-// desktop placement: content fills the left 2×4; photos fill the right 2 cols.
-const CELL_SPANS = [
-  "lg:col-start-3 lg:row-start-1",
-  "lg:col-start-4 lg:row-start-1",
-  "lg:col-start-3 lg:row-start-2",
-  "lg:col-start-4 lg:row-start-2",
-  "lg:col-start-3 lg:row-start-3",
-  "lg:col-start-4 lg:row-start-3",
-  "lg:col-start-3 lg:row-start-4",
-  "lg:col-start-4 lg:row-start-4",
+interface Cell {
+  src: string;
+  /** desktop grid placement (left half sits under the text overlay) */
+  pos: string;
+  /** desktop-only cells collapse away on mobile */
+  desktopOnly?: boolean;
+  /** ken burns timing — desynced per cell */
+  duration: number;
+  delay: number;
+}
+
+const g = (n: number) => `/images/hero-grid/grid-${String(n).padStart(2, "0")}.jpg`;
+
+const CELLS: Cell[] = [
+  // right half — always visible (these 8 form the mobile collage)
+  { src: g(1), pos: "lg:col-start-3 lg:row-start-1", duration: 17, delay: -3 },
+  { src: g(2), pos: "lg:col-start-4 lg:row-start-1", duration: 21, delay: -11 },
+  { src: g(3), pos: "lg:col-start-3 lg:row-start-2", duration: 15, delay: -7 },
+  { src: g(4), pos: "lg:col-start-4 lg:row-start-2", duration: 19, delay: -1 },
+  { src: g(5), pos: "lg:col-start-3 lg:row-start-3", duration: 22, delay: -14 },
+  { src: g(6), pos: "lg:col-start-4 lg:row-start-3", duration: 16, delay: -5 },
+  { src: g(7), pos: "lg:col-start-3 lg:row-start-4", duration: 20, delay: -9 },
+  { src: g(8), pos: "lg:col-start-4 lg:row-start-4", duration: 18, delay: -13 },
+  // left half — under the text overlay, desktop only
+  { src: g(9),  pos: "lg:col-start-1 lg:row-start-1", desktopOnly: true, duration: 19, delay: -6 },
+  { src: g(10), pos: "lg:col-start-2 lg:row-start-1", desktopOnly: true, duration: 16, delay: -12 },
+  { src: g(11), pos: "lg:col-start-1 lg:row-start-2", desktopOnly: true, duration: 21, delay: -2 },
+  { src: g(12), pos: "lg:col-start-2 lg:row-start-2", desktopOnly: true, duration: 17, delay: -8 },
+  { src: g(13), pos: "lg:col-start-1 lg:row-start-3", desktopOnly: true, duration: 20, delay: -15 },
+  { src: g(14), pos: "lg:col-start-2 lg:row-start-3", desktopOnly: true, duration: 15, delay: -4 },
+  { src: g(15), pos: "lg:col-start-1 lg:row-start-4", desktopOnly: true, duration: 22, delay: -10 },
+  { src: g(16), pos: "lg:col-start-2 lg:row-start-4", desktopOnly: true, duration: 18, delay: -1.5 },
 ];
 
 export function Hero({
@@ -64,110 +84,105 @@ export function Hero({
   const ctaLabel = cms?.ctaLabel || "Meet our paws";
   const ctaUrl = cms?.ctaUrl || "/adopt";
 
-  const cellReveal = {
-    hidden: reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 24 },
-    show: { opacity: 1, scale: 1, y: 0 },
-  };
-
   return (
     <section
       aria-label="Welcome"
-      className="relative -mt-16 overflow-hidden bg-gradient-to-br from-chakra-ink via-night to-forest-deep pb-16 pt-24 md:-mt-20 md:pb-20 md:pt-28"
+      className="relative -mt-16 h-[100svh] min-h-[36rem] overflow-hidden bg-night md:-mt-20"
     >
-      {/* ambient tricolour glows */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-24 top-1/3 h-96 w-96 rounded-full bg-saffron/25 blur-[120px]" />
-        <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-chakra/30 blur-[120px]" />
-        <div className="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-forest-bright/20 blur-[120px]" />
-      </div>
-
-      <div className="container-page relative">
-        <motion.div
-          initial="hidden"
-          animate="show"
-          transition={{ staggerChildren: reduced ? 0 : 0.08, delayChildren: 0.1 }}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:h-[44rem] lg:grid-cols-4 lg:grid-rows-4"
-        >
-          {/* content panel — left 2×4 */}
+      {/* — seamless 4×4 collage, edge to edge — */}
+      <motion.div
+        aria-hidden="true"
+        className="grid h-full w-full grid-cols-2 grid-rows-4 lg:grid-cols-4"
+        initial="hidden"
+        animate="show"
+        transition={{ staggerChildren: reduced ? 0 : 0.05 }}
+      >
+        {CELLS.map((cell) => (
           <motion.div
+            key={cell.src}
             variants={{
-              hidden: reduced ? { opacity: 0 } : { opacity: 0, y: 28 },
-              show: { opacity: 1, y: 0 },
+              hidden: { opacity: 0 },
+              show: { opacity: 1 },
             }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="relative col-span-2 flex flex-col justify-center overflow-hidden rounded-[1.75rem] border border-ivory/50 bg-gradient-to-br from-ivory via-ivory to-saffron/15 p-7 shadow-lift sm:p-9 lg:col-span-2 lg:row-span-4 lg:p-11"
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            className={`group relative overflow-hidden ${cell.pos} ${
+              cell.desktopOnly ? "hidden lg:block" : ""
+            }`}
           >
-            {/* corner paw watermark */}
-            <PawPrint
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-6 -top-6 h-32 w-32 rotate-12 text-saffron/10"
+            <Image
+              src={cell.src}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 25vw, 50vw"
+              priority={!cell.desktopOnly}
+              className="anim-kenburns object-cover"
+              style={{
+                animationDuration: `${cell.duration}s`,
+                animationDelay: `${cell.delay}s`,
+              }}
             />
-
-            <span className="mb-6 inline-flex w-fit items-center gap-2.5 rounded-full bg-forest/10 py-1.5 pl-1.5 pr-4 text-[11px] font-bold uppercase tracking-[0.14em] text-forest-deep">
-              <Seal size={24} className="h-6 w-6 shrink-0" />
-              An IIT Kharagpur student initiative
-            </span>
-
-            <h1 className="text-balance font-display text-4xl font-bold leading-[1.03] text-forest-deep sm:text-5xl lg:text-6xl">
-              {title}
-            </h1>
-
-            {/* tricolour rule */}
+            {/* subtle hover: a whisper of warm light, nothing card-like */}
             <span
               aria-hidden="true"
-              className="mt-6 flex h-1.5 w-40 overflow-hidden rounded-full"
-            >
-              <span className="flex-1 bg-saffron" />
-              <span className="flex-1 bg-ivory ring-1 ring-inset ring-line" />
-              <span className="flex-1 bg-forest-bright" />
-            </span>
-
-            <p className="mt-6 max-w-md text-base leading-relaxed text-charcoal/70 sm:text-lg">
-              {sub}
-            </p>
-
-            <div className="mt-8">
-              <Magnetic strength={0.3}>
-                <Link
-                  href={ctaUrl}
-                  className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-8 py-4 text-base font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
-                >
-                  {ctaLabel}
-                  <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
-                </Link>
-              </Magnetic>
-            </div>
-
-            <p className="mt-6 text-xs font-semibold text-moss">
-              Adopt a friend for life · together, we heal and grow.
-            </p>
+              className="absolute inset-0 bg-saffron/0 transition-colors duration-500 group-hover:bg-saffron/10"
+            />
           </motion.div>
+        ))}
+      </motion.div>
 
-          {/* photo cells — right 2 columns */}
-          {GRID_PHOTOS.map((src, i) => (
-            <motion.div
-              key={src}
-              variants={cellReveal}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className={`group relative aspect-square overflow-hidden rounded-[1.25rem] ring-1 ring-ivory/10 lg:aspect-auto lg:h-full ${CELL_SPANS[i]}`}
-            >
-              <Image
-                src={src}
-                alt=""
-                fill
-                sizes="(min-width: 1024px) 22vw, 45vw"
-                className="object-cover transition-transform duration-[900ms] ease-out group-hover:scale-110"
-              />
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-t from-night/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-              />
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 rounded-[1.25rem] ring-0 ring-inset ring-saffron/0 transition-all duration-300 group-hover:ring-2 group-hover:ring-saffron/70"
-              />
-            </motion.div>
-          ))}
+      {/* — legibility scrims: header strip + text panel over the collage — */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-night/80 to-transparent"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-night/95 via-night/55 to-night/20 lg:w-1/2 lg:bg-gradient-to-r lg:from-night/95 lg:via-night/80 lg:to-transparent"
+      />
+
+      {/* — the message, living on the collage itself — */}
+      <div className="absolute inset-0 flex flex-col justify-end lg:w-1/2 lg:justify-center">
+        <motion.div
+          initial={reduced ? false : { opacity: 0, y: 32 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          className="px-6 pb-24 sm:px-10 md:pb-20 lg:px-14 lg:pb-0 xl:px-20"
+        >
+          <span className="mb-6 inline-flex w-fit items-center gap-2.5 rounded-full border border-ivory/20 bg-night/40 py-1.5 pl-1.5 pr-4 text-[11px] font-bold uppercase tracking-[0.16em] text-gold-soft backdrop-blur-sm">
+            <Seal variant="light" size={24} className="h-6 w-6 shrink-0" />
+            An IIT Kharagpur student initiative
+          </span>
+
+          <h1 className="max-w-xl text-balance font-display text-5xl font-bold leading-[1.0] text-ivory drop-shadow-[0_4px_28px_rgba(6,12,9,0.7)] sm:text-6xl xl:text-7xl">
+            {title}
+          </h1>
+
+          {/* tricolour rule — saffron · white · green */}
+          <span aria-hidden="true" className="mt-7 flex h-1.5 w-44 overflow-hidden rounded-full">
+            <span className="flex-1 bg-saffron" />
+            <span className="flex-1 bg-ivory" />
+            <span className="flex-1 bg-forest-bright" />
+          </span>
+
+          <p className="mt-6 max-w-md text-lg leading-relaxed text-ivory/85 drop-shadow-[0_2px_12px_rgba(6,12,9,0.6)] sm:text-xl">
+            {sub}
+          </p>
+
+          <div className="mt-9">
+            <Magnetic strength={0.3}>
+              <Link
+                href={ctaUrl}
+                className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-9 py-4.5 text-lg font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
+              >
+                {ctaLabel}
+                <ArrowUpRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
+              </Link>
+            </Magnetic>
+          </div>
+
+          <p className="mt-6 text-sm font-semibold text-ivory/60">
+            Adopt a friend for life · together, we heal and grow.
+          </p>
         </motion.div>
       </div>
     </section>
