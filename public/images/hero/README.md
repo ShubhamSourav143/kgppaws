@@ -1,29 +1,36 @@
 # Home hero images
 
-## `iit-kgp-main-building.jpg` — attribution required
+## `main-building.jpg` — the hero backdrop
 
-The IIT Kharagpur Main Building photograph used as the home hero background is
-a **real photo of the actual building**, used under a Creative Commons licence:
+A photograph of the IIT Kharagpur Main Building, **supplied by KGP PAWS**
+(the society holds the rights). No third-party attribution is rendered.
 
-- **Photographer:** Biswarup Ganguly
-- **Licence:** [CC BY 3.0](https://creativecommons.org/licenses/by/3.0)
-- **Source:** [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Main_Building_-_Indian_Institute_of_Technology_-_Kharagpur_-_West_Midnapore_2013-01-26_3686.JPG)
-- Resized to 2560px wide and re-encoded; otherwise unmodified.
+⚠️ **Current file is low resolution: 413×275 px.** The hero is full-bleed, so
+on a 1920–2560px display this is upscaled roughly 5–6×, which reads as soft
+and makes the building's "INDIAN INSTITUTE OF TECHNOLOGY" lettering
+illegible. A film-grain overlay in `Hero.tsx` disguises some of it.
 
-⚠️ **CC BY requires attribution.** The credit is rendered in the hero (bottom
-corner) by `components/home/Hero.tsx`. If you replace this file with an
-official KGP PAWS photograph, remove that credit line too — see the
-`PHOTO_CREDIT` constant in `Hero.tsx`.
+**Please replace with the full-resolution original** — ideally **≥2400px wide**,
+landscape. Same filename, no code changes needed.
 
 ## Swapping the background
 
-Replace `iit-kgp-main-building.jpg` with any wide landscape image (same
-filename) and the hero picks it up on the next build — no code changes.
-Recommended: ≥2400px wide, landscape, with usable sky/negative space on the
-left for the headline.
+Drop any wide landscape image in as `main-building.jpg` and the hero picks it
+up on the next build. Recommended: ≥2400px wide, with usable sky/negative
+space on the left for the headline.
+
+If you add a **second** image to this folder, note that the hero uses the
+first file alphabetically (`lib/media.ts` → `listMedia("hero")`).
+
+### Attribution
+
+If you ever swap in a Creative Commons photo, credit is required — add the
+credit line back into `components/home/Hero.tsx`. (An earlier version used a
+CC BY 3.0 photo by Biswarup Ganguly from Wikimedia Commons; it was removed
+when the society's own photo replaced it.)
 
 ## Foreground animal photos
 
 The floating dog/cat cards in the hero reuse the adopt covers from
-`public/images/adopt/` (`simba.jpg`, `mishti.jpg`). Those are currently
+`public/images/adopt/` (`simba.jpg`, `percy.jpg`). Those are currently
 **temporary royalty-free placeholders** — see `public/images/adopt/README.md`.

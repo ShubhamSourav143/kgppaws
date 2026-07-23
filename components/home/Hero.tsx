@@ -29,12 +29,10 @@ export interface HeroMediaItem {
   blurDataURL?: string;
 }
 
-/** Backdrop is a CC BY 3.0 photo — attribution is required while it is in use.
- *  Set to null once an official KGP PAWS photograph replaces the file.
- *  See public/images/hero/README.md. */
-const PHOTO_CREDIT = "Main Building photo: Biswarup Ganguly · CC BY 3.0";
-
-const FALLBACK_BACKDROP = "/images/hero/iit-kgp-main-building.jpg";
+/** Backdrop lives in public/images/hero/ — swap the file to change it.
+ *  Currently a KGP PAWS-supplied photograph (rights held by the society),
+ *  so no third-party attribution is rendered. */
+const FALLBACK_BACKDROP = "/images/hero/main-building.jpg";
 
 /**
  * Home hero — the IIT Kharagpur Main Building carries the full screen while
@@ -81,7 +79,6 @@ export function Hero({
 
   const backdrop = media[0]?.src ?? FALLBACK_BACKDROP;
   const backdropBlur = media[0]?.blurDataURL;
-  const showCredit = backdrop === FALLBACK_BACKDROP;
 
   const title = cms?.title || "Every paw has a story.";
   const sub =
@@ -129,8 +126,9 @@ export function Hero({
         />
       </motion.div>
 
-      {/* — layer 2: tricolour scrim — saffron warmth, green depth, Ashoka blue sky — */}
-      <div aria-hidden="true" className="absolute inset-0">
+      {/* — layer 2: tricolour scrim — saffron warmth, green depth, Ashoka blue sky.
+           `grain` also softens upscaling artefacts on lower-resolution backdrops. — */}
+      <div aria-hidden="true" className="grain absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-b from-chakra-ink/75 via-night/45 to-forest-deep/90" />
         {/* legibility scrim — keeps the headline crisp over the bright façade */}
         <div className="absolute inset-0 bg-gradient-to-r from-night/90 via-night/55 to-transparent lg:via-night/35" />
@@ -298,11 +296,6 @@ export function Hero({
         </span>
       </motion.div>
 
-      {showCredit && (
-        <p className="absolute bottom-3 right-4 z-10 text-[10px] text-forest-deep/45">
-          {PHOTO_CREDIT}
-        </p>
-      )}
     </section>
   );
 }
