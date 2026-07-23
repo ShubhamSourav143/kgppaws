@@ -9,7 +9,6 @@ import { HelpBand } from "@/components/home/HelpBand";
 import { DonateCta } from "@/components/home/DonateCta";
 import { listAnimals } from "@/services/animals";
 import { listStories } from "@/services/stories";
-import { listCampaigns } from "@/services/campaigns";
 
 import { getHomeContent, getHelpContent } from "@/services/content";
 import { listMedia } from "@/lib/media";
@@ -18,7 +17,6 @@ export default async function HomePage() {
   const [
     animals,
     stories,
-    campaigns,
     homeContent,
     helpContent,
     heroMedia,
@@ -27,7 +25,6 @@ export default async function HomePage() {
   ] = await Promise.all([
     listAnimals(),
     listStories(),
-    listCampaigns(),
     getHomeContent(),
     getHelpContent(),
     listMedia("hero"),
@@ -79,7 +76,7 @@ export default async function HomePage() {
       <Transformations pairs={transformationPairs} />
       <Compawnions animals={animals} />
       <HelpBand cms={cmsHelp} />
-      <DonateCta campaigns={campaigns} />
+      <DonateCta />
     </>
   );
 }
