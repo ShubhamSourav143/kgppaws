@@ -23,6 +23,7 @@ export default async function HomePage() {
     helpContent,
     heroMedia,
     transformationMedia,
+    adoptMedia,
   ] = await Promise.all([
     listAnimals(),
     listStories(),
@@ -31,6 +32,7 @@ export default async function HomePage() {
     getHelpContent(),
     listMedia("hero"),
     listMedia("transformation"),
+    listMedia("adopt"),
   ]);
 
   const cmsHero = homeContent.find((c) => c.section === "Hero");
@@ -45,8 +47,20 @@ export default async function HomePage() {
   const heroCat = animals.find((a) => a.species === "cat");
   const identityAnimal = heroDog ?? animals[0];
 
+  // Per-animal cover photos, keyed by filename in public/images/adopt/ —
+  // the hero foreground uses these (see public/images/adopt/README.md).
+  const covers: Record<string, string> = {};
+  for (const m of adoptMedia) {
+    const file = m.src.split("/").pop() ?? "";
+    const key = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
+    if (key && !(key in covers)) covers[key] = m.src;
+  }
+
   const withPhoto = (a?: typeof heroDog) =>
-    a && { ...a, photoUrl: a.photos.find((p) => p.url)?.url };
+    a && {
+      ...a,
+      photoUrl: a.photos.find((p) => p.url)?.url ?? covers[a.slug],
+    };
 
   const transformationPairs = buildTransformationPairs(transformationMedia, stories);
 
