@@ -4,6 +4,7 @@ import { SITE } from "@/lib/config";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { MobileDock } from "@/components/layout/MobileDock";
 import { SmoothScroll } from "@/components/fx/SmoothScroll";
+import { PawCursor } from "@/components/fx/PawCursor";
 import { ServiceWorker } from "@/components/pwa/ServiceWorker";
 import { getSettings } from "@/services/content";
 import "./globals.css";
@@ -99,6 +100,7 @@ export default function RootLayout({
         </SiteChrome>
         <MobileDock />
         <SmoothScroll />
+        <PawCursor />
         <ServiceWorker />
       </body>
     </html>
