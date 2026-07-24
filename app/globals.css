@@ -347,12 +347,14 @@ html.lenis, html.lenis body { height: auto; }
 .backface-hidden { backface-visibility: hidden; }
 .perspective-1000 { perspective: 1000px; }
 
-/* ———————————————————————— custom two-paw cursor ————————————————————————
+/* ———————————————————————— custom paw cursor ————————————————————————
    Mounted site-wide by <PawCursor>; only active for fine pointers (desktop).
-   Two paw prints walk alongside the pointer. The native cursor is hidden
-   only while `paw-cursor-active` is set on <html>, which the component adds
-   after the first real mouse move. JS writes position/heading/step onto each
-   `.paw2-slot`; CSS owns the hover / press / colour states. */
+   Paw prints walk alongside the pointer, alternating single / pair by
+   section (see the component for the parity rule). The native cursor is
+   hidden only while `paw-cursor-active` is set on <html>, which the component
+   adds after the first real mouse move. JS writes position/heading/step onto
+   each `.paw2-slot` and the morph opacity onto the inner `.paw2`; CSS owns
+   the show/hide, hover, press and colour states. */
 html.paw-cursor-active,
 html.paw-cursor-active * { cursor: none !important; }
 
@@ -361,6 +363,14 @@ html.paw-cursor-active * { cursor: none !important; }
   inset: 0;
   z-index: 9999;
   pointer-events: none;
+}
+/* One knob for the artwork size. The stride, track separation and the offset
+   that keeps the paws clear of whatever is being pointed at scale with the
+   matching `SCALE` constant in PawCursor.tsx — move the two together. The
+   paws are SVG, so this is resolution-independent. */
+.paw-cursor2,
+.paw-ripple-layer {
+  --paw-size: 96px;
 }
 .paw2-slot {
   position: fixed;
@@ -371,10 +381,13 @@ html.paw-cursor-active * { cursor: none !important; }
   transition: opacity 0.25s ease;
 }
 .paw-cursor2.is-visible .paw2-slot { opacity: 1; }
-/* trailing paw a touch behind in feel: slightly delayed fade-in */
-.paw-cursor2.is-visible .paw2--b { transition-delay: 0.04s; }
 
-.paw2 { display: block; }
+/* per-paw opacity is JS-driven (step depth + the single/pair morph) and
+   multiplies with the slot's show/hide fade above */
+.paw2 {
+  display: block;
+  will-change: opacity;
+}
 .paw2__fx {
   display: block;
   transform: scale(1);
@@ -388,20 +401,17 @@ html.paw-cursor-active * { cursor: none !important; }
 
 .paw2__svg {
   display: block;
-  height: 24px;
-  width: 24px;
+  height: var(--paw-size);
+  width: var(--paw-size);
   color: var(--color-saffron-deep);
   transition: color 0.2s ease;
-  filter: drop-shadow(0 2px 4px rgba(23, 63, 53, 0.35));
+  filter: drop-shadow(0 8px 16px rgba(23, 63, 53, 0.35));
 }
 .paw-cursor2.is-hover .paw2__svg { color: var(--color-forest-bright); }
-/* the trailing paw reads as depth: smaller + softer */
-.paw2--b .paw2__svg {
-  height: 20px;
-  width: 20px;
-  opacity: 0.82;
-}
+/* the pair trade lead and trail every step, so both feet are the same
+   size — depth comes from the JS-driven opacity swing, not a fixed offset */
 
+/* ——— click: a paw print pressed into the page, plus the ripple ——— */
 .paw-ripple-layer {
   position: fixed;
   inset: 0;
@@ -410,12 +420,26 @@ html.paw-cursor-active * { cursor: none !important; }
 }
 .paw-ripple {
   position: absolute;
-  height: 14px;
-  width: 14px;
-  margin: -7px 0 0 -7px;
+  height: calc(var(--paw-size) * 0.58);
+  width: calc(var(--paw-size) * 0.58);
+  margin: calc(var(--paw-size) * -0.29) 0 0 calc(var(--paw-size) * -0.29);
   border-radius: 9999px;
+  /* the ring is scaled by the keyframes, so the border stays hairline-thin
+     here and thickens with the expansion exactly as it did before */
   border: 2px solid var(--color-saffron);
   animation: paw-ripple 0.6s ease-out forwards;
+}
+.paw-stamp {
+  position: absolute;
+  display: block;
+  color: var(--color-saffron-deep);
+  animation: paw-stamp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.paw-stamp svg {
+  display: block;
+  height: calc(var(--paw-size) * 1.08);
+  width: calc(var(--paw-size) * 1.08);
+  fill: currentColor;
 }
 
 @keyframes paw2-bounce {
@@ -426,4 +450,18 @@ html.paw-cursor-active * { cursor: none !important; }
 @keyframes paw-ripple {
   from { transform: scale(0.4); opacity: 0.55; }
   to { transform: scale(4.5); opacity: 0; }
+}
+@keyframes paw-stamp {
+  from {
+    transform: translate(-50%, -50%) rotate(var(--stamp-rot, 0deg)) scale(0.45);
+    opacity: 0.8;
+  }
+  35% {
+    transform: translate(-50%, -50%) rotate(var(--stamp-rot, 0deg)) scale(1.05);
+    opacity: 0.6;
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(var(--stamp-rot, 0deg)) scale(1.35);
+    opacity: 0;
+  }
 }
