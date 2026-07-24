@@ -14,7 +14,6 @@ export interface SearchResult {
 
 const PAGES: SearchResult[] = [
   { type: "page", title: "Adopt", subtitle: "Meet adoptable dogs & cats", href: "/adopt" },
-  { type: "page", title: "Gallery", subtitle: "Photos from the field", href: "/gallery" },
   { type: "page", title: "Stories", subtitle: "Rescue & recovery stories", href: "/stories" },
   { type: "page", title: "Donate", subtitle: "Fund feeding, treatment & vaccination", href: "/donate" },
   { type: "page", title: "Volunteer", subtitle: "Join the KGP PAWS pack", href: "/volunteer" },

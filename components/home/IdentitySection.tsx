@@ -30,15 +30,6 @@ export function IdentitySection({ animal }: { animal?: Animal }) {
       aria-labelledby="identity-h"
       className="relative overflow-hidden bg-gradient-to-b from-chakra-ink via-[#17395f] to-night py-24 text-ivory sm:py-32"
     >
-      {/* starfield dots */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage: "radial-gradient(rgba(253,251,246,0.5) 1px, transparent 1px)",
-          backgroundSize: "34px 34px",
-        }}
-      />
       <div className="container-page relative grid items-center gap-14 lg:grid-cols-2 lg:gap-10">
         <div>
           <Reveal effect="fade">

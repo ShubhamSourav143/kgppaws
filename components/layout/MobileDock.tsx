@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, PawPrint, Siren, Images, Heart } from "lucide-react";
+import { Home, PawPrint, Siren, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/adopt", label: "Adopt", icon: PawPrint },
   { href: "/report", label: "Report", icon: Siren, primary: true },
-  { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/donate", label: "Donate", icon: Heart },
 ];
 
