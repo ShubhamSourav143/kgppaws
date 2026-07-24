@@ -15,8 +15,8 @@ every image slot by filename (see `app/adopt/page.tsx` → `covers`):
 | File | Where it shows | Suggested shape |
 |------|----------------|-----------------|
 | `hero.jpg`   | Hero background            | wide / landscape |
-| `why.jpg`    | Beside "Why Adoption Matters" | portrait (4:5) |
-| `simba.jpg`  | Simba's card + collage     | portrait |
+| `why.jpg`    | (legacy) unused since the "Why Adoption Matters" redesign | portrait (4:5) |
+| `simba.jpg`  | Simba's card + collage + "Why Adoption Matters" band 3 | portrait |
 | `muesli.jpg` | Muesli's card + story + collage | portrait |
 | `bunti.jpg`  | Bunti's card + story + collage  | portrait |
 | `laika.jpg`  | Laika's card + collage     | portrait |
@@ -29,3 +29,7 @@ every image slot by filename (see `app/adopt/page.tsx` → `covers`):
 - Any format works: `.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`.
 - Delete a file to fall back to the built-in illustration for that slot.
 - Add `--caption`: `simba--first-day-home.jpg` keeps the slot and adds a caption.
+- The "Why Adoption Matters" section (`components/adopt/WhyAdopt.tsx`) shows
+  three titled bands of four photos each. It reuses `romi/odin/simba/bunti.jpg`
+  here plus eight photos from `public/images/hero-grid/` (the home collage);
+  see that component for the exact per-band mapping.

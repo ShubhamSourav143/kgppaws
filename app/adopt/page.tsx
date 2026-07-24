@@ -5,8 +5,8 @@ import { listAnimals } from "@/services/animals";
 import { getAdoptionContent } from "@/services/content";
 import { listMedia } from "@/lib/media";
 import { AdoptExplorer } from "@/components/adopt/AdoptExplorer";
+import { WhyAdopt, type WhyPhotos } from "@/components/adopt/WhyAdopt";
 import {
-  WhyAdopt,
   RescueStories,
   AdoptionProcess,
   FinalCta,
@@ -24,10 +24,13 @@ export const metadata: Metadata = {
 };
 
 export default async function AdoptPage() {
-  const [animals, content, adoptMedia] = await Promise.all([
+  const [animals, content, adoptMedia, gridMedia] = await Promise.all([
     listAnimals(),
     getAdoptionContent(),
     listMedia("adopt"),
+    // the "Why Adoption Matters" bands also pull from the home collage pool
+    // (public/images/hero-grid) for photo variety
+    listMedia("hero-grid"),
   ]);
 
   const intro = content.find((c) => c.section === "intro");
@@ -47,8 +50,25 @@ export default async function AdoptPage() {
     if (key && !(key in covers)) covers[key] = m.src;
   }
 
+  // Richer map (src + blur placeholder + dimensions) for the "Why Adoption
+  // Matters" bands, which render through next/image. Keyed by filename stem
+  // across both the adopt photos and the hero-grid collage pool.
+  const whyPhotos: WhyPhotos = {};
+  for (const m of [...adoptMedia, ...gridMedia]) {
+    const file = m.src.split("/").pop() ?? "";
+    const key = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
+    if (key && !(key in whyPhotos)) {
+      whyPhotos[key] = {
+        src: m.src,
+        blurDataURL: m.blurDataURL,
+        width: m.width,
+        height: m.height,
+        alt: m.alt,
+      };
+    }
+  }
+
   const heroPhoto = covers.hero;
-  const whyPhoto = covers.why;
 
   // Inject each animal's real cover photo (keyed by slug) so the existing
   // AnimalCard renders it automatically — no card changes required.
@@ -115,7 +135,7 @@ export default async function AdoptPage() {
       </header>
 
       {/* 2 · Why adoption matters */}
-      <WhyAdopt photo={whyPhoto} />
+      <WhyAdopt photos={whyPhotos} />
 
       {/* 3 · Adoptable animals */}
       <section id="animals" className="scroll-mt-24 bg-parchment py-20 sm:py-28">

@@ -1,9 +1,6 @@
 import Link from "next/link";
 import {
-  HeartCrack,
   PawPrint,
-  Ban,
-  HeartHandshake,
   ClipboardList,
   PhoneCall,
   Heart,
@@ -55,97 +52,8 @@ const ODIN: Subject = {
   } as PortraitConfig,
 };
 
-/* ————————————————————————— 2 · Why adoption matters ————————————————————————— */
-
-const WHY_POINTS = [
-  {
-    icon: HeartCrack,
-    title: "Thousands abandoned every year",
-    body: "Countless healthy dogs and cats are left behind annually — not because anything is wrong with them, but because homes ran out before love did.",
-  },
-  {
-    icon: PawPrint,
-    title: "Street puppies rarely make it",
-    body: "Born on the roadside, many never survive their first months — lost to hunger, disease, traffic, or attacks by larger animals.",
-  },
-  {
-    icon: Ban,
-    title: "Bred for profit, then discarded",
-    body: "Some dogs are bred purely to sell and abandoned the moment they stop being profitable. Adoption gives those lives another chance.",
-  },
-  {
-    icon: HeartHandshake,
-    title: "Adoption saves a life",
-    body: "Choosing to adopt frees up care for the next rescue and eases the cycle of unnecessary breeding. One choice, two lives changed.",
-  },
-];
-
-export function WhyAdopt({ photo }: { photo?: string }) {
-  const header = (
-    <div className="max-w-2xl">
-      <Reveal effect="fade">
-        <p className="eyebrow mb-4 text-saffron-deep">Why it matters</p>
-      </Reveal>
-      <TextReveal
-        as="h2"
-        text="Why Adoption Matters"
-        className="font-display text-3xl font-bold leading-tight text-forest-deep sm:text-4xl lg:text-5xl"
-      />
-    </div>
-  );
-
-  const points = (
-    <Stagger
-      className={
-        photo
-          ? "mt-10 grid gap-5 sm:grid-cols-2"
-          : "mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
-      }
-    >
-      {WHY_POINTS.map((p) => (
-        <Item key={p.title}>
-          <div className="flex h-full flex-col gap-4 rounded-3xl border border-line bg-ivory p-6 shadow-soft transition-shadow duration-300 hover:shadow-card">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-saffron/12 text-saffron-deep">
-              <p.icon className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <h3 className="font-display text-lg font-bold text-forest-deep">
-              {p.title}
-            </h3>
-            <p className="text-sm leading-relaxed text-charcoal/70">{p.body}</p>
-          </div>
-        </Item>
-      ))}
-    </Stagger>
-  );
-
-  return (
-    <section className="bg-cream py-20 sm:py-28">
-      <div className="container-page">
-        {photo ? (
-          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-14">
-            <Reveal effect="scale">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo}
-                alt="A rescued street dog cared for by KGP PAWS volunteers"
-                className="aspect-[4/5] w-full rounded-[2rem] object-cover shadow-card"
-              />
-            </Reveal>
-            <div>
-              {header}
-              {points}
-            </div>
-          </div>
-        ) : (
-          <>
-            {header}
-            {points}
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
+/* Section 2 · "Why Adoption Matters" is now the storytelling carousel in
+   components/adopt/WhyAdoptCarousel.tsx (client component). */
 
 /* ————————————————————————— 3 · Every rescue has a story ————————————————————————— */
 

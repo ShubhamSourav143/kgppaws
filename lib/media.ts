@@ -16,6 +16,7 @@ import sharp from "sharp";
 export type MediaCollection =
   | "branding"
   | "hero"
+  | "hero-grid"
   | "gallery"
   | "stories"
   | "transformation"
