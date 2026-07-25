@@ -182,11 +182,11 @@ const STEPS = [
   },
 ];
 
-/** Optional per-step photos (step-1.jpg … step-4.jpg). Falls back to the
- *  numbered icon badge until a photo exists. */
-export function AdoptionProcess({ covers = {} }: { covers?: Covers }) {
-  const stepPhoto = (i: number) => covers[`step-${i + 1}`];
-
+/** Adoption steps rendered as one continuous timeline — numbered discs sitting
+ *  on a single rail so they read as an obvious 1 → 2 → 3 → 4 flow rather than
+ *  a grid of parallel cards. The rail runs left-to-right across the four steps
+ *  on desktop and turns vertical once they stack on narrow screens. */
+export function AdoptionProcess() {
   return (
     <section className="bg-cream py-20 sm:py-28">
       <div className="container-page">
@@ -201,42 +201,43 @@ export function AdoptionProcess({ covers = {} }: { covers?: Covers }) {
           />
         </div>
 
-        <Stagger className="relative mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((step, i) => {
-            const photo = stepPhoto(i);
-            return (
+        <Stagger className="relative mx-auto mt-14 max-w-3xl lg:max-w-none">
+          {/* The rail the numbered discs sit on. One element that flips
+              orientation: vertical down the left of the stacked steps, and
+              horizontal across their centres once they sit in a row. The
+              columns are gapless and exactly a quarter each, so the first and
+              last disc centres land on 12.5% / 87.5% — the rail spans between
+              them and never juts past the end numbers. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-8 left-[22px] top-8 w-px bg-gradient-to-b from-saffron/50 via-saffron/30 to-saffron/50 sm:left-[28px] lg:bottom-auto lg:left-[12.5%] lg:right-[12.5%] lg:top-7 lg:h-px lg:w-auto lg:bg-gradient-to-r"
+          />
+
+          <div className="space-y-10 sm:space-y-14 lg:grid lg:grid-cols-4 lg:gap-0 lg:space-y-0">
+            {STEPS.map((step, i) => (
               <Item key={step.title}>
-                <div className="flex h-full flex-col gap-4 rounded-3xl border border-line bg-ivory p-6 shadow-soft">
-                  {photo ? (
-                    <div className="relative -m-6 mb-0 aspect-[16/10] overflow-hidden rounded-t-3xl">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={photo}
-                        alt={step.title}
-                        className="h-full w-full object-cover"
+                <div className="relative flex gap-5 sm:gap-7 lg:flex-col lg:items-center lg:gap-0 lg:px-5 lg:text-center">
+                  <span className="relative z-10 mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron font-display text-lg font-bold text-ivory shadow-ember sm:h-[3.5rem] sm:w-[3.5rem] sm:text-xl lg:mt-0">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 pt-1 sm:pt-2 lg:pt-6">
+                    <div className="flex items-center gap-2.5 lg:justify-center">
+                      <h3 className="font-display text-xl font-bold text-forest-deep sm:text-2xl lg:text-xl">
+                        {step.title}
+                      </h3>
+                      <step.icon
+                        className="h-4 w-4 shrink-0 text-forest-bright sm:h-[1.125rem] sm:w-[1.125rem]"
+                        aria-hidden="true"
                       />
-                      <span className="absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember font-display text-base font-bold">
-                        {i + 1}
-                      </span>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember font-display text-lg font-bold">
-                        {i + 1}
-                      </span>
-                      <step.icon className="h-5 w-5 text-forest-bright" aria-hidden="true" />
-                    </div>
-                  )}
-                  <h3 className="font-display text-lg font-bold text-forest-deep">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-charcoal/70">
-                    {step.body}
-                  </p>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-charcoal/70 sm:mt-2.5 sm:text-base lg:mt-3 lg:text-sm">
+                      {step.body}
+                    </p>
+                  </div>
                 </div>
               </Item>
-            );
-          })}
+            ))}
+          </div>
         </Stagger>
       </div>
     </section>
