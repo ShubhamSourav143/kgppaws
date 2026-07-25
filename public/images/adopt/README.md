@@ -29,7 +29,13 @@ every image slot by filename (see `app/adopt/page.tsx` → `covers`):
 - Any format works: `.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`.
 - Delete a file to fall back to the built-in illustration for that slot.
 - Add `--caption`: `simba--first-day-home.jpg` keeps the slot and adds a caption.
-- The "Why Adoption Matters" section (`components/adopt/WhyAdopt.tsx`) shows
-  three titled bands of four photos each. It reuses `romi/odin/simba/bunti.jpg`
-  here plus eight photos from `public/images/hero-grid/` (the home collage);
-  see that component for the exact per-band mapping.
+- The "Why Adoption Matters" section (`components/adopt/WhyAdopt.tsx`) is an
+  Instagram-Stories slideshow: four slides, each one photo beside its message,
+  auto-advancing every 5s. It reuses `romi/odin/simba.jpg` here plus one photo
+  from `public/images/hero-grid/`; see that component for the exact mapping.
+- Each animal card cycles through the first **three** of that animal's photos
+  that have a URL (5s each, with progress bars). Until real per-animal
+  galleries are uploaded, the cover above is padded with two stills from
+  `public/images/hero-grid/`, split by species via `lib/demo/photo-pool.ts` so
+  a dog's card never shows a cat. Upload three real photos for an animal and
+  that padding drops away automatically.

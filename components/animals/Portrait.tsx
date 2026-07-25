@@ -2,6 +2,9 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { Animal } from "@/types";
 
+/** Photos per card story — the CSS timing in globals.css is built for three. */
+export const STORY_SHOTS = 3;
+
 /**
  * Illustrated animal portrait — KGP PAWS' cohesive visual identity for
  * animals until real photography is uploaded through the CMS. Every
@@ -17,6 +20,7 @@ export function AnimalPortrait({
   frame = "rounded",
   className,
   photoUrl,
+  photos,
 }: {
   animal: Pick<Animal, "name" | "species" | "portrait">;
   /** enable subtle blink/head-tilt idle animation */
@@ -24,9 +28,58 @@ export function AnimalPortrait({
   frame?: "rounded" | "arch";
   className?: string;
   photoUrl?: string;
+  /**
+   * Opt-in: pass three photos to render an auto-advancing story instead of a
+   * single still — 5s each, progress bars on top, paused while hovered.
+   * Anything other than exactly three falls back to the single-photo frame.
+   */
+  photos?: { src: string; alt: string }[];
 }) {
   const p = animal.portrait;
   const isCat = animal.species === "cat";
+
+  if (photos && photos.length === STORY_SHOTS) {
+    return (
+      <div
+        className={cn(
+          "card-stories relative overflow-hidden",
+          frame === "arch" ? "rounded-b-3xl rounded-t-[999px]" : "rounded-3xl",
+          className
+        )}
+      >
+        {photos.map((photo) => (
+          <div key={photo.src} className="card-stories__shot absolute inset-0">
+            <Image
+              src={photo.src}
+              alt={photo.alt}
+              fill
+              sizes="(min-width: 1024px) 28rem, 90vw"
+              className="object-cover"
+            />
+          </div>
+        ))}
+
+        {/* scrim so the ivory bars stay legible over pale photos */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-gradient-to-b from-night/45 to-transparent"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex gap-1.5 p-2.5"
+        >
+          {photos.map((photo) => (
+            <span
+              key={photo.src}
+              className="card-stories__track h-[3px] flex-1 overflow-hidden rounded-full bg-ivory/35"
+            >
+              <span className="card-stories__fill block h-full w-full origin-left rounded-full bg-ivory" />
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (photoUrl) {
     return (
