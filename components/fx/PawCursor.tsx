@@ -7,6 +7,17 @@ import { usePathname } from "next/navigation";
 const INTERACTIVE =
   'a,button,input,textarea,select,label,summary,[role="button"],[role="link"],.group,[data-cursor="hover"]';
 
+/**
+ * Regions that drop the cursor to a single paw without otherwise highlighting
+ * it — site chrome (the fixed navbar, the mobile menu) rather than a target.
+ * A walking pair tracking across the navbar reads as clutter over what is
+ * really one thin strip, and the bar floats above whichever section happens to
+ * be scrolling beneath it, so the section's formation is meaningless there.
+ * Marked explicitly rather than by tag: pages here also open with a <header>
+ * hero band, which is very much not chrome.
+ */
+const SOLO_ZONE = '[data-cursor="solo"]';
+
 /** Paw silhouette — one pad + four toes. Shared by the cursor and the click stamp. */
 const PAW_SHAPES = [
   { cx: 20, cy: 27, rx: 8.5, ry: 7, rot: 0 },
@@ -213,13 +224,15 @@ export function PawCursor() {
     // paw, so "this is interactive" always reads the same way regardless of
     // which formation the surrounding section happens to use.
     let hovering = false;
+    // over site chrome: same collapse to one paw, but no highlight
+    let solo = false;
     // whether the in-flight morph was triggered by hover (fast) or by
     // crossing a section boundary (slow)
     let morphFast = false;
 
-    /** Fold the section's formation and the hover override into one target. */
+    /** Fold the section's formation and both overrides into one target. */
     const applyTarget = () => {
-      const next = hovering ? 0 : bandMode;
+      const next = hovering || solo ? 0 : bandMode;
       if (next === target && placed) return;
       target = next;
       if (!placed || reduced) spread = target; // first placement never animates
@@ -350,9 +363,12 @@ export function PawCursor() {
     const onLeave = () => root.classList.remove("is-visible");
     const onOver = (e: Event) => {
       const t = e.target as Element | null;
-      const next = !!t?.closest?.(INTERACTIVE);
-      if (next === hovering) return; // fires for every node crossed; only act on changes
-      hovering = next;
+      const nextHover = !!t?.closest?.(INTERACTIVE);
+      const nextSolo = !!t?.closest?.(SOLO_ZONE);
+      // fires for every node crossed; only act on an actual change
+      if (nextHover === hovering && nextSolo === solo) return;
+      hovering = nextHover;
+      solo = nextSolo;
       root.classList.toggle("is-hover", hovering);
       morphFast = true;
       applyTarget();

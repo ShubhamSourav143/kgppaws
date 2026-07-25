@@ -112,7 +112,9 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50">
+      {/* data-cursor="solo": the paw cursor drops to a single paw over site
+          chrome, whatever formation the section scrolling underneath uses. */}
+      <header data-cursor="solo" className="fixed inset-x-0 top-0 z-50">
         <div
           className={cn(
             "mx-auto flex items-center justify-between gap-4 transition-all duration-500",
@@ -209,6 +211,7 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
             role="dialog"
             aria-modal="true"
             aria-label="Site menu"
+            data-cursor="solo"
             className="aurora fixed inset-0 z-[60] flex flex-col bg-night text-ivory lg:hidden"
             initial={reduced ? { opacity: 0 } : { clipPath: "circle(0% at calc(100% - 3.5rem) 2.5rem)" }}
             animate={reduced ? { opacity: 1 } : { clipPath: "circle(150% at calc(100% - 3.5rem) 2.5rem)" }}
