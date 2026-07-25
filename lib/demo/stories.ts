@@ -318,7 +318,7 @@ export const DEMO_STORIES: Story[] = [
         items: [
           { date: "12 Mar 2026 · Found", text: "Reported near Nalanda after dark, hind legs completely limp, dragging himself along the road." },
           { date: "12 Mar 2026 · Rescue", text: "Stabilised on a rigid board to protect the spine and moved to the partner clinic the same night." },
-          { date: "14 Mar 2026 · Medical treatment", text: "X-rays showed spinal trauma consistent with a vehicle strike — no fracture, but severe swelling around the cord. Started on steroids, anti-inflammatories and strict cage rest." },
+          { date: "14 Mar 2026 · Medical treatment", text: "X-rays showed spinal trauma consistent with a vehicle strike — no fracture, but severe swelling around the cord.", medical: "Diagnosis: T3–L3 spinal cord contusion, no vertebral fracture. Treatment: tapering corticosteroids, NSAIDs, strict cage rest, bladder expression 3× daily." },
           { date: "Apr–Jun 2026 · Recovery", text: "Daily physiotherapy: assisted standing, then water-supported walking. First unaided step on 2 May, seven weeks in." },
           { date: "Today", text: "Runs — with a permanent slight sway in his back end that does not slow him down at all. He meets the feeding cart every morning." },
         ],
@@ -371,7 +371,7 @@ export const DEMO_STORIES: Story[] = [
         items: [
           { date: "3 Feb 2026 · Found", text: "Sitting at the main gate at dawn, collared, groomed, and completely unable to cope. She had not moved from the spot in several hours." },
           { date: "3 Feb 2026 · Rescue", text: "Walked in without resistance — she had clearly been waiting for someone to come back for her." },
-          { date: "5 Feb 2026 · Medical treatment", text: "Underweight, dehydrated, with an untreated ear infection and a skin condition consistent with long-term confinement. Vaccinated and dewormed." },
+          { date: "5 Feb 2026 · Medical treatment", text: "Underweight and dehydrated, with an untreated ear infection and a skin condition consistent with long-term confinement.", medical: "On intake: 18% underweight, bilateral otitis, chronic pyoderma. Treatment: rehydration, medicated baths, ear cytology and drops, DHPP + anti-rabies, deworming." },
           { date: "Feb–Apr 2026 · Recovery", text: "Coat and weight recovered within eight weeks. The harder part was teaching her to be a dog: where to sleep, how to approach the others, how to be alone without panicking." },
           { date: "Today", text: "Sterilized, healthy, and living with a family in the staff quarters. She still waits by doors." },
         ],
@@ -420,7 +420,7 @@ export const DEMO_STORIES: Story[] = [
         items: [
           { date: "8 Jan 2026 · Found", text: "A four-month-old pup near the Gymkhana, discharge around the eyes and nose, refusing food for a second day." },
           { date: "8 Jan 2026 · Rescue", text: "Isolated immediately — distemper is airborne and the litter she came from had already lost two." },
-          { date: "10 Jan 2026 · Medical treatment", text: "Confirmed canine distemper. No antiviral exists; treatment was fluids, anti-seizure medication, nebulisation and hand-feeding every three hours." },
+          { date: "10 Jan 2026 · Medical treatment", text: "Confirmed canine distemper. No antiviral exists — everything from here is supportive care against the clock.", medical: "Confirmed by PCR. Supportive protocol: IV fluids, anti-seizure medication, nebulisation for secondary pneumonia, broad-spectrum antibiotics, syringe feeding every 3 hours. Strict airborne isolation." },
           { date: "Jan–Feb 2026 · Recovery", text: "Tremors peaked in week three and slowly receded. She began eating unassisted on day 26 and walking steadily by week six." },
           { date: "Today", text: "Fully grown and healthy, with a permanent slight head tremor when she concentrates. Vaccinated, sterilized, and unbothered." },
         ],
@@ -469,7 +469,7 @@ export const DEMO_STORIES: Story[] = [
         items: [
           { date: "14 Nov 2025 · Found", text: "Enlarged lymph node found during a routine check on the Main Building round." },
           { date: "18 Nov 2025 · Rescue", text: "Brought in for diagnostics rather than an emergency — he walked in under his own steam and objected mainly to the car." },
-          { date: "22 Nov 2025 · Medical treatment", text: "Fine-needle aspiration confirmed multicentric lymphoma. Started a six-round CHOP chemotherapy protocol, one round every three weeks, with bloodwork before each." },
+          { date: "22 Nov 2025 · Medical treatment", text: "Fine-needle aspiration confirmed multicentric lymphoma. At twelve, the obvious call was to do nothing. We made a different one.", medical: "Diagnosis: multicentric lymphoma (stage III). Protocol: 6-cycle CHOP — vincristine, cyclophosphamide, doxorubicin, prednisolone — one cycle every 3 weeks, CBC before each. Doses calibrated for quality of life." },
           { date: "Dec 2025 – Mar 2026 · Recovery", text: "Nodes reduced measurably after the second round and were undetectable by the fifth. Side effects stayed mild: some nausea, one week of low appetite." },
           { date: "Today", text: "In remission and monitored quarterly. He is fourteen, and he has claimed the warmest step outside the Main Building." },
         ],

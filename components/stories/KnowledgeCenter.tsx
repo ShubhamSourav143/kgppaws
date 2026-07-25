@@ -12,10 +12,11 @@ import type { Shot } from "@/components/stories/StorySections";
 const ALL = "All";
 
 /**
- * Knowledge Center — reference articles as premium cards, filterable by
- * category. Cards are not links: none of these have a body page yet, and a
- * card that looks clickable but goes nowhere is worse than one that doesn't.
- * Add `href` to an article and this becomes a link with no layout change.
+ * Knowledge Center — a magazine, not a blog grid. The newest piece in the
+ * active category runs as a full-width featured spread; the rest follow as
+ * supporting cards. Cards aren't links yet — none of these have a body page,
+ * and a card that looks clickable but goes nowhere is worse than one that
+ * doesn't. Add `href` to an article and it becomes a link with no other change.
  */
 export function KnowledgeCenter({
   articles,
@@ -35,6 +36,7 @@ export function KnowledgeCenter({
       .sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
   }, [articles, active]);
 
+  const [featured, ...supporting] = shown;
   const tabs = [ALL, ...KNOWLEDGE_CATEGORIES];
 
   return (
@@ -88,69 +90,116 @@ export function KnowledgeCenter({
           })}
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence mode="popLayout">
-            {shown.map((a, i) => {
-              const shot = covers[a.photo];
-              return (
-                <motion.article
-                  key={a.slug}
-                  layout={!reduced}
-                  initial={reduced ? false : { opacity: 0, y: 22 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduced ? { opacity: 0 } : { opacity: 0, y: -12 }}
-                  transition={{
-                    duration: 0.45,
-                    delay: Math.min(i * 0.04, 0.2),
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-ivory shadow-card transition-shadow duration-300 hover:shadow-glow"
-                >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-sand-light">
-                    {shot && (
-                      <Image
-                        src={shot.src}
-                        alt={shot.alt}
-                        fill
-                        sizes="(min-width: 1024px) 31vw, (min-width: 640px) 46vw, 92vw"
-                        placeholder={shot.blurDataURL ? "blur" : undefined}
-                        blurDataURL={shot.blurDataURL}
-                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
-                      />
-                    )}
-                    <span className="absolute left-3 top-3 rounded-full bg-ivory/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-saffron-deep shadow-soft backdrop-blur-sm">
-                      {a.category}
-                    </span>
-                  </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active}
+            initial={reduced ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -12 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {featured && (
+              <FeaturedArticle article={featured} shot={covers[featured.photo]} />
+            )}
 
-                  <div className="flex flex-1 flex-col p-6">
-                    <p className="flex items-center gap-3 text-xs text-moss">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                        {a.readMinutes} min read
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>{formatDate(a.publishedAt)}</span>
-                    </p>
-                    <h3 className="mt-2.5 font-display text-xl font-bold leading-snug text-forest-deep">
-                      {a.title}
-                    </h3>
-                    <p className="mt-2.5 text-sm leading-relaxed text-charcoal/70">
-                      {a.summary}
-                    </p>
-                  </div>
-                </motion.article>
-              );
-            })}
-          </AnimatePresence>
-        </div>
+            {supporting.length > 0 && (
+              <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {supporting.map((a) => (
+                  <ArticleCard key={a.slug} article={a} shot={covers[a.photo]} />
+                ))}
+              </div>
+            )}
 
-        {!shown.length && (
-          <p className="mt-12 text-center text-moss">
-            No articles in that category yet.
-          </p>
-        )}
+            {!shown.length && (
+              <p className="mt-12 text-center text-moss">
+                No articles in that category yet.
+              </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </section>
+  );
+}
+
+function Meta({ a, className }: { a: Article; className?: string }) {
+  return (
+    <p className={cn("flex items-center gap-3 text-xs", className)}>
+      <span className="inline-flex items-center gap-1">
+        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+        {a.readMinutes} min read
+      </span>
+      <span aria-hidden="true">·</span>
+      <span>{formatDate(a.publishedAt)}</span>
+    </p>
+  );
+}
+
+function FeaturedArticle({ article: a, shot }: { article: Article; shot?: Shot }) {
+  return (
+    <article className="group mt-10 grid overflow-hidden rounded-[1.75rem] border border-line bg-ivory shadow-card transition-shadow duration-300 hover:shadow-glow lg:grid-cols-2">
+      <div className="relative aspect-[16/10] overflow-hidden bg-sand-light lg:aspect-auto">
+        {shot && (
+          <Image
+            src={shot.src}
+            alt={shot.alt}
+            fill
+            sizes="(min-width: 1024px) 46vw, 92vw"
+            placeholder={shot.blurDataURL ? "blur" : undefined}
+            blurDataURL={shot.blurDataURL}
+            className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
+          />
+        )}
+        <span className="absolute left-4 top-4 rounded-full bg-marigold px-3 py-1 text-[11px] font-black uppercase tracking-wider text-night">
+          {a.category}
+        </span>
+      </div>
+
+      <div className="flex flex-col justify-center p-7 sm:p-10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-saffron-deep">
+          Featured
+        </p>
+        <h3 className="mt-3 text-balance font-display text-2xl font-bold leading-tight text-forest-deep sm:text-3xl lg:text-4xl">
+          {a.title}
+        </h3>
+        <Meta a={a} className="mt-4 text-moss" />
+        <p className="mt-4 text-base leading-relaxed text-charcoal/75">
+          {a.summary}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+function ArticleCard({ article: a, shot }: { article: Article; shot?: Shot }) {
+  return (
+    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-ivory shadow-card transition-shadow duration-300 hover:shadow-glow">
+      <div className="relative aspect-[16/10] overflow-hidden bg-sand-light">
+        {shot && (
+          <Image
+            src={shot.src}
+            alt={shot.alt}
+            fill
+            sizes="(min-width: 1024px) 31vw, (min-width: 640px) 46vw, 92vw"
+            placeholder={shot.blurDataURL ? "blur" : undefined}
+            blurDataURL={shot.blurDataURL}
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+          />
+        )}
+        <span className="absolute left-3 top-3 rounded-full bg-ivory/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-saffron-deep shadow-soft backdrop-blur-sm">
+          {a.category}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-6">
+        <Meta a={a} className="text-moss" />
+        <h3 className="mt-2.5 font-display text-xl font-bold leading-snug text-forest-deep">
+          {a.title}
+        </h3>
+        <p className="mt-2.5 text-sm leading-relaxed text-charcoal/70">
+          {a.summary}
+        </p>
+      </div>
+    </article>
   );
 }

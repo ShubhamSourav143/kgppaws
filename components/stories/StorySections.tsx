@@ -1,21 +1,27 @@
 "use client";
 
+import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from "framer-motion";
 import {
   ArrowDown,
   ArrowUpRight,
   BookOpen,
-  Clock,
   HeartHandshake,
   PawPrint,
   Play,
 } from "lucide-react";
 import { BeforeAfter } from "@/components/fx/BeforeAfter";
+import { Counter } from "@/components/fx/Counter";
 import { Reveal } from "@/components/motion/Reveal";
 import { Magnetic } from "@/components/fx/Magnetic";
-import { formatDate, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { Initiative } from "@/lib/stories/our-work";
 import type { Story } from "@/types";
 
@@ -43,14 +49,12 @@ export function StoriesHero({ shot }: { shot?: Shot }) {
             src={shot.src}
             alt=""
             fill
-            // Next 16 deprecated `priority` in favour of `preload`
             preload
             sizes="100vw"
             placeholder={shot.blurDataURL ? "blur" : undefined}
             blurDataURL={shot.blurDataURL}
             className="anim-kenburns object-cover"
           />
-          {/* two scrims: one for the whole frame, one anchoring the text */}
           <div className="absolute inset-0 bg-night/45" />
           <div className="absolute inset-0 bg-gradient-to-t from-night via-night/70 to-transparent" />
         </div>
@@ -117,8 +121,9 @@ export function StoriesHero({ shot }: { shot?: Shot }) {
 /* ——————————————————— 2 · Featured rescue stories ——————————————————— */
 
 /**
- * Editorial story cards, sized like a streaming service's hero row: the first
- * story runs full width, the rest fall into a two-up grid beneath it.
+ * Editorial layout — one cinematic featured story that fills the width, then
+ * the rest as image-dominant supporting cards. The featured photo drifts on a
+ * slow scroll parallax; every card lifts and zooms its image on hover.
  */
 export function FeaturedStories({
   stories,
@@ -149,16 +154,14 @@ export function FeaturedStories({
           </Reveal>
         </div>
 
-        <div className="mt-12 space-y-6 sm:mt-16">
-          <Reveal>
-            <StoryTile story={lead} shot={covers[lead.slug]} size="lead" />
-          </Reveal>
+        <div className="mt-12 sm:mt-16">
+          <FeaturedLead story={lead} shot={covers[lead.slug]} />
 
           {rest.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {rest.map((s, i) => (
                 <Reveal key={s.slug} delay={Math.min(i * 0.07, 0.28)}>
-                  <StoryTile story={s} shot={covers[s.slug]} size="normal" />
+                  <SupportingCard story={s} shot={covers[s.slug]} />
                 </Reveal>
               ))}
             </div>
@@ -169,80 +172,114 @@ export function FeaturedStories({
   );
 }
 
-function StoryTile({
-  story,
-  shot,
-  size,
-}: {
-  story: Story;
-  shot?: Shot;
-  size: "lead" | "normal";
-}) {
-  const lead = size === "lead";
+function FeaturedLead({ story, shot }: { story: Story; shot?: Shot }) {
+  const reduced = useReducedMotion() ?? false;
+  const ref = useRef<HTMLAnchorElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const y = useTransform(scrollYProgress, [0, 1], ["-6%", "6%"]);
+
+  return (
+    <Link
+      ref={ref}
+      href={`/stories/${story.slug}`}
+      className="group relative block overflow-hidden rounded-[2rem] bg-night shadow-card transition-shadow duration-500 hover:shadow-glow"
+    >
+      <div className="relative aspect-[4/5] sm:aspect-[21/9]">
+        {shot ? (
+          <motion.div
+            className="absolute inset-[-6%]"
+            style={reduced ? undefined : { y }}
+            aria-hidden="true"
+          >
+            <Image
+              src={shot.src}
+              alt={shot.alt}
+              fill
+              sizes="92vw"
+              placeholder={shot.blurDataURL ? "blur" : undefined}
+              blurDataURL={shot.blurDataURL}
+              className="object-cover transition-transform duration-[1.3s] ease-out group-hover:scale-[1.05]"
+            />
+          </motion.div>
+        ) : (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(150deg, ${story.heroPalette[0]}, ${story.heroPalette[1]})`,
+            }}
+          />
+        )}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-t from-night via-night/55 to-transparent"
+        />
+      </div>
+
+      <div className="absolute inset-x-0 bottom-0 p-6 sm:max-w-2xl sm:p-10 lg:p-12">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-marigold px-3 py-1 text-[11px] font-black uppercase tracking-wider text-night">
+          <PawPrint className="h-3 w-3" aria-hidden="true" />
+          Featured story
+        </span>
+        <h3 className="mt-4 text-balance font-display text-2xl font-bold leading-[1.08] text-ivory sm:text-4xl lg:text-5xl">
+          {story.title}
+        </h3>
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-ivory/75 sm:text-base">
+          {story.excerpt}
+        </p>
+        <span className="mt-6 inline-flex items-center gap-2 rounded-full bg-ivory px-6 py-3 text-sm font-bold text-forest-deep transition-all duration-300 group-hover:bg-marigold group-hover:text-night">
+          Read the story
+          <ArrowUpRight
+            className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+            aria-hidden="true"
+          />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function SupportingCard({ story, shot }: { story: Story; shot?: Shot }) {
   return (
     <Link
       href={`/stories/${story.slug}`}
-      className={cn(
-        "group relative block overflow-hidden rounded-[1.75rem] bg-night shadow-card transition-all duration-500 hover:-translate-y-1.5 hover:shadow-glow",
-        lead ? "aspect-[4/5] sm:aspect-[21/9]" : "aspect-[4/3]"
-      )}
+      className="group relative block aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-night shadow-card transition-all duration-500 hover:-translate-y-1.5 hover:shadow-glow"
     >
       {shot ? (
         <Image
           src={shot.src}
           alt={shot.alt}
           fill
-          sizes={lead ? "(min-width: 640px) 92vw, 92vw" : "(min-width: 640px) 46vw, 92vw"}
+          sizes="(min-width: 1024px) 31vw, (min-width: 640px) 46vw, 92vw"
           placeholder={shot.blurDataURL ? "blur" : undefined}
           blurDataURL={shot.blurDataURL}
-          className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.06]"
+          className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.07]"
         />
       ) : (
         <div
           aria-hidden="true"
-          className="h-full w-full"
+          className="absolute inset-0"
           style={{
             background: `linear-gradient(150deg, ${story.heroPalette[0]}, ${story.heroPalette[1]})`,
           }}
         />
       )}
-
-      {/* readability gradient, deepened on hover */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-t from-night via-night/55 to-transparent transition-opacity duration-500 group-hover:from-night group-hover:via-night/70"
+        className="absolute inset-0 bg-gradient-to-t from-night via-night/45 to-transparent transition-opacity duration-500 group-hover:from-night group-hover:via-night/60"
       />
 
-      <div
-        className={cn(
-          "absolute inset-x-0 bottom-0 p-6 sm:p-8",
-          lead && "sm:max-w-2xl lg:p-10"
-        )}
-      >
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-ivory/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-ivory backdrop-blur-sm">
-          <PawPrint className="h-3 w-3" aria-hidden="true" />
+      <div className="absolute inset-x-0 bottom-0 p-6">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-marigold">
           {story.category.replace("-", " ")}
         </span>
-
-        <h3
-          className={cn(
-            "mt-3 text-balance font-display font-bold leading-tight text-ivory",
-            lead ? "text-2xl sm:text-4xl lg:text-[2.6rem]" : "text-xl sm:text-2xl"
-          )}
-        >
+        <h3 className="mt-2 text-balance font-display text-xl font-bold leading-snug text-ivory sm:text-2xl">
           {story.title}
         </h3>
-
-        <p
-          className={cn(
-            "mt-2.5 max-w-xl leading-relaxed text-ivory/75",
-            lead ? "text-sm sm:text-base" : "text-sm"
-          )}
-        >
-          {story.excerpt}
-        </p>
-
-        <span className="mt-5 inline-flex items-center gap-2 rounded-full bg-ivory px-5 py-2.5 text-sm font-bold text-forest-deep transition-all duration-300 group-hover:bg-marigold group-hover:text-night">
+        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-ivory/90 transition-colors group-hover:text-marigold">
           Read story
           <ArrowUpRight
             className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
@@ -255,6 +292,13 @@ function StoryTile({
 }
 
 /* ————————————————————————— 3 · Our work ————————————————————————— */
+
+/** Split "350+" into a countable number and its trailing symbol. */
+function splitStat(value: string): { num?: number; suffix: string } {
+  const m = value.match(/^(\d+)(\+?)$/);
+  if (m) return { num: Number(m[1]), suffix: m[2] };
+  return { suffix: value };
+}
 
 export function OurWork({
   initiatives,
@@ -281,89 +325,139 @@ export function OurWork({
             </h2>
           </Reveal>
         </div>
+      </div>
 
-        <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {initiatives.map((it, i) => {
-            const shot = covers[it.photo];
-            return (
-              <Reveal key={it.slug} delay={Math.min(i * 0.06, 0.3)}>
-                <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-glow">
-                  <div className="relative aspect-[16/10] overflow-hidden bg-sand-light">
-                    {shot && (
-                      <Image
-                        src={shot.src}
-                        alt={shot.alt}
-                        fill
-                        sizes="(min-width: 1024px) 31vw, (min-width: 768px) 46vw, 92vw"
-                        placeholder={shot.blurDataURL ? "blur" : undefined}
-                        blurDataURL={shot.blurDataURL}
-                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.07]"
-                      />
-                    )}
-                    <div
-                      aria-hidden="true"
-                      className="absolute inset-0 bg-gradient-to-t from-night/60 to-transparent"
-                    />
-                    {it.stat && (
-                      <div className="absolute bottom-3 left-4 text-ivory">
-                        <p className="font-display text-2xl font-bold leading-none">
-                          {it.stat.value}
-                        </p>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-ivory/80">
-                          {it.stat.label}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-1 flex-col p-6">
-                    <h3 className="font-display text-xl font-bold text-forest-deep">
-                      {it.title}
-                    </h3>
-                    <p className="mt-2.5 text-sm leading-relaxed text-charcoal/70">
-                      {it.summary}
-                    </p>
-
-                    <div className="mt-4 rounded-2xl bg-mist/60 p-4">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-forest-bright">
-                        Why it matters
-                      </p>
-                      <p className="mt-1.5 text-sm leading-relaxed text-charcoal/75">
-                        {it.why}
-                      </p>
-                    </div>
-
-                    <Link
-                      href={it.href}
-                      className="mt-auto inline-flex items-center gap-1.5 pt-5 text-sm font-bold text-saffron-deep transition-colors hover:text-saffron"
-                    >
-                      Learn more
-                      <ArrowUpRight
-                        className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                        aria-hidden="true"
-                      />
-                    </Link>
-                  </div>
-                </article>
-              </Reveal>
-            );
-          })}
-        </div>
+      <div className="mt-16 space-y-20 sm:mt-20 sm:space-y-28">
+        {initiatives.map((it, i) => (
+          <InitiativeRow
+            key={it.slug}
+            initiative={it}
+            shot={covers[it.photo]}
+            index={i}
+          />
+        ))}
       </div>
     </section>
   );
 }
 
+function InitiativeRow({
+  initiative: it,
+  shot,
+  index,
+}: {
+  initiative: Initiative;
+  shot?: Shot;
+  index: number;
+}) {
+  const reduced = useReducedMotion() ?? false;
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const y = useTransform(scrollYProgress, [0, 1], ["-7%", "7%"]);
+  const flip = index % 2 === 1;
+  const stat = it.stat ? splitStat(it.stat.value) : undefined;
+
+  return (
+    <div ref={ref} className="container-page">
+      <div
+        className={cn(
+          "grid items-center gap-8 lg:grid-cols-2 lg:gap-16",
+          flip && "lg:[&>*:first-child]:order-2"
+        )}
+      >
+        {/* image */}
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-sand-light shadow-lift sm:aspect-[3/2]">
+          {shot && (
+            <motion.div
+              className="absolute inset-[-7%]"
+              style={reduced ? undefined : { y }}
+              aria-hidden="true"
+            >
+              <Image
+                src={shot.src}
+                alt={shot.alt}
+                fill
+                sizes="(min-width: 1024px) 46vw, 92vw"
+                placeholder={shot.blurDataURL ? "blur" : undefined}
+                blurDataURL={shot.blurDataURL}
+                className="object-cover"
+              />
+            </motion.div>
+          )}
+        </div>
+
+        {/* copy */}
+        <motion.div
+          initial={reduced ? false : { opacity: 0, y: 36 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <p className="font-mono text-sm font-semibold text-saffron-deep">
+            {String(index + 1).padStart(2, "0")}
+          </p>
+          <h3 className="mt-2 font-display text-3xl font-bold leading-tight text-forest-deep sm:text-4xl">
+            {it.title}
+          </h3>
+
+          {it.stat && (
+            <div className="mt-5 flex items-baseline gap-2">
+              <span className="font-display text-4xl font-bold text-saffron-deep sm:text-5xl">
+                {stat?.num !== undefined ? (
+                  <Counter value={stat.num} suffix={stat.suffix} />
+                ) : (
+                  stat?.suffix
+                )}
+              </span>
+              <span className="text-sm font-bold uppercase tracking-wider text-moss">
+                {it.stat.label}
+              </span>
+            </div>
+          )}
+
+          <p className="mt-5 text-lg leading-relaxed text-charcoal/75">
+            {it.summary}
+          </p>
+
+          <div className="mt-5 border-l-2 border-saffron/40 pl-4">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-forest-bright">
+              Why it matters
+            </p>
+            <p className="mt-1.5 text-base leading-relaxed text-charcoal/75">
+              {it.why}
+            </p>
+          </div>
+
+          <Link
+            href={it.href}
+            className="group mt-7 inline-flex items-center gap-2 rounded-full border border-forest/20 px-6 py-3 text-sm font-bold text-forest transition-colors hover:bg-mist"
+          >
+            Learn more
+            <ArrowUpRight
+              className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              aria-hidden="true"
+            />
+          </Link>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 /* ————————————————————— 5 · Before & after ————————————————————— */
 
-export function BeforeAfterSection({ pairs }: { pairs: { before: Shot; after: Shot; name: string; note: string }[] }) {
+export function BeforeAfterSection({
+  pairs,
+}: {
+  pairs: { before: Shot; after: Shot; name: string; note: string }[];
+}) {
   if (!pairs.length) return null;
 
   return (
-    <section
-      aria-labelledby="ba-h"
-      className="bg-night py-20 text-ivory sm:py-28"
-    >
+    <section aria-labelledby="ba-h" className="bg-night py-20 text-ivory sm:py-28">
       <div className="container-page">
         <div className="max-w-2xl">
           <Reveal>
@@ -380,27 +474,35 @@ export function BeforeAfterSection({ pairs }: { pairs: { before: Shot; after: Sh
             </p>
           </Reveal>
         </div>
+      </div>
 
-        <div className="mt-14 grid gap-8 lg:grid-cols-2">
-          {pairs.map((p, i) => (
-            <Reveal key={p.name} delay={Math.min(i * 0.08, 0.3)}>
-              <figure>
-                <BeforeAfter
-                  before={p.before.src}
-                  after={p.after.src}
-                  alt={`${p.name} before and after treatment`}
-                  className="overflow-hidden rounded-3xl shadow-lift"
-                />
-                <figcaption className="mt-4">
-                  <p className="font-display text-xl font-bold">{p.name}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-ivory/65">
-                    {p.note}
-                  </p>
-                </figcaption>
-              </figure>
-            </Reveal>
-          ))}
-        </div>
+      {/* horizontal gallery: swipe / scroll through the comparisons */}
+      <div className="mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto px-5 pb-4 [scrollbar-width:none] sm:px-8 lg:px-12 [&::-webkit-scrollbar]:hidden">
+        {pairs.map((p, i) => (
+          <motion.figure
+            key={p.name + i}
+            className="w-[85vw] shrink-0 snap-center sm:w-[32rem] lg:w-[38rem]"
+            initial={{ opacity: 0, y: 28 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <BeforeAfter
+              before={p.before.src}
+              after={p.after.src}
+              alt={`${p.name} before and after treatment`}
+              className="overflow-hidden rounded-3xl shadow-lift"
+            />
+            <figcaption className="mt-4">
+              <p className="font-display text-xl font-bold">{p.name}</p>
+              <p className="mt-1 text-sm leading-relaxed text-ivory/65">
+                {p.note}
+              </p>
+            </figcaption>
+          </motion.figure>
+        ))}
+        {/* trailing spacer so the last card can snap-center */}
+        <div aria-hidden="true" className="w-1 shrink-0 sm:w-4" />
       </div>
     </section>
   );
@@ -408,15 +510,22 @@ export function BeforeAfterSection({ pairs }: { pairs: { before: Shot; after: Sh
 
 /* ————————————————————— 6 · Happy endings ————————————————————— */
 
-/** Masonry via CSS columns — images keep their own aspect ratios. */
+const ENDINGS = [
+  { badge: "Recovered", caption: "Walking again after four months of physiotherapy." },
+  { badge: "Adopted", caption: "First night indoors, and every night since." },
+  { badge: "Recovered", caption: "Beat distemper against long odds. Fully grown now." },
+  { badge: "In remission", caption: "Fourteen years old and back in the sun." },
+  { badge: "Adopted", caption: "From the campus gate to a family of her own." },
+  { badge: "Released", caption: "Sterilized, vaccinated, home on his own street." },
+];
+
+/** Premium social-post cards — image, a paw handle, a caption and an outcome. */
 export function HappyEndings({ shots }: { shots: Shot[] }) {
   if (!shots.length) return null;
+  const cards = ENDINGS.map((e, i) => ({ ...e, shot: shots[i % shots.length] }));
 
   return (
-    <section
-      aria-labelledby="happy-h"
-      className="bg-cream py-20 sm:py-28"
-    >
+    <section aria-labelledby="happy-h" className="bg-cream py-20 sm:py-28">
       <div className="container-page">
         <div className="max-w-2xl">
           <Reveal>
@@ -430,32 +539,48 @@ export function HappyEndings({ shots }: { shots: Shot[] }) {
           </Reveal>
         </div>
 
-        <div className="mt-14 [column-fill:_balance] columns-2 gap-4 sm:gap-5 lg:columns-3">
-          {shots.map((s, i) => (
-            <motion.figure
-              key={s.src + i}
-              className="mb-4 break-inside-avoid overflow-hidden rounded-2xl bg-sand-light shadow-card sm:mb-5"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{
-                duration: 0.65,
-                delay: Math.min((i % 6) * 0.05, 0.25),
-                ease: [0.16, 1, 0.3, 1],
-              }}
-            >
-              <Image
-                src={s.src}
-                alt={s.alt}
-                width={600}
-                // vary the crop so the columns interlock instead of forming rows
-                height={i % 3 === 0 ? 800 : i % 3 === 1 ? 600 : 700}
-                sizes="(min-width: 1024px) 31vw, 46vw"
-                placeholder={s.blurDataURL ? "blur" : undefined}
-                blurDataURL={s.blurDataURL}
-                className="h-auto w-full object-cover transition-transform duration-700 ease-out hover:scale-[1.05]"
-              />
-            </motion.figure>
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {cards.map((c, i) => (
+            <Reveal key={c.caption} delay={Math.min(i * 0.06, 0.3)}>
+              <article className="group flex h-full flex-col overflow-hidden rounded-[1.5rem] border border-line bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-glow">
+                {/* post header */}
+                <div className="flex items-center gap-2.5 px-4 py-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-marigold text-ivory">
+                    <PawPrint className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div className="leading-tight">
+                    <p className="text-sm font-bold text-forest-deep">kgp.paws</p>
+                    <p className="text-[11px] text-moss">IIT Kharagpur</p>
+                  </div>
+                  <span className="ml-auto rounded-full bg-forest-bright/12 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-forest-bright">
+                    {c.badge}
+                  </span>
+                </div>
+
+                {/* photo */}
+                <div className="relative aspect-square overflow-hidden bg-sand-light">
+                  {c.shot && (
+                    <Image
+                      src={c.shot.src}
+                      alt={c.shot.alt}
+                      fill
+                      sizes="(min-width: 1024px) 31vw, (min-width: 640px) 46vw, 92vw"
+                      placeholder={c.shot.blurDataURL ? "blur" : undefined}
+                      blurDataURL={c.shot.blurDataURL}
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+                    />
+                  )}
+                </div>
+
+                {/* caption */}
+                <div className="px-4 py-4">
+                  <p className="text-sm leading-relaxed text-charcoal/80">
+                    <span className="font-bold text-forest-deep">kgp.paws</span>{" "}
+                    {c.caption}
+                  </p>
+                </div>
+              </article>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -471,7 +596,7 @@ export function StoriesFinalCta({ shot }: { shot?: Shot }) {
   return (
     <section
       aria-labelledby="stories-cta-h"
-      className="relative overflow-hidden bg-night py-28 text-ivory sm:py-36"
+      className="relative flex min-h-[100svh] items-center overflow-hidden bg-night text-ivory"
     >
       {shot && (
         <div className="absolute inset-0" aria-hidden="true">
@@ -484,7 +609,7 @@ export function StoriesFinalCta({ shot }: { shot?: Shot }) {
             blurDataURL={shot.blurDataURL}
             className="anim-kenburns object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-night/88 via-night/78 to-night/92" />
+          <div className="absolute inset-0 bg-gradient-to-b from-night/85 via-night/72 to-night/90" />
         </div>
       )}
 
@@ -494,7 +619,7 @@ export function StoriesFinalCta({ shot }: { shot?: Shot }) {
         </Reveal>
         <motion.h2
           id="stories-cta-h"
-          className="mx-auto mt-7 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] sm:text-5xl lg:text-6xl"
+          className="mx-auto mt-7 max-w-4xl text-balance font-display text-4xl font-bold leading-[1.06] sm:text-6xl lg:text-7xl"
           initial={reduced ? false : { opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.4 }}
@@ -503,7 +628,7 @@ export function StoriesFinalCta({ shot }: { shot?: Shot }) {
           Help Write The Next Success Story.
         </motion.h2>
         <Reveal delay={0.25}>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ivory/70">
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ivory/75">
             Every story on this page began with somebody deciding not to walk
             past. That is the entire qualification.
           </p>
@@ -512,7 +637,7 @@ export function StoriesFinalCta({ shot }: { shot?: Shot }) {
           <Magnetic strength={0.25}>
             <Link
               href="/donate"
-              className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-9 py-4 text-lg font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
+              className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-10 py-4 text-lg font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
             >
               <HeartHandshake className="h-5 w-5" aria-hidden="true" />
               Donate
@@ -528,28 +653,5 @@ export function StoriesFinalCta({ shot }: { shot?: Shot }) {
         </Reveal>
       </div>
     </section>
-  );
-}
-
-/* ——— shared bits ——— */
-
-export function ReadMeta({
-  minutes,
-  date,
-  className,
-}: {
-  minutes: number;
-  date: string;
-  className?: string;
-}) {
-  return (
-    <p className={cn("flex items-center gap-3 text-xs text-moss", className)}>
-      <span className="inline-flex items-center gap-1">
-        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-        {minutes} min read
-      </span>
-      <span aria-hidden="true">·</span>
-      <span>{formatDate(date)}</span>
-    </p>
   );
 }

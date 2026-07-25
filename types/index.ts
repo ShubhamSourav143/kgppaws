@@ -209,7 +209,14 @@ export type StoryBlock =
   | { type: "h2"; text: string }
   | { type: "quote"; text: string; by?: string }
   | { type: "image"; caption: string; palette: [string, string] }
-  | { type: "timeline"; items: { date: string; text: string }[] };
+  | {
+      type: "timeline";
+      // `date` may carry a stage label after a "·" (e.g. "12 Mar 2026 · Found").
+      // `medical` is optional clinical detail surfaced on the rescue-journey
+      // view; both are additive and safe to omit — the CMS `blocks` column is
+      // freeform JSON, so older rows without them still render.
+      items: { date: string; text: string; medical?: string }[];
+    };
 
 export interface StoryPhoto {
   id: string;

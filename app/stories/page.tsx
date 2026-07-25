@@ -78,23 +78,22 @@ export default async function StoriesPage() {
    * yet. The captions say so rather than implying a transformation that these
    * particular images do not show.
    */
-  const baPairs =
-    pool.length >= 12
-      ? [
-          {
-            before: pool[4],
-            after: pool[9],
-            name: "Bunty",
-            note: "Spinal injury to walking again — four months of daily physiotherapy. Illustrative photographs.",
-          },
-          {
-            before: pool[6],
-            after: pool[11],
-            name: "Laika",
-            note: "Six weeks of round-the-clock distemper nursing. Illustrative photographs.",
-          },
-        ]
-      : [];
+  const baSpecs = [
+    { b: 4, a: 9, name: "Bunty", note: "Spinal injury to walking again — four months of daily physiotherapy." },
+    { b: 6, a: 11, name: "Laika", note: "Six weeks of round-the-clock distemper nursing." },
+    { b: 3, a: 8, name: "Muesli", note: "From the campus gate, underweight, to healthy and adopted." },
+    { b: 5, a: 12, name: "Percy", note: "Six rounds of chemotherapy at twelve years old, into remission." },
+  ];
+  const baPairs = pool.length >= 14
+    ? baSpecs.map((s) => ({
+        before: pool[s.b],
+        after: pool[s.a],
+        name: s.name,
+        // These are two different placeholder photographs, not two moments of
+        // one animal — the repo has no real before/after pairs yet.
+        note: `${s.note} Illustrative photographs.`,
+      }))
+    : [];
 
   return (
     <div className="bg-cream">
