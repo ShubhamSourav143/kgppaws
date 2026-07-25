@@ -287,6 +287,211 @@ export const DEMO_STORIES: Story[] = [
       },
     ],
   },
+
+  /* ————— Rescue journeys ————— */
+  /* These four follow the full arc the story page is built around:
+     Found → Rescue → Medical Treatment → Recovery → Today. Each carries a
+     five-item `timeline` block, which the story page renders as its spine. */
+
+  {
+    id: "st-0007",
+    slug: "bunty-paralysis-journey",
+    title: "Bunty Could Not Move His Back Legs. Watch Him Now.",
+    excerpt:
+      "A spinal injury left Bunty dragging himself along the road outside Nalanda. Four months of physiotherapy later, he runs to meet the feeding cart.",
+    category: "recovery",
+    animalSlug: "bunti",
+    readMinutes: 7,
+    publishedAt: "2026-07-12",
+    author: "KGP PAWS",
+    heroPalette: ["#4A6FA5", "#173F35"],
+    featured: true,
+    demo: true,
+    photos: [],
+    blocks: [
+      {
+        type: "p",
+        text: "The report came in just after 9 PM: a young dog near the Nalanda complex, back legs trailing behind him, pulling himself forward on his front paws alone. By the time volunteers reached him he had dragged himself nearly two hundred metres, and his hind paws were raw from the road.",
+      },
+      {
+        type: "timeline",
+        items: [
+          { date: "12 Mar 2026 · Found", text: "Reported near Nalanda after dark, hind legs completely limp, dragging himself along the road." },
+          { date: "12 Mar 2026 · Rescue", text: "Stabilised on a rigid board to protect the spine and moved to the partner clinic the same night." },
+          { date: "14 Mar 2026 · Medical treatment", text: "X-rays showed spinal trauma consistent with a vehicle strike — no fracture, but severe swelling around the cord. Started on steroids, anti-inflammatories and strict cage rest." },
+          { date: "Apr–Jun 2026 · Recovery", text: "Daily physiotherapy: assisted standing, then water-supported walking. First unaided step on 2 May, seven weeks in." },
+          { date: "Today", text: "Runs — with a permanent slight sway in his back end that does not slow him down at all. He meets the feeding cart every morning." },
+        ],
+      },
+      { type: "h2", text: "The first six weeks" },
+      {
+        type: "p",
+        text: "Spinal swelling is a waiting game. There was no surgery to perform and no way to know how much function would return; all anyone could do was keep the inflammation down, keep him still, and move his legs for him twice a day so the muscle did not waste away entirely.",
+      },
+      {
+        type: "quote",
+        text: "You move the legs for an animal who cannot feel them, twice a day, for six weeks, with no idea whether it is doing anything. And then one morning there is a twitch.",
+        by: "Rescue volunteer, KGP PAWS",
+      },
+      { type: "image", caption: "Week nine — assisted standing, taking weight for the first time", palette: ["#9DB4D0", "#4A6FA5"] },
+      {
+        type: "p",
+        text: "The twitch came in the ninth week. Two weeks after that he could hold himself up if someone supported his hips. On 2 May he took a single unaided step, fell over, and got back up.",
+      },
+      { type: "h2", text: "Today" },
+      {
+        type: "p",
+        text: "Bunty will always walk with a sway. He cannot manage stairs well and he tires faster than the other dogs on his route. None of that appears to have registered with him. He is, by a considerable margin, the most enthusiastic dog on the morning round.",
+      },
+    ],
+  },
+
+  {
+    id: "st-0008",
+    slug: "muesli-second-chance",
+    title: "Muesli Was Bred to Be Sold. Then She Stopped Being Profitable.",
+    excerpt:
+      "Abandoned at the campus gate with a collar still on, Muesli had never spent a night outdoors. She learned the rest from the dogs who found her first.",
+    category: "rescue",
+    animalSlug: "muesli",
+    readMinutes: 6,
+    publishedAt: "2026-06-28",
+    author: "KGP PAWS",
+    heroPalette: ["#E9C98F", "#8A6A4F"],
+    featured: true,
+    demo: true,
+    photos: [],
+    blocks: [
+      {
+        type: "p",
+        text: "You can usually tell. A dog who has never been outside does not know how to read traffic, does not know where to shelter when it rains, and does not know that food has to be looked for. Muesli arrived at the main gate knowing none of it, wearing a collar that someone had not bothered to remove.",
+      },
+      {
+        type: "timeline",
+        items: [
+          { date: "3 Feb 2026 · Found", text: "Sitting at the main gate at dawn, collared, groomed, and completely unable to cope. She had not moved from the spot in several hours." },
+          { date: "3 Feb 2026 · Rescue", text: "Walked in without resistance — she had clearly been waiting for someone to come back for her." },
+          { date: "5 Feb 2026 · Medical treatment", text: "Underweight, dehydrated, with an untreated ear infection and a skin condition consistent with long-term confinement. Vaccinated and dewormed." },
+          { date: "Feb–Apr 2026 · Recovery", text: "Coat and weight recovered within eight weeks. The harder part was teaching her to be a dog: where to sleep, how to approach the others, how to be alone without panicking." },
+          { date: "Today", text: "Sterilized, healthy, and living with a family in the staff quarters. She still waits by doors." },
+        ],
+      },
+      { type: "h2", text: "What breeding leaves behind" },
+      {
+        type: "p",
+        text: "Muesli was around four when she arrived, which is roughly when a breeding dog stops being commercially useful. The pattern is familiar enough that volunteers recognise it on sight: good coat, no road sense, no survival instinct, and an unshakeable belief that the person who left is coming back.",
+      },
+      {
+        type: "quote",
+        text: "She sat at that gate for hours. Not lost — waiting. That is the part that stays with you.",
+        by: "Rescue volunteer, KGP PAWS",
+      },
+      { type: "image", caption: "Eight weeks in — coat recovered, still watching the gate", palette: ["#F3DDA6", "#C79A54"] },
+      { type: "h2", text: "Today" },
+      {
+        type: "p",
+        text: "She was adopted in April by a family in the staff quarters. They report that she is gentle, entirely house-trained from her old life, and that she still gets up to check whenever a door opens.",
+      },
+    ],
+  },
+
+  {
+    id: "st-0009",
+    slug: "distemper-survivor",
+    title: "Almost Nothing Survives Distemper. Laika Did.",
+    excerpt:
+      "By the time the tremors started, the odds were long enough that the vet said it plainly. Six weeks of round-the-clock nursing said otherwise.",
+    category: "recovery",
+    animalSlug: "laika",
+    readMinutes: 6,
+    publishedAt: "2026-06-14",
+    author: "KGP PAWS",
+    heroPalette: ["#7FA08C", "#0B2A1E"],
+    featured: true,
+    demo: true,
+    photos: [],
+    blocks: [
+      {
+        type: "p",
+        text: "Distemper begins as something that looks entirely unremarkable — runny eyes, a cough, a puppy who is off her food. By the time the neurological signs appear, the virus has usually already won. There is no cure. There is only supportive care and time.",
+      },
+      {
+        type: "timeline",
+        items: [
+          { date: "8 Jan 2026 · Found", text: "A four-month-old pup near the Gymkhana, discharge around the eyes and nose, refusing food for a second day." },
+          { date: "8 Jan 2026 · Rescue", text: "Isolated immediately — distemper is airborne and the litter she came from had already lost two." },
+          { date: "10 Jan 2026 · Medical treatment", text: "Confirmed canine distemper. No antiviral exists; treatment was fluids, anti-seizure medication, nebulisation and hand-feeding every three hours." },
+          { date: "Jan–Feb 2026 · Recovery", text: "Tremors peaked in week three and slowly receded. She began eating unassisted on day 26 and walking steadily by week six." },
+          { date: "Today", text: "Fully grown and healthy, with a permanent slight head tremor when she concentrates. Vaccinated, sterilized, and unbothered." },
+        ],
+      },
+      { type: "h2", text: "Six weeks of three-hour shifts" },
+      {
+        type: "p",
+        text: "Nothing about this treatment is clever. It is fluids, warmth, clean bedding, medication on schedule and food delivered by syringe every three hours around the clock, sustained for six weeks by people who also had degrees to finish.",
+      },
+      {
+        type: "quote",
+        text: "The vet told us honestly that most do not make it, and that the ones who do are usually left with damage. We decided we would rather find out than assume.",
+        by: "Rescue volunteer, KGP PAWS",
+      },
+      { type: "image", caption: "Week four — first day standing without support", palette: ["#B9CFC2", "#7FA08C"] },
+      { type: "h2", text: "Which is why we vaccinate" },
+      {
+        type: "p",
+        text: "Laika's littermates were not vaccinated, and two of them died. Laika survived six weeks of intensive nursing that cost more than vaccinating an entire hall-area cohort would have. The DHPP vaccine costs a fraction of that and prevents the whole thing.",
+      },
+    ],
+  },
+
+  {
+    id: "st-0010",
+    slug: "chemotherapy-journey",
+    title: "The Lump Was Cancer. We Treated It Anyway.",
+    excerpt:
+      "Percy was twelve, and the obvious thing to say was that it was too late. Six rounds of chemotherapy later, he is spending his fourteenth year in the sun.",
+    category: "recovery",
+    animalSlug: "percy",
+    readMinutes: 6,
+    publishedAt: "2026-05-30",
+    author: "KGP PAWS",
+    heroPalette: ["#C96745", "#0B2A1E"],
+    featured: true,
+    demo: true,
+    photos: [],
+    blocks: [
+      {
+        type: "p",
+        text: "A volunteer noticed it during a routine tick check — a firm swelling under the jaw that had not been there a month earlier. Within a week there were three more, along the chest and behind the knee.",
+      },
+      {
+        type: "timeline",
+        items: [
+          { date: "14 Nov 2025 · Found", text: "Enlarged lymph node found during a routine check on the Main Building round." },
+          { date: "18 Nov 2025 · Rescue", text: "Brought in for diagnostics rather than an emergency — he walked in under his own steam and objected mainly to the car." },
+          { date: "22 Nov 2025 · Medical treatment", text: "Fine-needle aspiration confirmed multicentric lymphoma. Started a six-round CHOP chemotherapy protocol, one round every three weeks, with bloodwork before each." },
+          { date: "Dec 2025 – Mar 2026 · Recovery", text: "Nodes reduced measurably after the second round and were undetectable by the fifth. Side effects stayed mild: some nausea, one week of low appetite." },
+          { date: "Today", text: "In remission and monitored quarterly. He is fourteen, and he has claimed the warmest step outside the Main Building." },
+        ],
+      },
+      { type: "h2", text: "Chemotherapy in dogs is not what people picture" },
+      {
+        type: "p",
+        text: "The doses used in veterinary oncology are calibrated for quality of life rather than cure at any cost. Most dogs keep their coat, keep eating and carry on as normal between rounds. Percy's worst week was a mild one; he was indignant about the car journeys and largely untroubled by the rest.",
+      },
+      {
+        type: "quote",
+        text: "Somebody asked whether it was worth treating a dog that old. He has had fourteen more months of sleeping in the sun. Ask him.",
+        by: "Rescue volunteer, KGP PAWS",
+      },
+      { type: "image", caption: "Round five — bloodwork clear, nodes undetectable", palette: ["#E8A87C", "#C96745"] },
+      { type: "h2", text: "Today" },
+      {
+        type: "p",
+        text: "Lymphoma in dogs relapses more often than not, and everyone involved knows that. He is checked every three months. In the meantime he is fourteen years old, in remission, and entirely in charge of the warmest step on that side of the building.",
+      },
+    ],
+  },
 ];
 
 export function getDemoStory(slug: string) {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Camera, Clock, Heart } from "lucide-react";
 import { getStory, listStories } from "@/services/stories";
@@ -10,6 +11,10 @@ import { PhotoGallery } from "@/components/media/PhotoGallery";
 import { Reveal } from "@/components/motion/Reveal";
 import { ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
+import { StoryTimeline } from "@/components/stories/StoryTimeline";
+import type { Shot } from "@/components/stories/StorySections";
+import { listMedia } from "@/lib/media";
+import { poolForSpecies } from "@/lib/demo/photo-pool";
 import { STORY_CATEGORY_LABELS } from "@/lib/demo/stories";
 import { formatDate } from "@/lib/utils";
 import type { StoryBlock } from "@/types";
@@ -120,11 +125,54 @@ export default async function StoryPage({
   const story = await getStory(slug);
   if (!story) notFound();
 
-  const [animal, allStories] = await Promise.all([
+  const [animal, allStories, adoptMedia, gridMedia] = await Promise.all([
     story.animalSlug ? getAnimal(story.animalSlug) : Promise.resolve(undefined),
     listStories(),
+    listMedia("adopt"),
+    listMedia("hero-grid"),
   ]);
   const related = allStories.filter((s) => s.slug !== story.slug).slice(0, 2);
+
+  // Photography for the hero and the journey. The story's own uploads win;
+  // the shared pool fills in behind them until real story photos exist.
+  const byStem = new Map<string, Shot>();
+  for (const m of [...adoptMedia, ...gridMedia]) {
+    const file = m.src.split("/").pop() ?? "";
+    const stem = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
+    if (stem && !byStem.has(stem)) {
+      byStem.set(stem, { src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
+    }
+  }
+  const pool = [...byStem.values()];
+  const own: Shot[] = story.photos
+    .filter((p) => p.url)
+    .map((p) => ({ src: p.url, alt: p.caption || story.title }));
+
+  // Placeholder photography has to match the animal the story is about — a cat
+  // in a dog's rescue journey reads as careless. Narrow the pool by species
+  // whenever the story is tied to an animal we know.
+  const speciesPool = animal
+    ? poolForSpecies(
+        pool.map((s) => s.src),
+        animal.species
+      )
+        .map((src) => pool.find((s) => s.src === src))
+        .filter((s): s is Shot => Boolean(s))
+    : pool;
+  const usablePool = speciesPool.length ? speciesPool : pool;
+
+  const hero =
+    own[0] ??
+    (story.animalSlug ? byStem.get(story.animalSlug) : undefined) ??
+    usablePool[0];
+
+  // The journey is lifted out of the body so it can run full width; the rest
+  // of the blocks still read as an article in the narrow column.
+  const timelineSteps = story.blocks
+    .filter((b): b is Extract<StoryBlock, { type: "timeline" }> => b.type === "timeline")
+    .flatMap((b) => b.items);
+  const bodyBlocks = story.blocks.filter((b) => b.type !== "timeline");
+  const journeyShots = own.length > 1 ? own.slice(1) : usablePool.slice(1);
 
   return (
     <article>
@@ -135,8 +183,22 @@ export default async function StoryPage({
           background: `linear-gradient(160deg, ${story.heroPalette[0]}, ${story.heroPalette[1]})`,
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/55 via-transparent to-charcoal/25" aria-hidden="true" />
-        <div className="container-page relative flex min-h-[62vh] flex-col justify-end pb-14 pt-32">
+        {hero && (
+          <div className="absolute inset-0" aria-hidden="true">
+            <Image
+              src={hero.src}
+              alt=""
+              fill
+              preload
+              sizes="100vw"
+              placeholder={hero.blurDataURL ? "blur" : undefined}
+              blurDataURL={hero.blurDataURL}
+              className="anim-kenburns object-cover"
+            />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-night via-night/60 to-night/35" aria-hidden="true" />
+        <div className="container-page relative flex min-h-[72vh] flex-col justify-end pb-14 pt-32">
           <div className="flex flex-wrap items-center gap-3">
             <Chip tone="sand">{STORY_CATEGORY_LABELS[story.category]}</Chip>
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-cream/85">
@@ -156,10 +218,13 @@ export default async function StoryPage({
         </div>
       </header>
 
+      {/* the journey — full width, between the hero and the article */}
+      <StoryTimeline steps={timelineSteps} shots={journeyShots} title={story.title} />
+
       {/* body */}
       <div className="container-page grid gap-12 py-14 lg:grid-cols-[minmax(0,44rem)_1fr]">
         <div className="min-w-0">
-          {story.blocks.map((block, i) => (
+          {bodyBlocks.map((block, i) => (
             <Block key={i} block={block} />
           ))}
 
