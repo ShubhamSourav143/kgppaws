@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Menu, X, Siren, LayoutDashboard, LogIn, ArrowUpRight } from "lucide-react";
+import { Menu, X, Siren, LayoutDashboard, ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Magnetic } from "@/components/fx/Magnetic";
 import { InlineSearch, type InlineSearchHandle } from "@/components/search/InlineSearch";
@@ -141,7 +141,7 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
           <div className="flex items-center gap-2 sm:gap-3">
             <InlineSearch ref={searchRef} light={light} onOpenChange={setSearchOpen} />
 
-            {user ? (
+            {user && (
               <Link
                 href={dashboardHref}
                 className={cn(
@@ -154,20 +154,6 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
               >
                 <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                 {user.name.split(" ")[0]}
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className={cn(
-                  "hidden items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all md:inline-flex",
-                  searchOpen && "pointer-events-none scale-95 opacity-0",
-                  light
-                    ? "border-ivory/25 bg-ivory/10 text-ivory hover:bg-ivory/20"
-                    : "border-forest/15 bg-ivory/60 text-forest hover:bg-ivory"
-                )}
-              >
-                <LogIn className="h-4 w-4" aria-hidden="true" />
-                Sign in
               </Link>
             )}
 
@@ -279,21 +265,13 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
                   <Siren className="h-5 w-5" aria-hidden="true" />
                   Report an Animal
                 </Link>
-                {user ? (
+                {user && (
                   <Link
                     href={dashboardHref}
                     className="inline-flex items-center gap-2 rounded-full border border-ivory/25 px-6 py-3.5 font-semibold text-ivory"
                   >
                     <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                     My dashboard
-                  </Link>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="inline-flex items-center gap-2 rounded-full border border-ivory/25 px-6 py-3.5 font-semibold text-ivory"
-                  >
-                    <LogIn className="h-4 w-4" aria-hidden="true" />
-                    Sign in
                   </Link>
                 )}
               </motion.div>
