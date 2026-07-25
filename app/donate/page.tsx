@@ -143,31 +143,11 @@ export default async function DonatePage() {
         </div>
       </section>
 
-      {/* 3b · Give
-          NOTE: this section intentionally has no donate form or expense
-          ledger beneath it — both were removed at the user's explicit
-          request, aware that DonatePanel is the site's only working donation
-          mechanism. Every "Donate Now" / "Donate to this" button on this page
-          still points at #give and will land here with nothing to act on. */}
-      <section
-        id="give"
-        aria-labelledby="give-h"
-        className="scroll-mt-24 bg-gradient-to-b from-cream to-parchment py-20 sm:py-28"
-      >
-        <div className="container-page">
-          <div className="max-w-2xl">
-            <Reveal>
-              <p className="eyebrow mb-4 text-saffron-deep">Make it count</p>
-              <h2
-                id="give-h"
-                className="font-display text-3xl font-bold leading-tight text-forest-deep sm:text-4xl lg:text-5xl"
-              >
-                Give in under a minute.
-              </h2>
-            </Reveal>
-          </div>
-        </div>
-      </section>
+      {/* NOTE: the "Give" section (donate form + expense ledger + this
+          heading) has been fully removed at the user's request. There is no
+          #give anchor left on the page — every "Donate Now" / "Donate to
+          this" button still points at #give and is now a dead link with
+          nothing to scroll to. */}
 
       {/* 4 · Transparency — donor wall */}
       <DonorWall donors={donors} campaigns={wallCampaigns} isDemo={donorsAreDemo} />
