@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { ArrowUpRight, BadgeCheck, Mars, Venus, MapPin } from "lucide-react";
-import { AnimalPortrait } from "@/components/animals/Portrait";
+import { AnimalPortrait, STORY_SHOTS } from "@/components/animals/Portrait";
 import { HealthChip, AdoptionChip } from "@/components/animals/chips";
 import { SaveButton } from "@/components/animals/SaveButton";
 import { Tilt } from "@/components/fx/Tilt";
 import { zoneName } from "@/lib/demo/zones";
 import { cn } from "@/lib/utils";
 import type { Animal } from "@/types";
+
+/** Shared by the two alternating call-to-action messages (see .adopt-cta in
+ *  globals.css) — both stack in one grid cell so the bar never resizes. */
+const CTA_TEXT =
+  "adopt-cta__text col-start-1 row-start-1 whitespace-nowrap font-display text-xl font-bold tracking-wide [text-shadow:0_1px_6px_rgb(120_50_10_/_0.45)] sm:text-2xl";
 
 const SEX_META: Record<Animal["sex"], { icon: typeof Mars; label: string } | null> = {
   male: { icon: Mars, label: "Male" },
@@ -26,6 +31,13 @@ export function AnimalCard({
   className?: string;
 }) {
   const sex = SEX_META[animal.sex];
+  // The card cycles through the first three uploaded photos as a story; with
+  // fewer real uploads it quietly falls back to a single still (or the
+  // illustrated portrait when nothing has been uploaded at all).
+  const shots = animal.photos
+    .filter((p) => p.url)
+    .slice(0, STORY_SHOTS)
+    .map((p) => ({ src: p.url as string, alt: p.caption || `Photo of ${animal.name}` }));
   // The whole platform is adoption-only — foster_needed rolls up to adoptable.
   const canAdopt = animal.adoption === "available" || animal.adoption === "foster_needed";
   const isAdopted = animal.adoption === "adopted";
@@ -42,7 +54,8 @@ export function AnimalCard({
         <div className="transition-transform duration-700 ease-out group-hover:scale-[1.06]">
           <AnimalPortrait
             animal={animal}
-            photoUrl={animal.photos.find((p) => p.url)?.url}
+            photoUrl={shots[0]?.src}
+            photos={shots.length === STORY_SHOTS ? shots : undefined}
             className="aspect-[5/4] rounded-none"
           />
         </div>
@@ -109,39 +122,46 @@ export function AnimalCard({
         </div>
 
         {/* explicit, always-visible adopt affordance */}
-        <div
-          className={cn(
-            "adopt-bar -mx-5 -mb-5 mt-3 flex items-center justify-between gap-2 border-t border-line px-5 py-3.5 text-sm font-bold transition-all duration-300",
-            canAdopt
-              ? "text-saffron-deep group-hover:bg-gradient-to-r group-hover:from-saffron/10 group-hover:to-marigold/10"
-              : isAdopted
+        {canAdopt ? (
+          <div className="adopt-cta -mx-5 -mb-5 mt-3 flex items-center justify-center gap-3 px-5 py-4 text-ivory">
+            <span
+              aria-hidden="true"
+              className="text-xl transition-transform duration-300 group-hover:scale-125 group-hover:animate-bounce"
+            >
+              🐾
+            </span>
+            {/* the two messages share one grid cell, so the bar is sized by the
+                wider of them and never reflows as they alternate */}
+            <span aria-hidden="true" className="grid place-items-center">
+              <span className={cn(CTA_TEXT, "adopt-cta__text--a")}>Click here</span>
+              <span className={cn(CTA_TEXT, "adopt-cta__text--b")}>Adopt Me</span>
+            </span>
+            <span className="sr-only">Adopt {animal.name}</span>
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-ivory/25 transition-all duration-300 group-hover:bg-ivory group-hover:text-saffron-deep group-hover:shadow-ember">
+              <ArrowUpRight
+                className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                aria-hidden="true"
+              />
+            </span>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "adopt-bar -mx-5 -mb-5 mt-3 flex items-center justify-between gap-2 border-t border-line px-5 py-3.5 text-sm font-bold transition-all duration-300",
+              isAdopted
                 ? "text-forest-bright group-hover:bg-forest-bright/5"
                 : "text-moss group-hover:bg-mist"
-          )}
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <span className={cn(
-              "inline-block transition-transform duration-300",
-              canAdopt && "group-hover:scale-125 group-hover:animate-bounce"
-            )}>
-              {canAdopt ? "🐾" : isAdopted ? "♥" : ""}
+            )}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              {isAdopted && <span aria-hidden="true">♥</span>}
+              <span>{isAdopted ? "Adopted — happy ending" : "View profile"}</span>
             </span>
-            <span className={cn(
-              "transition-all duration-300",
-              canAdopt && "group-hover:tracking-wide"
-            )}>
-              {canAdopt ? "Adopt Me" : isAdopted ? "Adopted — happy ending" : "View profile"}
+            <span className="grid h-7 w-7 place-items-center rounded-full transition-all duration-300 group-hover:bg-forest/10">
+              <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
             </span>
-          </span>
-          <span className={cn(
-            "grid h-7 w-7 place-items-center rounded-full transition-all duration-300",
-            canAdopt
-              ? "group-hover:bg-saffron group-hover:text-ivory group-hover:shadow-ember"
-              : "group-hover:bg-forest/10"
-          )}>
-            <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
-          </span>
-        </div>
+          </div>
+        )}
       </div>
     </Link>
   );

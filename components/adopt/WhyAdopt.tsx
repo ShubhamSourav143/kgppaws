@@ -1,6 +1,17 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { HeartCrack, Ban, HeartHandshake, type LucideIcon } from "lucide-react";
-import { Reveal, Stagger, Item } from "@/components/fx/Reveal";
+import {
+  AnimatePresence,
+  motion,
+  useAnimationFrame,
+  useInView,
+  useMotionValue,
+  useReducedMotion,
+} from "framer-motion";
+import { PawPrint } from "lucide-react";
+import { Reveal } from "@/components/fx/Reveal";
 import { TextReveal } from "@/components/fx/TextReveal";
 import { cn } from "@/lib/utils";
 
@@ -16,92 +27,227 @@ export interface WhyPhoto {
 /** Keyed by filename stem — adopt/*.jpg and hero-grid/grid-NN.jpg. */
 export type WhyPhotos = Record<string, WhyPhoto>;
 
-interface Shot {
+interface Slide {
+  n: string;
+  /** filename stem resolved against the media manifest */
   key: string;
   alt: string;
-}
-
-interface Band {
-  n: string;
-  icon: LucideIcon;
   title: string;
   body: string;
-  shots: [Shot, Shot, Shot, Shot];
+  points: [string, string, string];
 }
 
 /**
- * "Why Adoption Matters" — three titled bands, each a short message followed
- * by a row of four photographs. Photos are keyed by filename stem and resolved
- * to real files (with blur placeholders) by the Adopt page; a missing key
- * degrades to a soft gradient tile so the grid never breaks.
+ * Four "Why Adoption Matters" stories. Each is a single emotional photograph
+ * paired with one message. Photos are keyed by filename stem and resolved to
+ * real files (with blur placeholders) by the Adopt page; a missing key
+ * degrades to a soft gradient so the layout never breaks.
+ *
+ * The four slides deliberately share the same shape — a title, one sentence,
+ * and exactly three bullets of similar length — so every slide reserves the
+ * same height and the slideshow never shifts the page as it advances.
  */
-const BANDS: Band[] = [
+const SLIDES: Slide[] = [
   {
     n: "01",
-    icon: HeartCrack,
-    title: "Thousands abandoned every year",
-    body: "Countless healthy dogs and cats are left behind each year — not because anything is wrong with them, but because homes ran out before love did. Born on the roadside, many never survive their first months.",
-    shots: [
-      { key: "romi", alt: "A rescued dog waiting quietly for a home" },
-      { key: "grid-15", alt: "A street puppy with a soulful gaze" },
-      { key: "grid-05", alt: "A street cat looking up from the roadside" },
-      { key: "grid-12", alt: "A young dog with a wistful expression" },
+    key: "romi",
+    alt: "A rescued street dog waiting quietly for a home",
+    title: "Thousands are abandoned every year",
+    body:
+      "Healthy dogs and cats are left behind every single day — not because anything is wrong with them, but because homes ran out before love did.",
+    points: [
+      "Born on the roadside, many never survive their first months",
+      "Left at gates, markets and highways once they’re no longer wanted",
+      "Every empty bowl is a life still waiting to be chosen",
     ],
   },
   {
     n: "02",
-    icon: Ban,
+    key: "odin",
+    alt: "A small-breed dog once bred for sale, now rescued",
     title: "Bred for profit, then discarded",
-    body: "Some animals are bred purely to sell and abandoned the moment they stop being profitable. Rescued and treated by our volunteers, they slowly learn that a raised hand can also mean a gentle one.",
-    shots: [
-      { key: "odin", alt: "A small-breed dog once bred for sale" },
-      { key: "grid-08", alt: "A tiny-breed dog resting after rescue" },
-      { key: "grid-06", alt: "A rescued dog settling into a safe home" },
-      { key: "grid-03", alt: "A hound recovering in comfort" },
+    body:
+      "Countless animals are bred purely to sell and abandoned the moment they stop being profitable.",
+    points: [
+      "Sold as products, dumped when they fall ill or grow up",
+      "Our volunteers rescue, treat and patiently rehabilitate them",
+      "They slowly learn a raised hand can also be a gentle one",
     ],
   },
   {
     n: "03",
-    icon: HeartHandshake,
-    title: "Adoption saves a life",
-    body: "Choosing to adopt frees up care for the next rescue and eases the cycle of unnecessary breeding. One choice, two lives changed — theirs, and yours.",
-    shots: [
-      { key: "simba", alt: "A healthy, happy adopted dog" },
-      { key: "grid-09", alt: "A joyful golden retriever in a loving home" },
-      { key: "bunti", alt: "A rescued husky thriving after adoption" },
-      { key: "grid-02", alt: "A rescued cat safe and warm indoors" },
+    key: "grid-09",
+    alt: "A joyful adopted dog thriving in a loving home",
+    title: "One rescue changes two lives",
+    body:
+      "Adopting frees up scarce care for the next animal in crisis and quietly eases the cycle of needless breeding.",
+    points: [
+      "Your home opens a shelter space for another rescue",
+      "Fewer animals bred means fewer animals abandoned",
+      "Two lives change forever — theirs, and yours",
+    ],
+  },
+  {
+    n: "04",
+    key: "simba",
+    alt: "A healthy, happy adopted dog greeting the morning",
+    title: "You write their next chapter",
+    body:
+      "Choose adoption and a frightened survivor becomes a thriving companion who greets every morning like a gift.",
+    points: [
+      "Vaccinated, health-checked and ready for a family",
+      "A loyal friend who never forgets the day you chose them",
+      "Living proof that second chances make the best stories",
     ],
   },
 ];
 
-function Photo({ shot, photos }: { shot: Shot; photos: WhyPhotos }) {
-  const photo = photos[shot.key];
+const DURATION = 5000; // ms per slide
+const LEN = SLIDES.length;
+
+/** The two-column body of a single slide (image left · message right). */
+function SlideBody({
+  slide,
+  photos,
+  preview,
+  reduced,
+}: {
+  slide: Slide;
+  photos: WhyPhotos;
+  /** render as an invisible sizer (no image load, no animation) */
+  preview?: boolean;
+  reduced?: boolean;
+}) {
+  const photo = photos[slide.key];
   return (
-    <figure className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-sand-light shadow-soft ring-1 ring-line/60">
-      {photo ? (
-        <Image
-          src={photo.src}
-          alt={photo.alt ?? shot.alt}
-          fill
-          // one of four across on desktop, two across on smaller screens
-          sizes="(min-width: 1024px) 22vw, (min-width: 640px) 23vw, 45vw"
-          placeholder={photo.blurDataURL ? "blur" : undefined}
-          blurDataURL={photo.blurDataURL}
-          className="object-cover transition-transform duration-700 ease-out hover:scale-[1.05]"
-        />
-      ) : (
-        <div
-          aria-hidden="true"
-          className="h-full w-full bg-gradient-to-br from-sand via-sand-light to-mist"
-        />
-      )}
-    </figure>
+    <div className="grid items-center gap-5 sm:gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,7fr)] lg:gap-8">
+      {/* — image (≈30%) — */}
+      <div className="relative aspect-[16/11] w-full overflow-hidden rounded-3xl bg-sand-light shadow-lift ring-1 ring-line/60 lg:aspect-[4/5]">
+        {preview ? (
+          <div className="h-full w-full" aria-hidden="true" />
+        ) : photo ? (
+          <motion.div
+            className="absolute inset-0"
+            initial={reduced ? false : { scale: 1.02 }}
+            animate={reduced ? undefined : { scale: 1.12 }}
+            transition={{ duration: 6.2, ease: "linear" }}
+          >
+            <Image
+              src={photo.src}
+              alt={photo.alt ?? slide.alt}
+              fill
+              sizes="(min-width: 1024px) 30vw, 92vw"
+              placeholder={photo.blurDataURL ? "blur" : undefined}
+              blurDataURL={photo.blurDataURL}
+              className="object-cover"
+            />
+          </motion.div>
+        ) : (
+          <div
+            aria-hidden="true"
+            className="h-full w-full bg-gradient-to-br from-sand via-sand-light to-mist"
+          />
+        )}
+      </div>
+
+      {/* — message (≈70%) — */}
+      <div className="lg:pl-1">
+        <p className="font-display text-sm font-bold text-moss">
+          {slide.n}
+          <span className="text-charcoal/30"> / {String(LEN).padStart(2, "0")}</span>
+        </p>
+        <h3 className="mt-2 font-display text-2xl font-bold leading-snug text-forest-deep sm:text-3xl lg:text-[2.15rem]">
+          {slide.title}
+        </h3>
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-charcoal/70 sm:text-base">
+          {slide.body}
+        </p>
+        <ul className="mt-5 space-y-3">
+          {slide.points.map((point) => (
+            <li key={point} className="flex items-start gap-3">
+              <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-saffron/12 text-saffron-deep">
+                <PawPrint className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+              <span className="text-sm leading-relaxed text-charcoal/80 sm:text-[0.95rem]">
+                {point}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
 
+/**
+ * "Why Adoption Matters" — an Instagram-Stories slideshow. Each story is a
+ * large photograph beside its adoption message; four thin progress bars drive
+ * the show (auto-advancing every 5s, click to jump, pause on hover, swipe on
+ * touch). Slides cross-fade with a gentle horizontal slide while the active
+ * photo drifts in a slow Ken Burns zoom. Respects prefers-reduced-motion.
+ */
 export function WhyAdopt({ photos = {} }: { photos?: WhyPhotos }) {
+  const reduced = useReducedMotion() ?? false;
+
+  const [index, setIndex] = useState(0);
+  const [dir, setDir] = useState(1);
+  const progress = useMotionValue(0);
+
+  const sectionRef = useRef<HTMLElement>(null);
+  const inView = useInView(sectionRef, { amount: 0.35 });
+
+  const elapsed = useRef(0);
+  const hovering = useRef(false);
+
+  const go = useCallback(
+    (next: number, direction: number) => {
+      elapsed.current = 0;
+      progress.set(0);
+      setDir(direction);
+      setIndex(((next % LEN) + LEN) % LEN);
+    },
+    [progress]
+  );
+
+  const jump = useCallback(
+    (i: number) => {
+      if (i === index) return;
+      go(i, i > index ? 1 : -1);
+    },
+    [index, go]
+  );
+
+  // Reset the clock whenever the active slide changes (jump or auto-advance).
+  useEffect(() => {
+    elapsed.current = 0;
+    progress.set(0);
+  }, [index, progress]);
+
+  // Single rAF clock drives both the active bar's fill and the auto-advance.
+  useAnimationFrame((_t, delta) => {
+    if (reduced || !inView || hovering.current) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    elapsed.current += delta;
+    const p = elapsed.current / DURATION;
+    if (p >= 1) {
+      go(index + 1, 1);
+    } else {
+      progress.set(p);
+    }
+  });
+
+  const slideTransition = { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const };
+  const active = SLIDES[index];
+
   return (
-    <section aria-labelledby="why-h" className="bg-cream py-20 sm:py-28">
+    <section
+      ref={sectionRef}
+      aria-labelledby="why-h"
+      aria-roledescription="carousel"
+      className="bg-cream py-20 sm:py-28"
+      onMouseEnter={() => (hovering.current = true)}
+      onMouseLeave={() => (hovering.current = false)}
+    >
       <div className="container-page">
         <div className="max-w-2xl">
           <Reveal effect="fade">
@@ -114,49 +260,114 @@ export function WhyAdopt({ photos = {} }: { photos?: WhyPhotos }) {
           />
         </div>
 
-        <div className="mt-14 space-y-16 sm:mt-16 sm:space-y-20">
-          {BANDS.map((band) => {
-            const Icon = band.icon;
-            return (
-              <Reveal key={band.n} effect="rise">
-                <article aria-label={band.title}>
-                  {/* — title / description — */}
-                  <div className="flex max-w-3xl items-start gap-4 sm:gap-5">
-                    <span className="mt-0.5 grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-saffron/12 text-saffron-deep">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <p className="font-display text-sm font-bold text-moss">
-                        {band.n}
-                        <span className="text-charcoal/30"> / 03</span>
-                      </p>
-                      <h3 className="mt-1 font-display text-2xl font-bold leading-snug text-forest-deep sm:text-3xl">
-                        {band.title}
-                      </h3>
-                      <p className="mt-3 text-sm leading-relaxed text-charcoal/70 sm:text-base">
-                        {band.body}
-                      </p>
-                    </div>
-                  </div>
+        <Reveal effect="rise" className="mt-12 sm:mt-14">
+          {/* — progress bars — */}
+          <div className="flex items-center gap-2" role="tablist" aria-label="Story progress">
+            {SLIDES.map((s, i) => (
+              <ProgressSegment
+                key={s.n}
+                index={i}
+                state={i < index ? "done" : i === index ? "active" : "todo"}
+                progress={progress}
+                reduced={reduced}
+                title={s.title}
+                onJump={jump}
+              />
+            ))}
+          </div>
 
-                  {/* — row of four fitted photos — */}
-                  <Stagger
-                    className={cn(
-                      "mt-7 grid grid-cols-2 gap-4 sm:mt-8 sm:grid-cols-4 sm:gap-5"
-                    )}
-                  >
-                    {band.shots.map((shot) => (
-                      <Item key={shot.key}>
-                        <Photo shot={shot} photos={photos} />
-                      </Item>
-                    ))}
-                  </Stagger>
-                </article>
-              </Reveal>
-            );
-          })}
-        </div>
+          {/* — stage — */}
+          <motion.div
+            className="relative mt-8 touch-pan-y select-none sm:mt-10"
+            onPanEnd={(e, info) => {
+              const pointer = (e as PointerEvent).pointerType;
+              if (pointer && pointer !== "touch") return; // swipe = touch only
+              if (info.offset.x < -60) go(index + 1, 1);
+              else if (info.offset.x > 60) go(index - 1, -1);
+            }}
+          >
+            {/* invisible sizer — stacks all four slides in one grid cell so the
+                stage always reserves the tallest slide's height (no layout
+                shift), responsively, with no magic numbers. */}
+            <div aria-hidden="true" className="invisible grid pointer-events-none">
+              {SLIDES.map((s) => (
+                <div key={s.n} className="col-start-1 row-start-1">
+                  <SlideBody slide={s} photos={photos} preview />
+                </div>
+              ))}
+            </div>
+
+            {/* animated layers, absolutely filling the reserved box */}
+            <div className="absolute inset-0">
+              <AnimatePresence initial={false} custom={dir}>
+                <motion.div
+                  key={index}
+                  custom={dir}
+                  className="absolute inset-0"
+                  initial={
+                    reduced
+                      ? { opacity: 0 }
+                      : { opacity: 0, x: dir > 0 ? 48 : -48 }
+                  }
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={
+                    reduced
+                      ? { opacity: 0 }
+                      : { opacity: 0, x: dir > 0 ? -48 : 48 }
+                  }
+                  transition={slideTransition}
+                >
+                  <SlideBody slide={active} photos={photos} reduced={reduced} />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        </Reveal>
       </div>
     </section>
+  );
+}
+
+/** Progress segment with an explicit done/active/todo state. */
+function ProgressSegment({
+  index,
+  state,
+  progress,
+  reduced,
+  title,
+  onJump,
+}: {
+  index: number;
+  state: "done" | "active" | "todo";
+  progress: ReturnType<typeof useMotionValue<number>>;
+  reduced: boolean;
+  title: string;
+  onJump: (i: number) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={state === "active"}
+      aria-label={`Go to slide ${index + 1}: ${title}`}
+      onClick={() => onJump(index)}
+      className="group relative flex-1 py-2 focus-visible:outline-none"
+    >
+      <span className="block h-1 overflow-hidden rounded-full bg-charcoal/12 transition-colors group-hover:bg-charcoal/20 group-focus-visible:ring-2 group-focus-visible:ring-saffron/60">
+        {state === "active" ? (
+          <motion.span
+            className="block h-full w-full origin-left rounded-full bg-gradient-to-r from-saffron-deep to-saffron"
+            style={reduced ? { scaleX: 1 } : { scaleX: progress }}
+          />
+        ) : (
+          <span
+            className={cn(
+              "block h-full rounded-full bg-gradient-to-r from-saffron-deep to-saffron transition-[width] duration-500",
+              state === "done" ? "w-full" : "w-0"
+            )}
+          />
+        )}
+      </span>
+    </button>
   );
 }
