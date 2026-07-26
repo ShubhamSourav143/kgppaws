@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Mail, Siren, ArrowUpRight } from "lucide-react";
 import { Logo, Seal } from "@/components/brand/Logo";
 import { Marquee } from "@/components/fx/Marquee";
@@ -54,6 +55,22 @@ const LEGAL = [
 
 const MANTRA = ["Rescue", "Heal", "Protect", "Remember"];
 
+/**
+ * The five rescues who peek over the top of the footer.
+ *
+ * Each is used exactly once, with its own slight scale (95–105%) and vertical
+ * nudge (±8px) so the row reads as five individuals rather than a stamped
+ * strip. Intrinsic dimensions come from the source files, so next/image
+ * reserves the right box up front and nothing shifts as they load.
+ */
+const PETS = [
+  { src: "/images/footer-dogs/dog-1.png", w: 480, h: 659, alt: "", scale: 1.02, dy: -6, dur: "5.4s", delay: "0s" },
+  { src: "/images/footer-dogs/dog-2.png", w: 480, h: 356, alt: "", scale: 0.97, dy: 5, dur: "6s", delay: "-1.6s" },
+  { src: "/images/footer-dogs/dog-3.png", w: 480, h: 923, alt: "", scale: 1.05, dy: -3, dur: "5.7s", delay: "-3.1s" },
+  { src: "/images/footer-dogs/dog-4.png", w: 471, h: 750, alt: "", scale: 0.95, dy: 8, dur: "5.9s", delay: "-0.8s" },
+  { src: "/images/footer-dogs/dog-5.png", w: 419, h: 751, alt: "", scale: 1.0, dy: -8, dur: "5.5s", delay: "-2.4s" },
+];
+
 export interface FooterSections {
   socialLinks: FooterItem[];
   quickLinks: FooterItem[];
@@ -80,7 +97,54 @@ export function Footer({
   const email = emergencyEmail ?? SITE.email;
 
   return (
-    <footer className="aurora relative overflow-hidden bg-night pb-24 text-ivory md:pb-0">
+    <div className="relative">
+      {/* ——— peeking rescues ———
+          Sits in normal flow above the footer, which is then pulled up over it,
+          so the animals appear to be looking over the footer's top edge. The
+          strip has a fixed height at every breakpoint, so adding it reserves
+          its own space and causes no layout shift. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none container-page flex h-[4.5rem] items-end justify-between sm:h-24 lg:h-28"
+      >
+        {PETS.map((p) => (
+          <span
+            key={p.src}
+            className="footer-pet relative block"
+            style={
+              {
+                top: `${p.dy}px`,
+                "--pet-dur": p.dur,
+                "--pet-delay": p.delay,
+              } as React.CSSProperties
+            }
+          >
+            <Image
+              src={p.src}
+              alt={p.alt}
+              width={p.w}
+              height={p.h}
+              loading="lazy"
+              sizes="(min-width: 1024px) 160px, (min-width: 640px) 130px, 90px"
+              className="h-[4.5rem] w-auto object-contain object-bottom sm:h-24 lg:h-28"
+              style={{ transform: `scale(${p.scale})`, transformOrigin: "bottom center" }}
+            />
+          </span>
+        ))}
+      </div>
+
+      <footer className="aurora relative z-10 -mt-5 overflow-hidden bg-night pb-24 text-ivory md:pb-0">
+        {/* seamless line-art texture — decorative, sits under everything */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 opacity-[0.06]"
+          style={{
+            backgroundImage: "url(/images/footer-pattern.svg)",
+            backgroundRepeat: "repeat",
+            backgroundSize: "260px 260px",
+          }}
+        />
+        <div className="relative z-10">
       {/* mantra marquee */}
       <div className="border-b border-ivory/10 py-5">
         <Marquee duration={28} className="select-none">
@@ -221,6 +285,8 @@ export function Footer({
           </p>
         </div>
       </div>
-    </footer>
+        </div>
+      </footer>
+    </div>
   );
 }

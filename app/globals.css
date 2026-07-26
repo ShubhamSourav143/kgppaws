@@ -290,6 +290,18 @@ html.lenis, html.lenis body { height: auto; }
   100% { transform: scaleX(1); }
 }
 
+/* Footer peeking animals — a slow 3px bob. Transform only, so it never
+   triggers layout and stays cheap enough to run on five images at once. */
+@keyframes footer-pet-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.footer-pet {
+  animation: footer-pet-float var(--pet-dur, 5.5s) ease-in-out infinite;
+  animation-delay: var(--pet-delay, 0s);
+  will-change: transform;
+}
+
 @keyframes adopt-sheen {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -445,6 +457,9 @@ html.lenis, html.lenis body { height: auto; }
   .adopt-cta__text { animation: none !important; }
   .adopt-cta__text--a { opacity: 0; }
   .adopt-cta__text--b { opacity: 1; transform: none; }
+
+  /* Park the footer animals instead of bobbing them. */
+  .footer-pet { animation: none !important; transform: none; }
 
   /* Hold the card stories on the first photo rather than cycling. */
   .card-stories__shot, .card-stories__fill { animation: none !important; }
