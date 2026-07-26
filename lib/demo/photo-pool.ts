@@ -10,7 +10,7 @@
  * of their own, those photos win and the pool is no longer drawn from.
  * If you add or replace files in hero-grid/, update this list.
  */
-const CAT_STEMS = new Set(["grid-02", "grid-05", "grid-07", "grid-11"]);
+const CAT_STEMS = new Set(["grid-05"]);
 
 function stemOf(src: string): string {
   return (src.split("/").pop() ?? "").replace(/\.[^.]+$/, "").toLowerCase();
