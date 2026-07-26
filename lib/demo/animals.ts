@@ -43,7 +43,7 @@ export const DEMO_ANIMALS: Animal[] = [
       tongue: true,
     },
     photos: [
-      { id: "sp1", caption: "Evening watch at Technology Market", date: "2026-06-20" },
+      { id: "sp1", url: "/images/adopt/simba.jpg", caption: "Evening watch at Technology Market", date: "2026-06-20" },
       { id: "sp2", caption: "First week of paw treatment", date: "2026-04-20" },
       { id: "sp3", caption: "Fully recovered, fully unbothered", date: "2026-05-14" },
     ],
@@ -96,7 +96,7 @@ export const DEMO_ANIMALS: Animal[] = [
       tongue: true,
     },
     photos: [
-      { id: "mp1", caption: "Supervising football practice", date: "2026-06-25" },
+      { id: "mp1", url: "/images/adopt/muesli.jpg", caption: "Supervising football practice", date: "2026-06-25" },
       { id: "mp2", caption: "Post-zoomies recovery nap", date: "2026-06-10" },
       { id: "mp3", caption: "With her hostel volunteer crew", date: "2026-05-02" },
     ],
@@ -146,7 +146,7 @@ export const DEMO_ANIMALS: Animal[] = [
       tongue: false,
     },
     photos: [
-      { id: "hp1", caption: "Morning post, Main Building steps", date: "2026-06-12" },
+      { id: "hp1", url: "/images/adopt/shanti.jpg", caption: "Morning post, Main Building steps", date: "2026-06-12" },
       { id: "hp2", caption: "Convocation day cameo", date: "2025-12-20" },
       { id: "hp3", caption: "Senior wellness checkup", date: "2026-06-15" },
     ],
@@ -196,7 +196,7 @@ export const DEMO_ANIMALS: Animal[] = [
       tongue: true,
     },
     photos: [
-      { id: "bp1", caption: "HQ: the RK Hall mess entrance", date: "2026-06-18" },
+      { id: "bp1", url: "/images/adopt/bunti.jpg", caption: "HQ: the RK Hall mess entrance", date: "2026-06-18" },
       { id: "bp2", caption: "Medicated bath day (deeply wronged)", date: "2026-06-29" },
       { id: "bp3", caption: "Coat growing back", date: "2026-07-06" },
     ],
@@ -246,7 +246,7 @@ export const DEMO_ANIMALS: Animal[] = [
       tongue: true,
     },
     photos: [
-      { id: "lp1", caption: "Week two: small and furious", date: "2026-03-30" },
+      { id: "lp1", url: "/images/adopt/laika.jpg", caption: "Week two: small and furious", date: "2026-03-30" },
       { id: "lp2", caption: "First solo meal", date: "2026-05-01" },
       { id: "lp3", caption: "Arguing with pigeons (ongoing)", date: "2026-06-27" },
     ],
@@ -400,7 +400,7 @@ export const DEMO_ANIMALS: Animal[] = [
       tongue: false,
     },
     photos: [
-      { id: "rp1", caption: "Rare stationary sighting", date: "2026-05-15" },
+      { id: "rp1", url: "/images/adopt/rocket.jpg", caption: "Rare stationary sighting", date: "2026-05-15" },
       { id: "rp2", caption: "On duty, Main Gate", date: "2026-06-08" },
     ],
     medicalTimeline: [
