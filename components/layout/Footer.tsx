@@ -97,17 +97,17 @@ export function Footer({
 
   return (
     <div className="relative">
-      {/* ——— peeking rescues ———
-          Sits in normal flow above the footer, which is then pulled up over it,
-          so the animals appear to be looking over the footer's top edge. The
-          strip has a fixed height at every breakpoint, so adding it reserves
-          its own space and causes no layout shift. */}
-      {/* Own padding rather than container-page: at this size the four dogs
-          need the full mobile width, and 20px gutters would leave them
-          touching. Max width still matches the footer's content column. */}
+      {/* ——— rescues emerging from behind the footer ———
+          Absolutely positioned, so it occupies no space in the flow and adds
+          no band of its own — the dogs simply stand in whatever section
+          precedes the footer. Its top is pinned to the footer's top edge and
+          then lifted 72% of its own height, leaving the bottom ~28% of every
+          dog behind the footer, which paints over it on a higher z-index.
+          Own padding rather than container-page: at this size the dogs need
+          close to the full mobile width, and 20px gutters left them touching. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none mx-auto flex h-36 w-full max-w-7xl items-end justify-between px-2 sm:h-48 sm:px-8 lg:h-56 lg:px-12"
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 mx-auto flex h-36 w-full max-w-7xl -translate-y-[72%] items-end justify-between px-2 sm:h-48 sm:px-8 lg:h-56 lg:px-12"
       >
         {PETS.map((p) => (
           <span
@@ -128,14 +128,16 @@ export function Footer({
               height={p.h}
               loading="lazy"
               sizes="(min-width: 1024px) 320px, (min-width: 640px) 260px, 180px"
-              className="h-36 w-auto object-contain object-bottom sm:h-48 lg:h-56"
+              className="h-36 w-auto object-contain object-bottom drop-shadow-[0_12px_16px_rgba(10,18,14,0.28)] sm:h-48 lg:h-56"
               style={{ transform: `scale(${p.scale})`, transformOrigin: "bottom center" }}
             />
           </span>
         ))}
       </div>
 
-      <footer className="aurora relative z-10 -mt-8 overflow-hidden bg-night pb-24 text-ivory md:pb-0 lg:-mt-10">
+      {/* The upward shadow is what sells the depth: it falls from the footer's
+          own top edge onto the dogs standing behind it. */}
+      <footer className="aurora relative z-10 overflow-hidden bg-night pb-24 text-ivory shadow-[0_-18px_38px_-14px_rgba(6,12,9,0.85)] md:pb-0">
         {/* seamless line-art texture — decorative, sits under everything */}
         <span
           aria-hidden="true"
