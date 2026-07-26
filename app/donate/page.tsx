@@ -33,18 +33,30 @@ export default async function DonatePage() {
     listMedia("donate"),
   ]);
 
-  // Campaign galleries prefer their own dedicated donate/*.jpg photos first, so
-  // no image reused on the adopt page or in the hero grid ever appears again
-  // inside a donation gallery.
+  // Two disjoint pools so no photo appears in two sections of the donate page:
+  //   * campaign galleries pull from donate/*.jpg (dedicated per-campaign stems
+  //     — see lib/donate/editorial.ts)
+  //   * the hero collage, "Why donate" tiles and final CTA backdrop pull from
+  //     the shared adopt/ + hero-grid/ pool, and are sliced disjointly below.
   const byStem = new Map<string, Shot>();
-  for (const m of [...donateMedia, ...adoptMedia, ...gridMedia]) {
+  for (const m of donateMedia) {
     const file = m.src.split("/").pop() ?? "";
     const stem = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
     if (stem && !byStem.has(stem)) {
       byStem.set(stem, { src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
     }
   }
-  const pool = [...byStem.values()];
+  const generalPool: Shot[] = [...adoptMedia, ...gridMedia].map((m) => ({
+    src: m.src,
+    alt: m.alt,
+    blurDataURL: m.blurDataURL,
+  }));
+  // Everything outside the campaign galleries draws from a single unique-slot
+  // sequence, so the hero, "why donate" cards and final backdrop each get their
+  // own set of photos with no overlap.
+  const heroShots = generalPool.slice(0, 12);
+  const whyShots = generalPool.slice(12, 16);
+  const ctaShots = generalPool.slice(16, 17);
 
   /** Resolve a campaign's gallery stems, dropping any file that isn't there. */
   const galleryFor = (stems: string[]): GalleryPhoto[] =>
@@ -109,7 +121,7 @@ export default async function DonatePage() {
   return (
     <div className="bg-cream">
       {/* 1 · Hero */}
-      <DonateHero shots={pool} />
+      <DonateHero shots={heroShots} />
 
       {/* 2 · Our impact */}
       <ImpactStats />
@@ -157,10 +169,10 @@ export default async function DonatePage() {
       <DonorWall donors={donors} campaigns={wallCampaigns} isDemo={donorsAreDemo} />
 
       {/* 5 · Why donate */}
-      <WhyDonate shots={pool.slice(3, 7)} />
+      <WhyDonate shots={whyShots} />
 
       {/* 6 · Final CTA */}
-      <FinalCta shots={pool.slice(8)} />
+      <FinalCta shots={ctaShots} />
     </div>
   );
 }
