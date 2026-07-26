@@ -34,16 +34,18 @@ export interface HeroMediaItem {
 
 interface Cell {
   src: string;
+  type?: "image" | "video";
   /** desktop grid placement (left half sits under the text overlay) */
   pos: string;
   /** desktop-only cells collapse away on mobile */
   desktopOnly?: boolean;
-  /** ken burns timing — desynced per cell */
+  /** ken burns timing — desynced per cell (images only) */
   duration: number;
   delay: number;
 }
 
-const g = (n: number) => `/images/hero-grid/grid-${String(n).padStart(2, "0")}.jpg`;
+const g = (n: number, ext = "jpg") =>
+  `/images/hero-grid/grid-${String(n).padStart(2, "0")}.${ext}`;
 
 const CELLS: Cell[] = [
   // right half — always visible (these 8 form the mobile collage)
@@ -59,11 +61,11 @@ const CELLS: Cell[] = [
   { src: g(9),  pos: "lg:col-start-1 lg:row-start-1", desktopOnly: true, duration: 19, delay: -6 },
   { src: g(10), pos: "lg:col-start-2 lg:row-start-1", desktopOnly: true, duration: 16, delay: -12 },
   { src: g(11), pos: "lg:col-start-1 lg:row-start-2", desktopOnly: true, duration: 21, delay: -2 },
-  { src: g(12), pos: "lg:col-start-2 lg:row-start-2", desktopOnly: true, duration: 17, delay: -8 },
+  { src: g(12, "mp4"), type: "video", pos: "lg:col-start-2 lg:row-start-2", desktopOnly: true, duration: 17, delay: -8 },
   { src: g(13), pos: "lg:col-start-1 lg:row-start-3", desktopOnly: true, duration: 20, delay: -15 },
   { src: g(14), pos: "lg:col-start-2 lg:row-start-3", desktopOnly: true, duration: 15, delay: -4 },
   { src: g(15), pos: "lg:col-start-1 lg:row-start-4", desktopOnly: true, duration: 22, delay: -10 },
-  { src: g(16), pos: "lg:col-start-2 lg:row-start-4", desktopOnly: true, duration: 18, delay: -1.5 },
+  { src: g(16, "mp4"), type: "video", pos: "lg:col-start-2 lg:row-start-4", desktopOnly: true, duration: 18, delay: -1.5 },
 ];
 
 export function Hero({
@@ -109,18 +111,29 @@ export function Hero({
               cell.desktopOnly ? "hidden lg:block" : ""
             }`}
           >
-            <Image
-              src={cell.src}
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 25vw, 50vw"
-              priority={!cell.desktopOnly}
-              className="anim-kenburns object-cover"
-              style={{
-                animationDuration: `${cell.duration}s`,
-                animationDelay: `${cell.delay}s`,
-              }}
-            />
+            {cell.type === "video" ? (
+              <video
+                src={cell.src}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={cell.src}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 25vw, 50vw"
+                priority={!cell.desktopOnly}
+                className="anim-kenburns object-cover"
+                style={{
+                  animationDuration: `${cell.duration}s`,
+                  animationDelay: `${cell.delay}s`,
+                }}
+              />
+            )}
             {/* subtle hover: a whisper of warm light, nothing card-like */}
             <span
               aria-hidden="true"
