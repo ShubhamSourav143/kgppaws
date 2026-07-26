@@ -56,19 +56,18 @@ const LEGAL = [
 const MANTRA = ["Rescue", "Heal", "Protect", "Remember"];
 
 /**
- * The five rescues who peek over the top of the footer.
+ * The four rescues who peek over the top of the footer.
  *
  * Each is used exactly once, with its own slight scale (95–105%) and vertical
- * nudge (±8px) so the row reads as five individuals rather than a stamped
+ * nudge (±8px) so the row reads as four individuals rather than a stamped
  * strip. Intrinsic dimensions come from the source files, so next/image
  * reserves the right box up front and nothing shifts as they load.
  */
 const PETS = [
-  { src: "/images/footer-dogs/dog-1.png", w: 480, h: 659, alt: "", scale: 1.02, dy: -6, dur: "5.4s", delay: "0s" },
-  { src: "/images/footer-dogs/dog-2.png", w: 480, h: 356, alt: "", scale: 0.97, dy: 5, dur: "6s", delay: "-1.6s" },
-  { src: "/images/footer-dogs/dog-3.png", w: 480, h: 923, alt: "", scale: 1.05, dy: -3, dur: "5.7s", delay: "-3.1s" },
-  { src: "/images/footer-dogs/dog-4.png", w: 471, h: 750, alt: "", scale: 0.95, dy: 8, dur: "5.9s", delay: "-0.8s" },
-  { src: "/images/footer-dogs/dog-5.png", w: 419, h: 751, alt: "", scale: 1.0, dy: -8, dur: "5.5s", delay: "-2.4s" },
+  { src: "/images/footer-dogs/pet-1.png", w: 720, h: 988, alt: "", scale: 1.02, dy: -6, dur: "5.4s", delay: "0s" },
+  { src: "/images/footer-dogs/pet-2.png", w: 720, h: 1385, alt: "", scale: 1.05, dy: -3, dur: "5.7s", delay: "-3.1s" },
+  { src: "/images/footer-dogs/pet-3.png", w: 471, h: 750, alt: "", scale: 0.95, dy: 8, dur: "5.9s", delay: "-0.8s" },
+  { src: "/images/footer-dogs/pet-4.png", w: 419, h: 751, alt: "", scale: 1.0, dy: -8, dur: "5.5s", delay: "-2.4s" },
 ];
 
 export interface FooterSections {
@@ -103,9 +102,12 @@ export function Footer({
           so the animals appear to be looking over the footer's top edge. The
           strip has a fixed height at every breakpoint, so adding it reserves
           its own space and causes no layout shift. */}
+      {/* Own padding rather than container-page: at this size the four dogs
+          need the full mobile width, and 20px gutters would leave them
+          touching. Max width still matches the footer's content column. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none container-page flex h-[4.5rem] items-end justify-between sm:h-24 lg:h-28"
+        className="pointer-events-none mx-auto flex h-36 w-full max-w-7xl items-end justify-between px-2 sm:h-48 sm:px-8 lg:h-56 lg:px-12"
       >
         {PETS.map((p) => (
           <span
@@ -125,15 +127,15 @@ export function Footer({
               width={p.w}
               height={p.h}
               loading="lazy"
-              sizes="(min-width: 1024px) 160px, (min-width: 640px) 130px, 90px"
-              className="h-[4.5rem] w-auto object-contain object-bottom sm:h-24 lg:h-28"
+              sizes="(min-width: 1024px) 320px, (min-width: 640px) 260px, 180px"
+              className="h-36 w-auto object-contain object-bottom sm:h-48 lg:h-56"
               style={{ transform: `scale(${p.scale})`, transformOrigin: "bottom center" }}
             />
           </span>
         ))}
       </div>
 
-      <footer className="aurora relative z-10 -mt-5 overflow-hidden bg-night pb-24 text-ivory md:pb-0">
+      <footer className="aurora relative z-10 -mt-8 overflow-hidden bg-night pb-24 text-ivory md:pb-0 lg:-mt-10">
         {/* seamless line-art texture — decorative, sits under everything */}
         <span
           aria-hidden="true"
