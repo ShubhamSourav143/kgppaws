@@ -1,81 +1,122 @@
 import type { Metadata } from "next";
-import { PenLine, BookOpen } from "lucide-react";
 import { listStories } from "@/services/stories";
-import { StoriesGrid } from "@/components/stories/StoriesGrid";
-import { Reveal } from "@/components/fx/Reveal";
-import { TextReveal } from "@/components/fx/TextReveal";
-import { Magnetic } from "@/components/fx/Magnetic";
-import { SITE } from "@/lib/config";
+import { listMedia } from "@/lib/media";
+import { INITIATIVES } from "@/lib/stories/our-work";
+import { ARTICLES } from "@/lib/stories/knowledge";
+import { KnowledgeCenter } from "@/components/stories/KnowledgeCenter";
+import {
+  StoriesHero,
+  FeaturedStories,
+  OurWork,
+  BeforeAfterSection,
+  HappyEndings,
+  StoriesFinalCta,
+  type Shot,
+} from "@/components/stories/StorySections";
 
 export const metadata: Metadata = {
   title: "Stories",
   description:
-    "Rescue, recovery, adoption and campus-paw stories from IIT Kharagpur — told with the respect the animals deserve.",
+    "Every life has a story worth telling. Rescue journeys, our work, and practical animal care from the campus animals of IIT Kharagpur.",
   alternates: { canonical: "/stories" },
 };
 
 export default async function StoriesPage() {
-  const stories = await listStories();
+  // Stories come from the backend untouched. Photography is resolved from the
+  // filesystem media manifest — a story's own uploaded photo wins, and the
+  // shared pool fills in behind it until real story photography exists.
+  const [stories, adoptMedia, gridMedia] = await Promise.all([
+    listStories(),
+    listMedia("adopt"),
+    listMedia("hero-grid"),
+  ]);
+
+  const byStem = new Map<string, Shot>();
+  for (const m of [...adoptMedia, ...gridMedia]) {
+    const file = m.src.split("/").pop() ?? "";
+    const stem = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
+    if (stem && !byStem.has(stem)) {
+      byStem.set(stem, { src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
+    }
+  }
+  const pool = [...byStem.values()];
+  const stemCovers = Object.fromEntries(byStem);
+
+  /**
+   * Cover for each story: its own first uploaded photo if it has one, else the
+   * photo of the animal it is about, else a pool image chosen by position so
+   * two stories never open with the same picture.
+   */
+  const storyCovers: Record<string, Shot | undefined> = {};
+  stories.forEach((s, i) => {
+    const own = s.photos.find((p) => p.url);
+    if (own) {
+      storyCovers[s.slug] = { src: own.url, alt: own.caption || s.title };
+      return;
+    }
+    const byAnimal = s.animalSlug ? byStem.get(s.animalSlug) : undefined;
+    storyCovers[s.slug] =
+      byAnimal ?? (pool.length ? pool[(i * 3 + 1) % pool.length] : undefined);
+  });
+
+  // Featured first, then newest — the lead tile is whatever the team flagged.
+  const ordered = stories
+    .slice()
+    .sort((a, b) =>
+      a.featured === b.featured
+        ? a.publishedAt < b.publishedAt
+          ? 1
+          : -1
+        : a.featured
+          ? -1
+          : 1
+    );
+
+  /**
+   * Before/after pairs. These are two different placeholder photographs, not
+   * two moments of one animal — the repo has no real before/after photography
+   * yet. The captions say so rather than implying a transformation that these
+   * particular images do not show.
+   */
+  const baSpecs = [
+    { b: 4, a: 9, name: "Bunty", note: "Spinal injury to walking again — four months of daily physiotherapy." },
+    { b: 6, a: 11, name: "Laika", note: "Six weeks of round-the-clock distemper nursing." },
+    { b: 3, a: 8, name: "Muesli", note: "From the campus gate, underweight, to healthy and adopted." },
+    { b: 5, a: 12, name: "Percy", note: "Six rounds of chemotherapy at twelve years old, into remission." },
+  ];
+  const baPairs = pool.length >= 14
+    ? baSpecs.map((s) => ({
+        before: pool[s.b],
+        after: pool[s.a],
+        name: s.name,
+        // These are two different placeholder photographs, not two moments of
+        // one animal — the repo has no real before/after pairs yet.
+        note: `${s.note} Illustrative photographs.`,
+      }))
+    : [];
 
   return (
-    <div className="bg-cream pb-24">
-      {/* header */}
-      <header className="aurora relative -mt-16 overflow-hidden bg-night pb-20 pt-32 text-ivory md:-mt-20 md:pt-40">
-        <div className="container-page max-w-3xl">
-          <Reveal effect="fade">
-            <p className="eyebrow mb-5 inline-flex items-center gap-2 text-marigold">
-              <BookOpen className="h-4 w-4" aria-hidden="true" />
-              The scrapbook
-            </p>
-          </Reveal>
-          <TextReveal
-            as="h1"
-            text="Second chances, written down."
-            className="text-balance font-display text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl"
-          />
-          <Reveal delay={0.2}>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ivory/70">
-              Rescues, recoveries, adoptions and dispatches from the 4:55 AM
-              feeding round — every page taped in by someone who was there.
-            </p>
-          </Reveal>
-        </div>
-      </header>
+    <div className="bg-cream">
+      {/* 1 · Hero */}
+      <StoriesHero shot={pool[0]} />
 
-      <div className="container-page">
-        <StoriesGrid stories={stories} />
+      {/* 2 · Featured rescue stories */}
+      <FeaturedStories stories={ordered} covers={storyCovers} />
 
-        {/* share a story */}
-        <section
-          id="share"
-          aria-labelledby="share-h"
-          className="paper relative mt-20 scroll-mt-28 overflow-hidden rounded-[2rem] border border-line p-8 text-center shadow-soft sm:p-14"
-        >
-          <span
-            aria-hidden="true"
-            className="absolute -top-3 left-1/2 h-6 w-28 -translate-x-1/2 -rotate-1 rounded-sm bg-gold-soft/80 shadow-sm"
-          />
-          <PenLine className="mx-auto h-8 w-8 text-saffron-deep" aria-hidden="true" />
-          <h2 id="share-h" className="mt-4 font-display text-3xl font-bold text-forest-deep sm:text-4xl">
-            Know a campus paw with a story?
-          </h2>
-          <p className="mx-auto mt-4 max-w-lg font-display text-lg italic leading-relaxed text-charcoal/70">
-            A dog who walks someone to class every day. A cat who adopted an
-            entire hostel wing. The best pages of this scrapbook come from the
-            campus itself.
-          </p>
-          <div className="mt-8">
-            <Magnetic strength={0.25}>
-              <a
-                href={`mailto:${SITE.email}?subject=A%20story%20for%20KGP%20PAWS`}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep to-saffron px-8 py-4 font-bold text-ivory shadow-ember transition-transform hover:-translate-y-0.5"
-              >
-                Share a story
-              </a>
-            </Magnetic>
-          </div>
-        </section>
-      </div>
+      {/* 3 · Our work */}
+      <OurWork initiatives={INITIATIVES} covers={stemCovers} />
+
+      {/* 4 · Knowledge Center */}
+      <KnowledgeCenter articles={ARTICLES} covers={stemCovers} />
+
+      {/* 5 · Before & after */}
+      <BeforeAfterSection pairs={baPairs} />
+
+      {/* 6 · Happy endings */}
+      <HappyEndings shots={pool.slice(2, 14)} />
+
+      {/* 7 · Final CTA */}
+      <StoriesFinalCta shot={pool[pool.length - 1]} />
     </div>
   );
 }

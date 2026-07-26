@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, PawPrint, Siren, Heart } from "lucide-react";
+import { Home, PawPrint, Siren, Heart, HandHeart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -10,6 +10,7 @@ const TABS = [
   { href: "/adopt", label: "Adopt", icon: PawPrint },
   { href: "/report", label: "Report", icon: Siren, primary: true },
   { href: "/donate", label: "Donate", icon: Heart },
+  { href: "/volunteer", label: "Volunteer", icon: HandHeart },
 ];
 
 /**

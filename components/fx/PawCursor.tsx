@@ -7,6 +7,17 @@ import { usePathname } from "next/navigation";
 const INTERACTIVE =
   'a,button,input,textarea,select,label,summary,[role="button"],[role="link"],.group,[data-cursor="hover"]';
 
+/**
+ * Regions that drop the cursor to a single paw without otherwise highlighting
+ * it — site chrome (the fixed navbar, the mobile menu) rather than a target.
+ * A walking pair tracking across the navbar reads as clutter over what is
+ * really one thin strip, and the bar floats above whichever section happens to
+ * be scrolling beneath it, so the section's formation is meaningless there.
+ * Marked explicitly rather than by tag: pages here also open with a <header>
+ * hero band, which is very much not chrome.
+ */
+const SOLO_ZONE = '[data-cursor="solo"]';
+
 /** Paw silhouette — one pad + four toes. Shared by the cursor and the click stamp. */
 const PAW_SHAPES = [
   { cx: 20, cy: 27, rx: 8.5, ry: 7, rot: 0 },
@@ -29,12 +40,27 @@ const PAW_MARKUP = PAW_SHAPES.map(
  * vector, so it stays crisp at any value; only the CSS `--paw-size` and the
  * click-stamp size in globals.css need to move with it.
  */
-const SCALE = 4;
+const SCALE = 2;
 
 // walk tuning
 const EASE = 0.2; // body follow
 const DIR_EASE = 0.15; // heading smoothing
-const MODE_EASE = 0.09; // single <-> double morph
+/**
+ * Single <-> double morph, as exponential-decay time constants in ms: the
+ * formation covers ~95% of the change in 3x these. Unlike the per-frame
+ * easing used for the follow, these are integrated against real elapsed time,
+ * so the durations hold at 30, 60 or 120Hz instead of running twice as fast
+ * on a high-refresh display.
+ *
+ * A section boundary can afford a leisurely change. The answer to "is this
+ * clickable?" cannot — it has to land while the pointer is still arriving, so
+ * the hover collapse settles in ~195ms, inside the 150–250ms the interaction
+ * wants.
+ */
+const MORPH_TAU_SECTION = 177;
+const MORPH_TAU_HOVER = 65;
+/** Longest frame to integrate over, so a throttled tab doesn't snap on return. */
+const MAX_FRAME_MS = 64;
 const ALONG = 9 * SCALE; // stride length: fore/aft swing per paw (px)
 const PERP = 11 * SCALE; // left/right track separation (px)
 const AMP = 0.14; // per-step scale pulse
@@ -128,8 +154,10 @@ const Paw = ({ variant }: { variant: "a" | "b" }) => (
  * fades out), so nothing pops. In pair mode the two paws swing in antiphase
  * on fixed left/right tracks, trading lead and trail like real footfalls.
  *
- * Both paws trail the pointer with easing, enlarge and turn brand-green over
- * interactive elements, and stamp a rotated paw print plus a ripple on click.
+ * Hovering anything clickable overrides the section entirely and collapses to
+ * a single paw — enlarged, brand-green, with a bounce — so "this is
+ * interactive" reads identically everywhere; leaving restores the section's
+ * own formation. Clicking stamps a rotated paw print plus a ripple.
  *
  * Desktop only ((hover: hover) and (pointer: fine)); touch keeps the native
  * cursor. Reduced motion → paws follow instantly, no stepping, no stamp, and
@@ -190,6 +218,27 @@ export function PawCursor() {
     let placed = false; // first resolve snaps instead of animating
     let stampSide = 1; // click stamps alternate left/right like footsteps
 
+    // The section's own formation, before hover has a say.
+    let bandMode = 0;
+    // Hovering anything clickable overrides the section and collapses to one
+    // paw, so "this is interactive" always reads the same way regardless of
+    // which formation the surrounding section happens to use.
+    let hovering = false;
+    // over site chrome: same collapse to one paw, but no highlight
+    let solo = false;
+    // whether the in-flight morph was triggered by hover (fast) or by
+    // crossing a section boundary (slow)
+    let morphFast = false;
+
+    /** Fold the section's formation and both overrides into one target. */
+    const applyTarget = () => {
+      const next = hovering || solo ? 0 : bandMode;
+      if (next === target && placed) return;
+      target = next;
+      if (!placed || reduced) spread = target; // first placement never animates
+      placed = true;
+    };
+
     /* ————— section bands ————— */
 
     // Where each band starts, in document coordinates. Resolution is
@@ -212,11 +261,12 @@ export function PawCursor() {
 
       const mode = modeFor(index);
       const next = mode === "double" ? 1 : 0;
-      if (next === target && placed) return;
-      target = next;
-      if (!placed || reduced) spread = target; // first placement never animates
-      placed = true;
+      if (next !== bandMode) {
+        bandMode = next;
+        morphFast = false; // a section change gets the slower, scenic morph
+      }
       root.dataset.mode = mode;
+      applyTarget();
     };
 
     // Find the current page's bands in document order. Pages wrap their
@@ -313,7 +363,15 @@ export function PawCursor() {
     const onLeave = () => root.classList.remove("is-visible");
     const onOver = (e: Event) => {
       const t = e.target as Element | null;
-      root.classList.toggle("is-hover", !!t?.closest?.(INTERACTIVE));
+      const nextHover = !!t?.closest?.(INTERACTIVE);
+      const nextSolo = !!t?.closest?.(SOLO_ZONE);
+      // fires for every node crossed; only act on an actual change
+      if (nextHover === hovering && nextSolo === solo) return;
+      hovering = nextHover;
+      solo = nextSolo;
+      root.classList.toggle("is-hover", hovering);
+      morphFast = true;
+      applyTarget();
     };
     const onDown = () => {
       root.classList.add("is-down");
@@ -381,11 +439,21 @@ export function PawCursor() {
       if (paw) paw.style.opacity = `${side === 1 ? depth : depth * Math.min(1, spread * 1.15)}`;
     };
 
-    const loop = () => {
+    let prevT = 0;
+    const loop = (now: number) => {
+      const dt = prevT ? Math.min(now - prevT, MAX_FRAME_MS) : 16.7;
+      prevT = now;
+
       const ease = reduced ? 1 : EASE;
       cx += (tx - cx) * ease;
       cy += (ty - cy) * ease;
-      spread += (target - spread) * (reduced ? 1 : MODE_EASE);
+
+      const tau = morphFast ? MORPH_TAU_HOVER : MORPH_TAU_SECTION;
+      spread += (target - spread) * (reduced ? 1 : 1 - Math.exp(-dt / tau));
+      if (morphFast && Math.abs(target - spread) < 0.001) {
+        spread = target;
+        morphFast = false;
+      }
 
       const mvx = cx - lcx;
       const mvy = cy - lcy;

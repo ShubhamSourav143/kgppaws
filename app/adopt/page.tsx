@@ -184,7 +184,7 @@ export default async function AdoptPage() {
 
       {/* 4 · Adoption process */}
       <section id="how" className="scroll-mt-24">
-        <AdoptionProcess covers={covers} />
+        <AdoptionProcess />
       </section>
 
       {/* 5 · Real rescue stories */}
