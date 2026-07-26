@@ -26,14 +26,18 @@ export default async function DonatePage() {
   // Campaign money comes from the backend exactly as before — this page only
   // changes how it's told. Photography is resolved from the filesystem media
   // manifest, keyed by the stems in lib/donate/editorial.ts.
-  const [campaigns, adoptMedia, gridMedia] = await Promise.all([
+  const [campaigns, adoptMedia, gridMedia, donateMedia] = await Promise.all([
     listCampaigns(),
     listMedia("adopt"),
     listMedia("hero-grid"),
+    listMedia("donate"),
   ]);
 
+  // Campaign galleries prefer their own dedicated donate/*.jpg photos first, so
+  // no image reused on the adopt page or in the hero grid ever appears again
+  // inside a donation gallery.
   const byStem = new Map<string, Shot>();
-  for (const m of [...adoptMedia, ...gridMedia]) {
+  for (const m of [...donateMedia, ...adoptMedia, ...gridMedia]) {
     const file = m.src.split("/").pop() ?? "";
     const stem = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
     if (stem && !byStem.has(stem)) {

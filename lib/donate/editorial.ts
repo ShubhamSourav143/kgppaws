@@ -55,10 +55,7 @@ const FEEDING: CampaignEditorial = {
     { amount: 3200, label: "Sponsors one full day of feeding" },
     { amount: 22400, label: "Sponsors an entire week" },
   ],
-  gallery: [
-    "romi", "grid-15", "grid-04", "grid-12", "laika",
-    "grid-13", "grid-01", "muesli", "grid-14", "grid-03",
-  ],
+  gallery: ["feed-01", "feed-02", "feed-03"],
 };
 
 const STERILIZATION: CampaignEditorial = {
@@ -82,10 +79,7 @@ const STERILIZATION: CampaignEditorial = {
     { amount: 8000, label: "A week's transport for four dogs" },
     { amount: 20000, label: "An entire surgical camp" },
   ],
-  gallery: [
-    "bunti", "grid-06", "grid-10", "grid-16", "odin",
-    "grid-08", "grid-13", "laika", "grid-12", "grid-01",
-  ],
+  gallery: ["ster-01", "ster-02", "ster-03"],
 };
 
 const VACCINATION: CampaignEditorial = {
@@ -109,10 +103,7 @@ const VACCINATION: CampaignEditorial = {
     { amount: 5500, label: "A full hall-area round of 25" },
     { amount: 13000, label: "A tenth of the entire year's drive" },
   ],
-  gallery: [
-    "simba", "grid-09", "grid-03", "grid-14", "grid-04",
-    "muesli", "grid-16", "grid-15", "grid-10", "bunti",
-  ],
+  gallery: ["vacc-01", "vacc-02", "vacc-03"],
 };
 
 const EMERGENCY: CampaignEditorial = {
@@ -137,10 +128,7 @@ const EMERGENCY: CampaignEditorial = {
     { amount: 8000, label: "Fracture plating for one dog" },
     { amount: 25000, label: "A full critical surgery" },
   ],
-  gallery: [
-    "odin", "grid-08", "grid-06", "romi", "grid-09",
-    "simba", "grid-13", "grid-16", "grid-01", "grid-04",
-  ],
+  gallery: ["emer-01", "emer-02", "emer-03"],
 };
 
 const BY_SLUG: Record<string, CampaignEditorial> = {
