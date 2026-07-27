@@ -25,22 +25,33 @@ export default async function StoriesPage() {
   // Stories come from the backend untouched. Photography is resolved from the
   // filesystem media manifest — a story's own uploaded photo wins, and the
   // shared pool fills in behind it until real story photography exists.
-  const [stories, adoptMedia, gridMedia] = await Promise.all([
+  // Story photography comes from public/images/stories first. The home hero
+  // collage (public/images/hero-grid) is deliberately NOT in this pool — those
+  // fourteen photographs belong to the hero alone, and pulling them in here is
+  // what used to put the same pictures on three different pages. The adopt
+  // covers trail the story photos so the page still fills when there are more
+  // slots than dedicated photographs; see the shortfall note in the audit.
+  const [stories, storyMedia, adoptMedia] = await Promise.all([
     listStories(),
+    listMedia("stories"),
     listMedia("adopt"),
-    listMedia("hero-grid"),
   ]);
 
   const byStem = new Map<string, Shot>();
-  for (const m of [...adoptMedia, ...gridMedia]) {
+  for (const m of [...storyMedia, ...adoptMedia]) {
     const file = m.src.split("/").pop() ?? "";
     const stem = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
     if (stem && !byStem.has(stem)) {
       byStem.set(stem, { src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
     }
   }
-  const pool = [...byStem.values()];
   const stemCovers = Object.fromEntries(byStem);
+
+  // "Why Adoption Matters" on /adopt owns story-01…04, so this page starts at
+  // story-05 and never shows a photograph that page already used.
+  const pool = [...byStem.values()].filter(
+    (s) => !/\/stories\/story-0[1-4]\./.test(s.src)
+  );
 
   /**
    * Cover for each story: its own first uploaded photo if it has one, else the

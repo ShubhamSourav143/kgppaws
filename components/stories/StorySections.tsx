@@ -636,7 +636,7 @@ export function StoriesFinalCta({ shot }: { shot?: Shot }) {
         <Reveal delay={0.4} className="mt-10 flex flex-wrap justify-center gap-4">
           <Magnetic strength={0.25}>
             <Link
-              href="/donate"
+              href="/donate#give"
               className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-10 py-4 text-lg font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
             >
               <HeartHandshake className="h-5 w-5" aria-hidden="true" />

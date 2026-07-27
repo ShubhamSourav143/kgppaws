@@ -4,7 +4,7 @@ import { PawPrint, ArrowUpRight, ArrowDown } from "lucide-react";
 import { listAnimals } from "@/services/animals";
 import { getAdoptionContent } from "@/services/content";
 import { listMedia } from "@/lib/media";
-import { poolForSpecies } from "@/lib/demo/photo-pool";
+import { withCoverPhotos } from "@/lib/animal-covers";
 import { AdoptExplorer } from "@/components/adopt/AdoptExplorer";
 import { WhyAdopt, type WhyPhotos } from "@/components/adopt/WhyAdopt";
 import {
@@ -25,13 +25,13 @@ export const metadata: Metadata = {
 };
 
 export default async function AdoptPage() {
-  const [animals, content, adoptMedia, gridMedia] = await Promise.all([
+  const [animals, content, adoptMedia, storyMedia] = await Promise.all([
     listAnimals(),
     getAdoptionContent(),
     listMedia("adopt"),
-    // the "Why Adoption Matters" bands also pull from the home collage pool
-    // (public/images/hero-grid) for photo variety
-    listMedia("hero-grid"),
+    // the "Why Adoption Matters" slideshow has its own photography
+    // (public/images/stories) so it never re-shows an animal's card photo
+    listMedia("stories"),
   ]);
 
   const intro = content.find((c) => c.section === "intro");
@@ -52,10 +52,10 @@ export default async function AdoptPage() {
   }
 
   // Richer map (src + blur placeholder + dimensions) for the "Why Adoption
-  // Matters" bands, which render through next/image. Keyed by filename stem
-  // across both the adopt photos and the hero-grid collage pool.
+  // Matters" slideshow, which renders through next/image. Keyed by filename
+  // stem over its own dedicated photographs.
   const whyPhotos: WhyPhotos = {};
-  for (const m of [...adoptMedia, ...gridMedia]) {
+  for (const m of storyMedia) {
     const file = m.src.split("/").pop() ?? "";
     const key = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
     if (key && !(key in whyPhotos)) {
@@ -74,37 +74,12 @@ export default async function AdoptPage() {
   // Inject each animal's real cover photo (keyed by slug) so the existing
   // AnimalCard renders it automatically — no card changes required.
   //
-  // The card cycles through the first three photos that have a URL. Until real
-  // per-animal galleries are uploaded, we top the cover up with two stills from
-  // the shared collage pool so every card has a full story. The pool is split
-  // by species first — a dog's card never pads out with a cat — and each animal
-  // draws a different pair. Once an animal has three real uploads of its own,
-  // those win and this padding falls away on its own.
-  const pool = gridMedia.map((m) => m.src);
-  const drawn: Record<string, number> = { dog: 0, cat: 0 };
-  const animalsWithPhotos: Animal[] = animals.map((a) => {
-    if (!covers[a.slug]) return a;
-    const matching = poolForSpecies(pool, a.species);
-    // walk the species pool so no two cards of the same species share a still
-    const at = drawn[a.species] ?? 0;
-    drawn[a.species] = at + 2;
-    const extras = matching.length
-      ? [matching[at % matching.length], matching[(at + 1) % matching.length]]
-      : [];
-    return {
-      ...a,
-      photos: [
-        { id: `cover-${a.slug}`, caption: a.name, date: "", url: covers[a.slug] },
-        ...extras.map((url, n) => ({
-          id: `pool-${a.slug}-${n}`,
-          caption: "",
-          date: "",
-          url,
-        })),
-        ...a.photos,
-      ],
-    };
-  });
+  // The card shows a three-photo story only when an animal has three real
+  // uploads of its own; with one photo it renders that single still. It used
+  // to be topped up with two stills borrowed from the hero collage, which put
+  // the same fourteen photographs on this page and the home hero — so every
+  // card now shows only photography that belongs to that animal.
+  const animalsWithPhotos: Animal[] = await withCoverPhotos(animals);
 
   return (
     <div className="bg-cream">

@@ -23,6 +23,7 @@ import { Chip } from "@/components/ui/Chip";
 import { ButtonLink } from "@/components/ui/Button";
 import { DemoNotice } from "@/components/ui/Section";
 import { getAnimal, listAnimals } from "@/services/animals";
+import { withCoverPhoto } from "@/lib/animal-covers";
 import { zoneName } from "@/lib/demo/zones";
 import { formatDate } from "@/lib/utils";
 import { SITE } from "@/lib/config";
@@ -70,8 +71,9 @@ export default async function AnimalProfilePage({
   searchParams: Promise<{ via?: string }>;
 }) {
   const [{ slug }, { via }] = await Promise.all([params, searchParams]);
-  const animal = await getAnimal(slug);
-  if (!animal) notFound();
+  const found = await getAnimal(slug);
+  if (!found) notFound();
+  const animal = await withCoverPhoto(found);
 
   const fromQr = via === "qr";
   const banner = STATUS_BANNER[animal.healthStatus];
@@ -387,7 +389,7 @@ export default async function AnimalProfilePage({
                     Start adoption inquiry
                   </ButtonLink>
                 )}
-                <ButtonLink href="/donate" variant="primary" className="w-full">
+                <ButtonLink href="/donate#give" variant="primary" className="w-full">
                   <HandHeart className="h-4 w-4" aria-hidden="true" />
                   Fund care at KGP PAWS
                 </ButtonLink>

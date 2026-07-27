@@ -253,7 +253,7 @@ export default async function StoryPage({
                   <ButtonLink href={`/adopt/apply/${animal.slug}`} variant="light" size="lg">
                     Adopt {animal.name}
                   </ButtonLink>
-                  <ButtonLink href="/donate" variant="accent" size="lg">
+                  <ButtonLink href="/donate#give" variant="accent" size="lg">
                     Fund the next rescue
                   </ButtonLink>
                 </div>
@@ -264,7 +264,7 @@ export default async function StoryPage({
                   Stories like this one run on support like yours.
                 </p>
                 <div className="mt-5 flex flex-wrap justify-center gap-3">
-                  <ButtonLink href="/donate" variant="light" size="lg">
+                  <ButtonLink href="/donate#give" variant="light" size="lg">
                     Donate
                   </ButtonLink>
                   <ButtonLink href="/volunteer" variant="accent" size="lg">

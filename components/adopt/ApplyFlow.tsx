@@ -166,6 +166,7 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
         >
           <AnimalPortrait
             animal={animal}
+            photoUrl={animal.photos.find((p) => p.url)?.url}
             className="h-20 w-20 shrink-0 lg:h-auto lg:w-full lg:!aspect-square"
           />
           <div className="lg:mt-4">

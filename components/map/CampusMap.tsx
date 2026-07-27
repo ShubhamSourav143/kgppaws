@@ -206,7 +206,11 @@ export function CampusMap({
                       href={`/animal/${a.slug}`}
                       className="group flex items-center gap-3 rounded-xl border border-line bg-cream p-2 transition-colors hover:border-forest/30"
                     >
-                      <AnimalPortrait animal={a} className="h-14 w-14 shrink-0 rounded-xl" />
+                      <AnimalPortrait
+                        animal={a}
+                        photoUrl={a.photos.find((p) => p.url)?.url}
+                        className="h-14 w-14 shrink-0 rounded-xl"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="font-display text-base font-bold text-forest-deep">
                           {a.name}

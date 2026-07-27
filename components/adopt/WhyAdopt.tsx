@@ -50,7 +50,7 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     n: "01",
-    key: "romi",
+    key: "story-01",
     alt: "A rescued street dog waiting quietly for a home",
     title: "Thousands are abandoned every year",
     body:
@@ -63,7 +63,7 @@ const SLIDES: Slide[] = [
   },
   {
     n: "02",
-    key: "odin",
+    key: "story-02",
     alt: "A small-breed dog once bred for sale, now rescued",
     title: "Bred for profit, then discarded",
     body:
@@ -76,7 +76,7 @@ const SLIDES: Slide[] = [
   },
   {
     n: "03",
-    key: "grid-09",
+    key: "story-03",
     alt: "A joyful adopted dog thriving in a loving home",
     title: "One rescue changes two lives",
     body:
@@ -89,7 +89,7 @@ const SLIDES: Slide[] = [
   },
   {
     n: "04",
-    key: "simba",
+    key: "story-04",
     alt: "A healthy, happy adopted dog greeting the morning",
     title: "You write their next chapter",
     body:

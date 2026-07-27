@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Copy, HandHeart, HeartHandshake, X } from "lucide-react";
 import { QrCodeImage } from "@/components/qr/QrCode";
@@ -23,6 +24,7 @@ const HOLDER = "KGP PAWS";
  */
 export function DonateModal() {
   const reduced = useReducedMotion() ?? false;
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number>(300);
   const [custom, setCustom] = useState("");
@@ -38,16 +40,18 @@ export function DonateModal() {
     }
   }, []);
 
-  // Watch hash for #give. Listens both on mount (deep link / same-page click
-  // that landed on #give before we mounted) and on subsequent hashchange
-  // events (all the existing <Link href="#give"> buttons fire hashchange).
+  // Watch hash for #give. Three ways in, and all of them have to work:
+  //   * a same-page <Link href="#give"> — fires hashchange
+  //   * a cross-page <Link href="/donate#give"> — client-side route change,
+  //     which fires no hashchange, so the effect re-runs on `pathname`
+  //   * a cold load / deep link straight to /donate#give — the mount call
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sync = () => setOpen(window.location.hash === "#give");
     sync();
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
-  }, []);
+  }, [pathname]);
 
   // Escape closes; body-scroll lock while open.
   useEffect(() => {

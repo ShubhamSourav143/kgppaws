@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ShieldCheck, Users } from "lucide-react";
 import { listAnimals } from "@/services/animals";
+import { withCoverPhotos } from "@/lib/animal-covers";
 import { CampusMap } from "@/components/map/CampusMap";
 import { ButtonLink } from "@/components/ui/Button";
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function MapPage() {
-  const animals = await listAnimals();
+  const animals = await withCoverPhotos(await listAnimals());
 
   return (
     <div className="container-page py-10 sm:py-14">

@@ -10,10 +10,13 @@ const TAPES = ["bg-gold-soft/80", "bg-sage/60", "bg-clay", "bg-gold-soft/80", "b
 
 /** Campus Com-Paw-Nions — a scrapbook wall of the residents everyone knows. */
 export function Compawnions({ animals }: { animals: Animal[] }) {
-  const residents = [
-    ...animals.filter((a) => a.adoption === "not_available"),
-    ...animals.filter((a) => a.adoption !== "not_available"),
-  ].slice(0, 6);
+  // Only the animals who genuinely aren't up for adoption — this section is
+  // about the residents who already own the campus. Topping the row up with
+  // adoptable animals repeated the cards from Featured Rescues above.
+  const residents = animals
+    .filter((a) => a.adoption === "not_available")
+    .slice(0, 6);
+  if (residents.length === 0) return null;
 
   return (
     <section aria-labelledby="compaw-h" className="paper overflow-hidden py-24 sm:py-32">

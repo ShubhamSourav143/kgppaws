@@ -78,10 +78,12 @@ export function FeaturedRescues({
   animals: Animal[];
   cms?: ContentSectionRow;
 }) {
-  const featured = [
-    ...animals.filter((a) => a.adoption === "available"),
-    ...animals.filter((a) => a.adoption !== "available"),
-  ].slice(0, 8);
+  // Adoptable paws only. The campus residents get their own section further
+  // down (Com-Paw-Nions) — when this list fell back to "everyone else" to fill
+  // eight slots, the same animals appeared twice on one page.
+  const featured = animals
+    .filter((a) => a.adoption === "available" || a.adoption === "foster_needed")
+    .slice(0, 8);
 
   return (
     <section aria-labelledby="featured-h" className="overflow-hidden bg-parchment py-24 sm:py-32">

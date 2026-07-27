@@ -59,6 +59,23 @@ export default async function HomePage() {
       photoUrl: a.photos.find((p) => p.url)?.url ?? covers[a.slug],
     };
 
+  // Give every animal its filesystem cover the same way /adopt does. Without
+  // this the cards fall through to the illustrated SVG portrait whenever the
+  // database has an animal but no uploaded photo for it — which put thirteen
+  // cartoon dogs on the home page while real photographs sat in
+  // public/images/adopt/ unused.
+  const animalsWithCovers = animals.map((a) =>
+    a.photos.some((p) => p.url) || !covers[a.slug]
+      ? a
+      : {
+          ...a,
+          photos: [
+            { id: `cover-${a.slug}`, caption: a.name, date: "", url: covers[a.slug] },
+            ...a.photos,
+          ],
+        }
+  );
+
   const transformationPairs = buildTransformationPairs(transformationMedia, stories);
 
   return (
@@ -69,12 +86,12 @@ export default async function HomePage() {
         dog={withPhoto(heroDog)}
         cat={withPhoto(heroCat)}
       />
-      <Mission cms={cmsMission} animals={animals.slice(0, 2)} />
+      <Mission cms={cmsMission} animals={animalsWithCovers.slice(0, 2)} />
 
-      <FeaturedRescues animals={animals} cms={cmsFeatured} />
+      <FeaturedRescues animals={animalsWithCovers} cms={cmsFeatured} />
       <IdentitySection animal={identityAnimal} />
       <Transformations pairs={transformationPairs} />
-      <Compawnions animals={animals} />
+      <Compawnions animals={animalsWithCovers} />
       <HelpBand cms={cmsHelp} />
       <DonateCta />
     </>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAnimal, listAnimals } from "@/services/animals";
+import { withCoverPhoto } from "@/lib/animal-covers";
 import { ApplyFlow } from "@/components/adopt/ApplyFlow";
 
 export async function generateStaticParams() {
@@ -34,5 +35,5 @@ export default async function ApplyPage({
   if (animal.adoption !== "available" && animal.adoption !== "foster_needed") {
     notFound();
   }
-  return <ApplyFlow animal={animal} />;
+  return <ApplyFlow animal={await withCoverPhoto(animal)} />;
 }
