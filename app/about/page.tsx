@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
+  ChevronDown,
   HeartPulse,
-  QrCode,
+  Home,
   Scissors,
   ShieldCheck,
   Soup,
   Syringe,
-  Home,
   Users,
 } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
-import { SectionHeading, DemoNotice } from "@/components/ui/Section";
+import { SectionHeading } from "@/components/ui/Section";
 import { ButtonLink } from "@/components/ui/Button";
 import { PawMark, Seal } from "@/components/brand/Logo";
 
 export const metadata: Metadata = {
-  title: "About",
+  title: "About KGP PAWS",
   description:
-    "Who KGP PAWS is, why the animals of IIT Kharagpur need support, and how a digital identity for every paw changes what campus animal welfare can be.",
+    "KGP PAWS is a student-led animal welfare society at IIT Kharagpur. We feed, treat, vaccinate, sterilize, rescue and rehome the campus animals.",
   alternates: { canonical: "/about" },
 };
 
@@ -25,59 +26,80 @@ const PILLARS = [
   {
     icon: Soup,
     title: "Feeding",
-    text: "Daily feeding rounds keep campus animals healthy, predictable in their territories, and easy to monitor for early signs of illness.",
+    text: "Daily feeding rounds so campus dogs and cats do not go hungry — especially during vacations when the messes shut and their usual food disappears.",
   },
   {
     icon: HeartPulse,
     title: "Treatment",
-    text: "From paw injuries to accident response — volunteers coordinate first aid, vet visits, and recovery care for every reported animal.",
+    text: "First aid, vet visits and follow-up care for injuries, accidents, skin conditions and other health issues reported by students and volunteers.",
   },
   {
     icon: Syringe,
     title: "Vaccination",
-    text: "Annual anti-rabies drives protect both animals and people, making the campus safer for everyone who shares it.",
+    text: "Regular anti-rabies and DHPP drives to protect the animals and everyone who shares the campus with them.",
   },
   {
     icon: Scissors,
     title: "Sterilization",
-    text: "Humane population management through sterilize-and-release — fewer puppies born into hardship, healthier community animals.",
+    text: "Humane sterilize-and-release camps to slowly stabilise the campus population and reduce the number of animals born into hardship.",
   },
   {
     icon: Home,
     title: "Adoption",
-    text: "Careful matching of campus dogs and cats with families — applications, meet-and-greets, and post-adoption follow-ups.",
+    text: "Careful matching of campus animals with caring families through personal reviews, meet-and-greets and follow-ups.",
   },
   {
     icon: Users,
     title: "Student volunteers",
-    text: "Students, scholars, staff and faculty run everything: feeding routes, rescue response, adoption coordination, and this platform itself.",
+    text: "Everything above is run by student volunteers, research scholars, staff, faculty and their families — no paid staff, no external management.",
   },
 ];
 
 /**
- * Timeline entries are CMS-editable placeholders — no invented
- * institutional dates or claims are presented as verified fact.
+ * Practical FAQ entries. Deliberately short and honest — students, staff
+ * and campus visitors should be able to skim these and understand what to
+ * do without needing to email or DM.
  */
-const TIMELINE = [
+const FAQS: { question: string; answer: string }[] = [
   {
-    period: "The beginning",
-    title: "A feeding circle forms",
-    text: "A handful of students start pooling mess leftovers and pocket money to feed the dogs of their hostel area. (Editable placeholder — add your verified founding story.)",
+    question: "What is KGP PAWS?",
+    answer:
+      "KGP PAWS is short for Kharagpur Pradyogiki Animal Welfare Society. We are a student-led society at IIT Kharagpur that looks after the dogs, cats and other animals living on the campus.",
   },
   {
-    period: "Growing up",
-    title: "Organized rescue response",
-    text: "Feeding circles connect into a society: shared duty rosters, a vet network, and the first vaccination drives. (Editable placeholder.)",
+    question: "Who can volunteer?",
+    answer:
+      "Any student, research scholar, faculty member, staff member or family member on campus can volunteer. We have roles that fit different skills — from feeding rounds and rescue work to poster design, video editing and website development. Sign up on the Volunteer page.",
   },
   {
-    period: "Scaling care",
-    title: "Sterilization & records",
-    text: "Systematic sterilize-and-release begins, and volunteers start keeping proper health records per animal. (Editable placeholder.)",
+    question: "How can I adopt a campus animal?",
+    answer:
+      "Open the Adopt page, pick an animal whose profile feels right for you, and fill the short adoption form. A volunteer from our team will review the request personally and get back to you to plan the next steps.",
   },
   {
-    period: "Today",
-    title: "A digital identity for every paw",
-    text: "QR collar tags link each animal to a living health record — making care continuous even as volunteer batches graduate.",
+    question: "How are donations used?",
+    answer:
+      "Every rupee we receive goes to the animals — feeding supplies, vaccines, sterilization camps, medical treatment during emergencies and rescue operations. No money is spent on salaries. Volunteers work for free.",
+  },
+  {
+    question: "Who takes care of injured animals?",
+    answer:
+      "Our volunteer rescue team responds to reports. When an animal is found injured or unwell, volunteers give first aid, take the animal to a partner vet if needed, and keep the animal in care until it recovers.",
+  },
+  {
+    question: "Can I report a sick or injured dog?",
+    answer:
+      "Yes — please do. Tap the floating Report button anywhere on the site, upload a photo, share the location and describe what you see. A volunteer will attend to it as soon as possible.",
+  },
+  {
+    question: "Are campus dogs vaccinated?",
+    answer:
+      "We run anti-rabies drives every year and cover as many campus dogs as we safely can. Vaccinated dogs are recorded in our register. When you meet a KGP PAWS collar-tag dog, scan the tag to see its health record.",
+  },
+  {
+    question: "How can I support KGP PAWS?",
+    answer:
+      "The three easiest ways are: donate through the Donate page, volunteer through the Volunteer page, and report any animal that needs help through the Report button. Sharing our posts and stories with your friends also helps a lot.",
   },
 ];
 
@@ -90,14 +112,14 @@ export default function AboutPage() {
           <div className="max-w-3xl">
             <p className="eyebrow mb-4 text-sand">About KGP PAWS</p>
             <h1 className="text-balance font-display text-4xl font-bold leading-[1.06] sm:text-5xl lg:text-6xl">
-              Care that outlasts every batch.
+              A student-led society for the animals of IIT Kharagpur.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-cream/85">
-              KGP PAWS is the Animal Welfare Society of IIT Kharagpur — a
-              volunteer-run community of students, scholars, staff and faculty
-              who look after the animals that call this campus home. Students
-              graduate every year. The animals stay. Our job is to make sure
-              the care stays too.
+              KGP PAWS — the Kharagpur Pradyogiki Animal Welfare Society — is
+              run entirely by students, scholars, staff and faculty who share
+              the campus with hundreds of dogs, cats and other animals. Our
+              work is simple: feed them, treat them, protect them, and give
+              those who need a home a chance at one.
             </p>
           </div>
           <Seal
@@ -110,27 +132,36 @@ export default function AboutPage() {
       </header>
 
       {/* why */}
-      <section className="container-page grid gap-10 py-16 sm:py-20 lg:grid-cols-2" aria-labelledby="why-h">
+      <section
+        className="container-page grid gap-10 py-16 sm:py-20 lg:grid-cols-2"
+        aria-labelledby="why-h"
+      >
         <Reveal>
           <SectionHeading
-            eyebrow="Why it matters"
-            title="Campus animals live between systems."
+            eyebrow="Why we exist"
+            title="Students and campus animals share this place."
             sub=""
           />
           <div className="mt-5 space-y-4 text-base leading-relaxed text-charcoal/85">
             <p>
-              A campus dog isn&apos;t a pet, and isn&apos;t quite a street
-              dog either. She has a territory, a routine, and hundreds of
-              humans who know her by name — but no single person responsible
-              for her when she&apos;s hit by a bike at midnight or stops
-              eating for three days.
+              Dogs and cats have lived on the IIT Kharagpur campus for as long
+              as anyone can remember. Students grow attached to them. Staff
+              families feed them. Faculty children play with them. But nobody
+              is officially responsible for what happens when one of them is
+              hit by a scooter at midnight, or stops eating for three days,
+              or gives birth to puppies during the monsoon.
             </p>
             <p>
-              That gap is where KGP PAWS works. Organized feeding so nutrition
-              isn&apos;t luck. A rescue pipeline so an injury reported at
-              11 PM gets a response, not a shrug. Vaccination and
-              sterilization so kindness scales beyond individual animals to
-              the whole population.
+              That gap is where KGP PAWS works. We organise the feeding so
+              that nutrition is not left to luck. We respond to rescue reports
+              so that injured animals are not left to suffer. We vaccinate and
+              sterilize so that kindness reaches the entire population and not
+              only the few animals a batch of students happen to know.
+            </p>
+            <p>
+              Compassion, vaccination, sterilization, rescue and adoption
+              together make the campus safer and healthier — for the animals
+              and for the people who share it with them.
             </p>
           </div>
         </Reveal>
@@ -138,26 +169,36 @@ export default function AboutPage() {
           <div className="grain flex h-full min-h-64 flex-col items-center justify-center gap-4 rounded-3xl bg-gradient-to-br from-sand to-terracotta p-10 text-center text-parchment">
             <PawMark className="h-14 w-14" />
             <p className="max-w-xs font-display text-2xl font-bold leading-snug">
-              “No paw on this campus should be anonymous in an emergency.”
+              &ldquo;No paw on this campus should be anonymous in an
+              emergency.&rdquo;
             </p>
-            <p className="text-xs uppercase tracking-[0.2em]">The PAWS principle</p>
+            <p className="text-xs uppercase tracking-[0.2em]">
+              The PAWS principle
+            </p>
           </div>
         </Reveal>
       </section>
 
       {/* pillars */}
-      <section className="bg-parchment py-16 sm:py-20" aria-labelledby="pillars-h">
+      <section
+        className="bg-parchment py-16 sm:py-20"
+        aria-labelledby="pillars-h"
+      >
         <div className="container-page">
           <Reveal>
             <SectionHeading
               eyebrow="What we do"
-              title="Six kinds of care."
+              title="Six kinds of care, every day."
               align="center"
             />
           </Reveal>
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {PILLARS.map((p, i) => (
-              <Reveal key={p.title} delay={Math.min(i * 0.07, 0.35)} className="h-full">
+              <Reveal
+                key={p.title}
+                delay={Math.min(i * 0.07, 0.35)}
+                className="h-full"
+              >
                 <div className="flex h-full flex-col gap-3 rounded-3xl border border-line bg-cream p-6">
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-forest text-cream">
                     <p.icon className="h-5 w-5" aria-hidden="true" />
@@ -173,66 +214,111 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* timeline */}
-      <section className="container-page py-16 sm:py-20" aria-labelledby="timeline-h">
+      {/* how to help */}
+      <section
+        className="container-page grid gap-6 py-16 sm:grid-cols-3 sm:py-20"
+        aria-label="How to help"
+      >
         <Reveal>
-          <SectionHeading
-            eyebrow="Our journey"
-            title="From feeding circle to digital identity."
-          />
+          <Link
+            href="/volunteer"
+            className="group flex h-full flex-col gap-2 rounded-3xl border border-line bg-parchment p-6 shadow-card transition-all hover:-translate-y-1 hover:shadow-glow"
+          >
+            <p className="text-xs font-bold uppercase tracking-wider text-saffron-deep">
+              Volunteer
+            </p>
+            <p className="font-display text-xl font-bold text-forest-deep">
+              Join the team →
+            </p>
+            <p className="text-sm leading-relaxed text-moss">
+              From feeding rounds to poster design, there is a role that fits
+              your skills.
+            </p>
+          </Link>
         </Reveal>
-        <ol className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {TIMELINE.map((t, i) => (
-            <Reveal key={t.title} delay={i * 0.1} className="h-full">
-              <li className="relative flex h-full flex-col gap-2 rounded-3xl border border-line bg-parchment p-6">
-                <span className="eyebrow text-[10px] text-terracotta-deep">
-                  {t.period}
-                </span>
-                <h3 className="font-display text-lg font-bold text-forest-deep">
-                  {t.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-moss">{t.text}</p>
-                <span
-                  className="absolute -top-2 left-6 grid h-6 w-6 place-items-center rounded-full bg-terracotta text-[10px] font-black text-parchment"
-                  aria-hidden="true"
-                >
-                  {i + 1}
-                </span>
-              </li>
-            </Reveal>
-          ))}
-        </ol>
-        <DemoNotice className="mt-6">
-          Timeline entries are CMS-editable placeholders — verified milestones
-          are added by society admins, never invented here.
-        </DemoNotice>
+        <Reveal delay={0.1}>
+          <Link
+            href="/donate#give"
+            className="group flex h-full flex-col gap-2 rounded-3xl border border-line bg-parchment p-6 shadow-card transition-all hover:-translate-y-1 hover:shadow-glow"
+          >
+            <p className="text-xs font-bold uppercase tracking-wider text-saffron-deep">
+              Donate
+            </p>
+            <p className="font-display text-xl font-bold text-forest-deep">
+              Support the care →
+            </p>
+            <p className="text-sm leading-relaxed text-moss">
+              A UPI QR opens straight away. Every rupee goes to the animals.
+            </p>
+          </Link>
+        </Reveal>
+        <Reveal delay={0.2}>
+          <Link
+            href="/report"
+            className="group flex h-full flex-col gap-2 rounded-3xl border border-line bg-parchment p-6 shadow-card transition-all hover:-translate-y-1 hover:shadow-glow"
+          >
+            <p className="text-xs font-bold uppercase tracking-wider text-saffron-deep">
+              Report
+            </p>
+            <p className="font-display text-xl font-bold text-forest-deep">
+              Tell us about an animal →
+            </p>
+            <p className="text-sm leading-relaxed text-moss">
+              Saw an injured dog? Share a photo and a location — our team
+              takes it from there.
+            </p>
+          </Link>
+        </Reveal>
       </section>
 
-      {/* digital identity vision */}
-      <section className="bg-forest-deep py-16 text-cream sm:py-20" aria-labelledby="vision-h">
-        <div className="container-page grid items-center gap-10 lg:grid-cols-[auto_1fr]">
+      {/* FAQ */}
+      <section
+        id="faq"
+        aria-labelledby="faq-h"
+        className="container-page scroll-mt-24 py-16 sm:py-20"
+      >
+        <div className="mx-auto max-w-3xl">
           <Reveal>
-            <span className="mx-auto grid h-24 w-24 place-items-center rounded-3xl bg-cream/10">
-              <QrCode className="h-12 w-12 text-sand" aria-hidden="true" />
-            </span>
+            <SectionHeading
+              eyebrow="Frequently asked questions"
+              title="Common questions, plain answers."
+            />
           </Reveal>
-          <Reveal delay={0.1}>
-            <h2 id="vision-h" className="font-display text-3xl font-bold sm:text-4xl">
-              The digital identity vision
-            </h2>
-            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-cream/85">
-              Volunteer knowledge used to graduate with the volunteers — which
-              dog is vaccinated, who&apos;s recovering from what, who gets
-              nervous around bikes. PAWS digital identity moves that knowledge
-              out of heads and into a record that persists: scan a collar tag,
-              and four years of care history is in your hand.
-            </p>
-            <div className="mt-6">
-              <ButtonLink href="/animal/simba" variant="light" size="lg">
-                See a live digital ID
-              </ButtonLink>
-            </div>
-          </Reveal>
+
+          <ul className="mt-10 space-y-3">
+            {FAQS.map((entry) => (
+              <li
+                key={entry.question}
+                className="rounded-2xl border border-line bg-parchment shadow-soft"
+              >
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-4 p-5 sm:p-6">
+                    <h3 className="font-display text-base font-semibold leading-snug text-forest-deep sm:text-lg">
+                      {entry.question}
+                    </h3>
+                    <span
+                      className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-forest/20 text-forest transition-transform group-open:rotate-180"
+                      aria-hidden="true"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </span>
+                  </summary>
+                  <p className="px-5 pb-5 text-sm leading-relaxed text-charcoal/80 sm:px-6 sm:pb-6 sm:text-base">
+                    {entry.answer}
+                  </p>
+                </details>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <ButtonLink href="/volunteer" size="lg">
+              Volunteer with us
+            </ButtonLink>
+            <ButtonLink href="/donate#give" variant="outline" size="lg">
+              Donate now
+            </ButtonLink>
+          </div>
         </div>
       </section>
 
@@ -253,26 +339,20 @@ export default function AboutPage() {
           <ul className="mt-5 space-y-3 text-sm leading-relaxed text-charcoal/85">
             <li>
               <strong>Reporters:</strong> contact details on rescue reports are
-              optional, visible only to the responding team, and never
-              published.
+              optional and are only visible to the responding team.
             </li>
             <li>
               <strong>Donors:</strong> donation records are private. Public
-              campaign pages show aggregate totals and supporter counts only.
+              campaign pages show totals and supporter counts only.
             </li>
             <li>
-              <strong>Volunteers:</strong> personal phone numbers and
-              addresses are never exposed on public pages.
+              <strong>Volunteers:</strong> personal phone numbers and addresses
+              are never shown on public pages.
             </li>
             <li>
-              <strong>QR scans:</strong> we log only the scan time and coarse
-              device category — never your identity, and location only with
-              your explicit permission.
-            </li>
-            <li>
-              <strong>Accounts:</strong> authentication is handled by our
-              identity provider; we store the minimum profile needed for your
-              role.
+              <strong>Adopters:</strong> the details in your adoption request
+              are visible only to the adoption coordinators reviewing your
+              application.
             </li>
           </ul>
         </article>
@@ -291,28 +371,22 @@ export default function AboutPage() {
           </h2>
           <ul className="mt-5 space-y-3 text-sm leading-relaxed text-charcoal/85">
             <li>
-              <strong>Zone-level location only:</strong> public profiles show
-              approximate campus zones. Precise coordinates live inside
-              access-controlled rescue records.
+              <strong>Approximate location only:</strong> public profiles show
+              a general area of the campus, not exact coordinates.
             </li>
             <li>
-              <strong>No live tracking:</strong> we never publish real-time
-              movement of community animals.
+              <strong>No live tracking:</strong> we do not publish real-time
+              movements of the community animals.
             </li>
             <li>
               <strong>Vulnerable animals:</strong> admins can hide any animal
-              from public listings during medical care, relocation, or when
-              there is risk of harm.
+              from public listings during medical care or when there is any
+              risk of harm.
             </li>
             <li>
-              <strong>Respectful imagery:</strong> graphic injury photos are
-              restricted to internal case records — public stories use
-              recovery-focused imagery.
-            </li>
-            <li>
-              <strong>Honest records:</strong> health statuses are updated by
-              authorized volunteers and admins with audit trails; impact
-              numbers are configuration, clearly labelled when demo.
+              <strong>Respectful photography:</strong> graphic injury photos
+              stay inside internal case records; public stories show recovery
+              images instead.
             </li>
           </ul>
         </article>

@@ -2,6 +2,7 @@ import { getFooterContent, getNavigation, getSettings } from "@/services/content
 import { Header, type HeaderNavItem } from "./Header";
 import { Footer, type FooterSections } from "./Footer";
 import { DonateModal } from "@/components/donate/DonateModal";
+import { FloatingReportButton } from "@/components/report/FloatingReportButton";
 
 /**
  * Server component that fetches CMS content for the site chrome (navigation
@@ -36,6 +37,7 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
       {children}
       <Footer sections={footerSections} emergencyEmail={emergencyEmail} emergencyPhone={emergencyPhone} />
       <DonateModal />
+      <FloatingReportButton />
     </>
   );
 }

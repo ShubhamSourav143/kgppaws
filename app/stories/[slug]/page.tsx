@@ -2,17 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Camera, Clock, Heart } from "lucide-react";
+import { Camera, Clock } from "lucide-react";
 import { getStory, listStories } from "@/services/stories";
 import { getAnimal } from "@/services/animals";
 import { AnimalCard } from "@/components/animals/AnimalCard";
 import { StoryCard } from "@/components/stories/StoryCard";
 import { PhotoGallery } from "@/components/media/PhotoGallery";
 import { Reveal } from "@/components/motion/Reveal";
-import { ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { StoryTimeline } from "@/components/stories/StoryTimeline";
+import { StorySlideshow, type SlideshowPhoto } from "@/components/stories/StorySlideshow";
 import type { Shot } from "@/components/stories/StorySections";
+import { bulletsFromStory } from "@/lib/stories/bullets";
 import { listMedia } from "@/lib/media";
 import { IMAGE_FOLDERS } from "@/lib/image-config";
 import { withCoverPhoto } from "@/lib/animal-covers";
@@ -177,6 +178,16 @@ export default async function StoryPage({
   const bodyBlocks = story.blocks.filter((b) => b.type !== "timeline");
   const journeyShots = own.length > 1 ? own.slice(1) : usablePool.slice(1);
 
+  // Slideshow photos — prefer the story's own uploads, then fill from the
+  // shared species-matched pool. Cap at five so the reel stays scannable
+  // and the dots row does not wrap on mobile.
+  const slideshowPhotos: SlideshowPhoto[] = [
+    ...own,
+    ...usablePool.filter((s) => !own.some((o) => o.src === s.src)),
+  ]
+    .slice(0, 5)
+    .map((s) => ({ src: s.src, alt: s.alt, blurDataURL: s.blurDataURL }));
+
   return (
     <article>
       {/* cinematic hero */}
@@ -221,62 +232,62 @@ export default async function StoryPage({
         </div>
       </header>
 
+      {/* primary view: slideshow — 4–5 photos + 4–5 short bullets + support CTA */}
+      <StorySlideshow
+        title={story.title}
+        subtitle={story.excerpt}
+        photos={slideshowPhotos}
+        bullets={bulletsFromStory(story)}
+        adoptHref={
+          animal && (animal.adoption === "available" || animal.adoption === "foster_needed")
+            ? `/adopt/apply/${animal.slug}`
+            : undefined
+        }
+        animalName={animal?.name}
+      />
+
       {/* the journey — full width, between the hero and the article */}
       <StoryTimeline steps={timelineSteps} shots={journeyShots} title={story.title} />
 
-      {/* body */}
+      {/* body — kept collapsed by default now that the slideshow is the
+          primary view. Readers who want the long-form piece can expand it. */}
       <div className="container-page grid gap-12 py-14 lg:grid-cols-[minmax(0,44rem)_1fr]">
         <div className="min-w-0">
-          {bodyBlocks.map((block, i) => (
-            <Block key={i} block={block} />
-          ))}
+          <details className="group rounded-3xl border border-line bg-parchment p-6 sm:p-8">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <span>
+                <span className="eyebrow text-saffron-deep">Read the full story</span>
+                <span className="mt-1 block font-display text-xl font-bold text-forest-deep sm:text-2xl">
+                  The long-form version, in the volunteer&apos;s own words.
+                </span>
+              </span>
+              <span
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-forest/20 text-forest transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </span>
+            </summary>
 
-          {story.photos.length > 0 && (
-            <section aria-labelledby="story-photos-h" className="mt-12">
-              <h2 id="story-photos-h" className="font-display text-2xl font-bold text-forest-deep">
-                Photos from this story
-              </h2>
-              <div className="mt-5">
-                <PhotoGallery photos={story.photos} fallbackPalette={story.heroPalette} />
-              </div>
-            </section>
-          )}
+            <div className="mt-6">
+              {bodyBlocks.map((block, i) => (
+                <Block key={i} block={block} />
+              ))}
 
-          {/* contextual CTA */}
-          <aside className="mt-14 rounded-3xl bg-forest p-8 text-center text-cream">
-            <Heart className="mx-auto h-7 w-7 text-sand" aria-hidden="true" />
-            {animal &&
-            (animal.adoption === "available" ||
-              animal.adoption === "foster_needed") ? (
-              <>
-                <p className="mt-3 font-display text-2xl font-bold">
-                  {animal.name}&apos;s next chapter could be yours to write.
-                </p>
-                <div className="mt-5 flex flex-wrap justify-center gap-3">
-                  <ButtonLink href={`/adopt/apply/${animal.slug}`} variant="light" size="lg">
-                    Adopt {animal.name}
-                  </ButtonLink>
-                  <ButtonLink href="/donate#give" variant="accent" size="lg">
-                    Fund the next rescue
-                  </ButtonLink>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="mt-3 font-display text-2xl font-bold">
-                  Stories like this one run on support like yours.
-                </p>
-                <div className="mt-5 flex flex-wrap justify-center gap-3">
-                  <ButtonLink href="/donate#give" variant="light" size="lg">
-                    Donate
-                  </ButtonLink>
-                  <ButtonLink href="/volunteer" variant="accent" size="lg">
-                    Volunteer
-                  </ButtonLink>
-                </div>
-              </>
-            )}
-          </aside>
+              {story.photos.length > 0 && (
+                <section aria-labelledby="story-photos-h" className="mt-12">
+                  <h2 id="story-photos-h" className="font-display text-2xl font-bold text-forest-deep">
+                    Photos from this story
+                  </h2>
+                  <div className="mt-5">
+                    <PhotoGallery photos={story.photos} fallbackPalette={story.heroPalette} />
+                  </div>
+                </section>
+              )}
+            </div>
+          </details>
         </div>
 
         {/* sidebar */}

@@ -54,7 +54,8 @@ export default function AdminAdoptionsPage() {
                     </Link>
                   </p>
                   <p className="mt-0.5 font-mono text-xs text-moss">
-                    {app.id} · {formatDate(app.createdAt.slice(0, 10))} · {app.applicant.affiliation}
+                    {app.id} · {formatDate(app.createdAt.slice(0, 10))}
+                    {app.applicant.affiliation && ` · ${app.applicant.affiliation}`}
                   </p>
                 </div>
                 <Chip
@@ -72,24 +73,59 @@ export default function AdminAdoptionsPage() {
 
               <dl className="mt-4 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-xs font-bold uppercase tracking-wide text-moss">Home</dt>
+                  <dt className="text-xs font-bold uppercase tracking-wide text-moss">Contact</dt>
                   <dd className="text-charcoal/85">
-                    {app.living.housing} ({app.living.ownOrRent})
-                    {app.living.hasOutdoorSpace ? " · outdoor space" : ""}
+                    {app.applicant.email} · {app.applicant.phone}
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-xs font-bold uppercase tracking-wide text-moss">Experience</dt>
-                  <dd className="text-charcoal/85">
-                    {app.experience.hadPetsBefore ? "Prior animal care" : "First-time"}
-                    {app.experience.currentPets ? ` · ${app.experience.currentPets}` : ""} ·
-                    alone {app.experience.hoursAloneDaily}
-                  </dd>
-                </div>
+                {app.applicant.address && (
+                  <div>
+                    <dt className="text-xs font-bold uppercase tracking-wide text-moss">Address</dt>
+                    <dd className="whitespace-pre-line text-charcoal/85">{app.applicant.address}</dd>
+                  </div>
+                )}
+                {app.applicant.mapsLink && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs font-bold uppercase tracking-wide text-moss">Google Maps</dt>
+                    <dd>
+                      <a
+                        href={app.applicant.mapsLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="break-all text-forest underline decoration-terracotta/50 underline-offset-4 hover:decoration-terracotta"
+                      >
+                        {app.applicant.mapsLink}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+                {/* Legacy wizard-form fields — only shown for older records that still carry them. */}
+                {app.living.housing && (
+                  <div>
+                    <dt className="text-xs font-bold uppercase tracking-wide text-moss">Home (legacy)</dt>
+                    <dd className="text-charcoal/85">
+                      {app.living.housing}
+                      {app.living.ownOrRent && ` (${app.living.ownOrRent})`}
+                      {app.living.hasOutdoorSpace ? " · outdoor space" : ""}
+                    </dd>
+                  </div>
+                )}
+                {app.experience.hoursAloneDaily && (
+                  <div>
+                    <dt className="text-xs font-bold uppercase tracking-wide text-moss">Experience (legacy)</dt>
+                    <dd className="text-charcoal/85">
+                      {app.experience.hadPetsBefore ? "Prior animal care" : "First-time"}
+                      {app.experience.currentPets ? ` · ${app.experience.currentPets}` : ""} ·
+                      alone {app.experience.hoursAloneDaily}
+                    </dd>
+                  </div>
+                )}
               </dl>
-              <blockquote className="mt-3 rounded-2xl bg-cream p-3.5 text-sm italic leading-relaxed text-charcoal/80">
-                “{app.motivation}”
-              </blockquote>
+              {app.motivation && (
+                <blockquote className="mt-3 rounded-2xl bg-cream p-3.5 text-sm italic leading-relaxed text-charcoal/80">
+                  &ldquo;{app.motivation}&rdquo;
+                </blockquote>
+              )}
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <label className="block">

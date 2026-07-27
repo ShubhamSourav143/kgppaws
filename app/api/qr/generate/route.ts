@@ -26,12 +26,24 @@ export async function POST(request: NextRequest) {
   if (!supabase) return NextResponse.json({ error: "supabase not configured" }, { status: 503 });
   const { data: userData } = await supabase.auth.getUser();
   if (!userData?.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  // Approved staff/moderators/admins can mint animal QR codes. Signups
+  // that are still pending admin approval (see migration 0012) are
+  // filtered out by the is_approved gate — until an admin flips it, they
+  // cannot generate QR codes for animals.
   const { data: roleData } = await supabase
     .from("user_roles")
-    .select("role")
+    .select("role, is_approved")
     .eq("user_id", userData.user.id);
-  const roles = new Set((roleData ?? []).map((r) => r.role));
-  if (!roles.has("admin") && !roles.has("super_admin")) {
+  const approvedRoles = new Set(
+    (roleData ?? [])
+      .filter((r: { is_approved?: boolean }) => r.is_approved !== false)
+      .map((r) => r.role)
+  );
+  if (
+    !approvedRoles.has("admin") &&
+    !approvedRoles.has("super_admin") &&
+    !approvedRoles.has("volunteer")
+  ) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

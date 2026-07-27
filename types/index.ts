@@ -154,6 +154,13 @@ export interface RescueReport {
   status: ReportStatus;
   updates: ReportUpdate[];
   linkedAnimalSlug?: string;
+  /** Optional Google Maps URL the reporter shares so a volunteer can
+   *  navigate straight to the animal. New floating-report flow sets this. */
+  mapsLink?: string;
+  /** File name of the uploaded photo, if any. Live mode would store the
+   *  Storage URL; demo mode keeps only the filename so the admin dashboard
+   *  can display "photo attached" without any actual upload happening. */
+  photoName?: string;
   demo: boolean;
 }
 
@@ -262,19 +269,30 @@ export interface AdoptionApplication {
     name: string;
     email: string;
     phone: string;
+    /** Old wizard-form field; new simple form leaves this blank. */
     affiliation: string;
+    /** New simple form: home address the applicant can be visited at. */
+    address?: string;
+    /** New simple form: Google Maps link so a volunteer can navigate to the home. */
+    mapsLink?: string;
   };
+  /** Old wizard-form living-situation snapshot — kept for older records
+   *  in localStorage/DB. New simple form fills these with placeholder
+   *  defaults so admin displays keep working. */
   living: {
     housing: string;
     ownOrRent: string;
     householdAgrees: boolean;
     hasOutdoorSpace: boolean;
   };
+  /** Old wizard-form animal-experience snapshot — see `living` note above. */
   experience: {
     hadPetsBefore: boolean;
     currentPets: string;
     hoursAloneDaily: string;
   };
+  /** New simple form maps its "Any concern" field into here so old admin
+   *  code that reads `motivation` still surfaces the applicant's own words. */
   motivation: string;
   demo: boolean;
 }

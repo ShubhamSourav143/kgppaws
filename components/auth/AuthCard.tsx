@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Info } from "lucide-react";
+import { Clock, Info, PawPrint } from "lucide-react";
 import { PawMark } from "@/components/brand/Logo";
 import { Input } from "@/components/ui/Field";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { DemoRoleButtons } from "@/components/auth/DemoRoleButtons";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/config";
@@ -25,13 +25,23 @@ type Values = z.infer<ReturnType<typeof makeSchema>>;
 
 /**
  * Credential auth (Supabase) with a demo-mode fallback.
- * Live mode: email/password via Supabase Auth; roles come from the
- * `user_roles` table and are enforced by RLS, not by this component.
+ *
+ * Signups intentionally do NOT auto-redirect to the dashboard. Every new
+ * account starts in a "pending approval" state — the account exists but
+ * cannot access user-only features (submitting adoption stories, generating
+ * animal QR codes) until an administrator approves it and assigns a role
+ * (User / Moderator / Admin). The approval flow lives in the admin area;
+ * this card only communicates the state to the person who just signed up.
+ *
+ * Live mode: email/password via Supabase Auth. The pending state must be
+ * enforced server-side by RLS on the `user_roles` / `user_approvals` tables
+ * — this UI cannot grant access on its own.
  */
 export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [signupPending, setSignupPending] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -41,9 +51,8 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     defaultValues: { name: "" },
   });
 
-  // Preserves the original hard-reload redirect (not router.push) rather
-  // than guessing at intent; the mutation just needs to live in an effect,
-  // not the submit handler, to satisfy react-hooks/immutability.
+  // Login (approved) users are hard-reloaded to the dashboard, as before.
+  // Signups never redirect — they see the pending-approval screen instead.
   useEffect(() => {
     if (redirecting) {
       window.location.href = "/dashboard";
@@ -71,8 +80,50 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
       setServerError(error.message);
       return;
     }
-    setRedirecting(true);
+    if (mode === "signup") {
+      setSignupPending(values.email);
+    } else {
+      setRedirecting(true);
+    }
   };
+
+  if (signupPending) {
+    return (
+      <div className="rounded-3xl border border-line bg-parchment p-8 shadow-soft">
+        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-forest text-cream">
+          <Clock className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 font-display text-3xl font-bold text-forest-deep">
+          Account created — pending approval.
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-charcoal/80">
+          Thank you for signing up as{" "}
+          <strong className="text-forest-deep">{signupPending}</strong>. Every
+          new account is reviewed by a KGP PAWS administrator before it can
+          submit adoption stories or generate QR codes for animals.
+        </p>
+        <div className="mt-5 rounded-2xl bg-sand-light p-4 text-sm leading-relaxed text-forest-deep">
+          <p className="flex items-start gap-2">
+            <PawPrint className="mt-0.5 h-4 w-4 shrink-0 text-saffron-deep" aria-hidden="true" />
+            <span>
+              After approval, an admin will assign you a role —{" "}
+              <strong>User</strong>, <strong>Moderator</strong> or{" "}
+              <strong>Admin</strong> — and you will be able to sign in
+              normally.
+            </span>
+          </p>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <ButtonLink href="/" variant="outline">
+            Back to the site
+          </ButtonLink>
+          <ButtonLink href="/login" variant="ghost">
+            Go to sign in
+          </ButtonLink>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-3xl border border-line bg-parchment p-8 shadow-soft">
@@ -85,7 +136,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
       <p className="mt-2 text-sm leading-relaxed text-moss">
         {mode === "login"
           ? "Track your reports, applications and saved paws."
-          : "Save animals, track your reports and applications, and see your donation history."}
+          : "Create an account to submit adoption stories, generate QR codes for approved animals, and track your activity. New accounts are reviewed by an admin before they can post."}
       </p>
 
       {isSupabaseConfigured ? (
@@ -103,6 +154,14 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
             {pending ? "One moment…" : mode === "login" ? "Sign in" : "Create account"}
           </Button>
+          {mode === "signup" && (
+            <p className="rounded-2xl bg-sand-light p-3 text-xs leading-relaxed text-forest-deep">
+              <Info className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 text-saffron-deep" aria-hidden="true" />
+              Every account starts pending. After admin approval you can be
+              assigned a role: <strong>User</strong>, <strong>Moderator</strong>{" "}
+              or <strong>Admin</strong>.
+            </p>
+          )}
         </form>
       ) : (
         <div className="mt-6">

@@ -9,13 +9,14 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Search, X, PawPrint, BookOpen, Compass } from "lucide-react";
+import { Search, X, PawPrint, BookOpen, Compass, HelpCircle } from "lucide-react";
 import type { SearchResult } from "@/app/api/search/route";
 import { cn } from "@/lib/utils";
 
 const TYPE_META: Record<SearchResult["type"], { label: string; icon: typeof PawPrint }> = {
   animal: { label: "Animals", icon: PawPrint },
   story: { label: "Stories", icon: BookOpen },
+  faq: { label: "FAQs", icon: HelpCircle },
   page: { label: "Pages", icon: Compass },
 };
 

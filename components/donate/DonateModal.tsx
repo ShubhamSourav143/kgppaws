@@ -1,15 +1,40 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, Copy, HandHeart, HeartHandshake, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  HandHeart,
+  HeartHandshake,
+  Scissors,
+  Siren,
+  Soup,
+  Stethoscope,
+  Syringe,
+  X,
+} from "lucide-react";
 import { QrCodeImage } from "@/components/qr/QrCode";
 import { cn, formatINR } from "@/lib/utils";
 
 const PRESETS = [100, 300, 500, 1000, 2500];
 const UPI_ID = "kgppaws@upi";
 const HOLDER = "KGP PAWS";
+
+/**
+ * What every donation goes toward, shown below the QR so donors know
+ * exactly what they are supporting. Kept short and specific — this is the
+ * same set that appears on the donation-page campaigns.
+ */
+const USES = [
+  { icon: Soup, label: "Feeding" },
+  { icon: Syringe, label: "Vaccination" },
+  { icon: Scissors, label: "Sterilization" },
+  { icon: Stethoscope, label: "Emergency medical treatment" },
+  { icon: Siren, label: "Rescue operations" },
+];
 
 /**
  * A modal that opens whenever the URL hash becomes `#give`. Every existing
@@ -29,6 +54,9 @@ export function DonateModal() {
   const [amount, setAmount] = useState<number>(300);
   const [custom, setCustom] = useState("");
   const [copied, setCopied] = useState(false);
+  // Kept in a ref (not state) so the Download button uses the latest PNG
+  // without rerendering the whole dialog on every amount tweak.
+  const qrDataUrlRef = useRef<string | null>(null);
 
   const effective = custom ? Math.max(0, Math.floor(Number(custom) || 0)) : amount;
 
@@ -80,6 +108,17 @@ export function DonateModal() {
     } catch {
       /* no-op — fall back to the visible text */
     }
+  };
+
+  const downloadQr = () => {
+    const url = qrDataUrlRef.current;
+    if (!url) return;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kgp-paws-upi-qr${effective > 0 ? `-${effective}` : ""}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -220,14 +259,46 @@ export function DonateModal() {
               {/* right — QR code */}
               <div className="flex flex-col items-center justify-start sm:pt-6">
                 <div className="rounded-2xl border border-line bg-ivory p-3 shadow-soft">
-                  <QrCodeImage value={upiUri} size={168} />
+                  <QrCodeImage
+                    value={upiUri}
+                    size={168}
+                    onDataUrl={(url) => {
+                      qrDataUrlRef.current = url;
+                    }}
+                  />
                 </div>
-                <p className="mt-3 text-center text-[11px] leading-relaxed text-moss">
+                <button
+                  type="button"
+                  onClick={downloadQr}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-mist px-3 py-1.5 text-xs font-bold text-forest transition-colors hover:bg-sand"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  Download QR
+                </button>
+                <p className="mt-2 text-center text-[11px] leading-relaxed text-moss">
                   Scan with any UPI app
                   <br />
                   <span className="text-moss/70">PhonePe · GPay · Paytm · BHIM</span>
                 </p>
               </div>
+            </div>
+
+            {/* how donations are used */}
+            <div className="border-t border-line/70 bg-parchment/60 px-6 py-4 sm:px-7">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-moss">
+                Your donation supports
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+                {USES.map((u) => (
+                  <li
+                    key={u.label}
+                    className="inline-flex items-center gap-1.5 text-xs text-charcoal/80"
+                  >
+                    <u.icon className="h-3.5 w-3.5 text-saffron-deep" aria-hidden="true" />
+                    {u.label}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {/* footer strip */}
@@ -239,16 +310,25 @@ export function DonateModal() {
                   {effective > 0 ? formatINR(effective) : "—"}
                 </span>
               </p>
-              <a
-                href={upiUri}
-                className={cn(
-                  "inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-5 py-2.5 text-sm font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95",
-                  effective <= 0 && "pointer-events-none opacity-60"
-                )}
-              >
-                <HandHeart className="h-4 w-4" aria-hidden="true" />
-                Open UPI app
-              </a>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={close}
+                  className="rounded-full border border-line px-4 py-2.5 text-sm font-semibold text-forest transition-colors hover:bg-mist"
+                >
+                  Close
+                </button>
+                <a
+                  href={upiUri}
+                  className={cn(
+                    "inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-5 py-2.5 text-sm font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95",
+                    effective <= 0 && "pointer-events-none opacity-60"
+                  )}
+                >
+                  <HandHeart className="h-4 w-4" aria-hidden="true" />
+                  Open UPI app
+                </a>
+              </div>
             </div>
           </motion.div>
         </motion.div>

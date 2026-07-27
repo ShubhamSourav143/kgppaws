@@ -14,12 +14,17 @@ export function QrCodeImage({
   size = 240,
   dark = "#173F35",
   light = "#FCF8F0",
+  onDataUrl,
 }: {
   value: string;
   className?: string;
   size?: number;
   dark?: string;
   light?: string;
+  /** Called with the generated PNG data URL each time it re-renders. Lets
+   *  a parent (e.g. the Donate modal) attach a Download button that saves
+   *  the same PNG the user is looking at. */
+  onDataUrl?: (dataUrl: string) => void;
 }) {
   const [src, setSrc] = useState<string | null>(null);
 
@@ -32,7 +37,10 @@ export function QrCodeImage({
       errorCorrectionLevel: "M",
     })
       .then((url) => {
-        if (!cancelled) setSrc(url);
+        if (!cancelled) {
+          setSrc(url);
+          onDataUrl?.(url);
+        }
       })
       .catch(() => {
         /* decorative fallback below */
@@ -40,7 +48,7 @@ export function QrCodeImage({
     return () => {
       cancelled = true;
     };
-  }, [value, size, dark, light]);
+  }, [value, size, dark, light, onDataUrl]);
 
   if (!src) {
     return (
