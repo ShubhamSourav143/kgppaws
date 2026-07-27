@@ -1,4 +1,6 @@
 import { listMedia } from "@/lib/media";
+import { IMAGE_FOLDERS } from "@/lib/image-config";
+import type { MediaCollection } from "@/lib/image-config";
 import type { Animal } from "@/types";
 
 /**
@@ -14,9 +16,18 @@ import type { Animal } from "@/types";
  * home page, the campus map and the adoption form while real photographs sat
  * unused on disk. Every surface that renders an `AnimalPortrait` should pass
  * its animals through here first.
+ *
+ * `overrideFolder` lets one section show a different photo of the same
+ * animal than everywhere else: pass `IMAGE_FOLDERS.featuredDogs` or
+ * `IMAGE_FOLDERS.companions` and a same-slug file there wins over the
+ * `adopt/` cover for that call only. Leave it unset for the default
+ * site-wide identity photo.
  */
-export async function withCoverPhotos(animals: Animal[]): Promise<Animal[]> {
-  const covers = await coverMap();
+export async function withCoverPhotos(
+  animals: Animal[],
+  overrideFolder?: MediaCollection
+): Promise<Animal[]> {
+  const covers = await coverMap(overrideFolder);
   return animals.map((a) => attachCover(a, covers));
 }
 
@@ -33,14 +44,22 @@ export async function withCoverPhoto(
   return attachCover(animal, await coverMap());
 }
 
-/** slug → `/images/adopt/<slug>.jpg`, ignoring any `--caption` suffix. */
-export async function coverMap(): Promise<Record<string, string>> {
-  const media = await listMedia("adopt");
+/**
+ * slug → cover src, ignoring any `--caption` suffix. Reads `adopt/` first,
+ * then layers `overrideFolder` on top so a matching slug there wins — the
+ * override is optional per-section styling, `adopt/` is the fallback that's
+ * always present.
+ */
+export async function coverMap(overrideFolder?: MediaCollection): Promise<Record<string, string>> {
+  const [base, override] = await Promise.all([
+    listMedia(IMAGE_FOLDERS.adopt),
+    overrideFolder ? listMedia(overrideFolder) : Promise.resolve([]),
+  ]);
   const covers: Record<string, string> = {};
-  for (const m of media) {
+  for (const m of [...base, ...override]) {
     const file = m.src.split("/").pop() ?? "";
     const key = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
-    if (key && !(key in covers)) covers[key] = m.src;
+    if (key) covers[key] = m.src; // later entries (override) win
   }
   return covers;
 }

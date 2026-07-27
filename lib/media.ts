@@ -1,6 +1,7 @@
 import { readdir } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
+import type { MediaCollection } from "@/lib/image-config";
 
 /**
  * Filesystem-backed media manifest (server/build-time only).
@@ -9,24 +10,15 @@ import sharp from "sharp";
  * renders a collection picks them up on the next build — no code changes.
  * Filenames become captions: `simba--first-day-home.jpg` → "Simba — first day home".
  *
+ * Every valid `collection` value is a path from `lib/image-config.ts` — that
+ * file is the single source of truth for which folders exist and what each
+ * one feeds; see docs/IMAGE_GUIDE.md for the full section-to-folder map.
+ *
  * CMS media (Supabase `animal_photos`, story photos) is merged by the pages
  * themselves; this module only knows about static files.
  */
 
-export type MediaCollection =
-  | "branding"
-  | "hero"
-  | "hero-grid"
-  | "gallery"
-  | "stories"
-  | "transformation"
-  | "campus-compawnions"
-  | "shelter-residents"
-  | "adopt"
-  | "donate"
-  | "volunteer"
-  | "events"
-  | "backgrounds";
+export type { MediaCollection };
 
 export interface MediaAsset {
   src: string;

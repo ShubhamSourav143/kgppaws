@@ -187,7 +187,7 @@ function FeaturedLead({ story, shot }: { story: Story; shot?: Shot }) {
       href={`/stories/${story.slug}`}
       className="group relative block overflow-hidden rounded-[2rem] bg-night shadow-card transition-shadow duration-500 hover:shadow-glow"
     >
-      <div className="relative aspect-[4/5] sm:aspect-[21/9]">
+      <div className="relative aspect-[4/5] sm:aspect-[16/9]">
         {shot ? (
           <motion.div
             className="absolute inset-[-6%]"
@@ -201,7 +201,7 @@ function FeaturedLead({ story, shot }: { story: Story; shot?: Shot }) {
               sizes="92vw"
               placeholder={shot.blurDataURL ? "blur" : undefined}
               blurDataURL={shot.blurDataURL}
-              className="object-cover transition-transform duration-[1.3s] ease-out group-hover:scale-[1.05]"
+              className="object-cover object-top transition-transform duration-[1.3s] ease-out group-hover:scale-[1.05]"
             />
           </motion.div>
         ) : (
@@ -383,7 +383,7 @@ function InitiativeRow({
                 sizes="(min-width: 1024px) 46vw, 92vw"
                 placeholder={shot.blurDataURL ? "blur" : undefined}
                 blurDataURL={shot.blurDataURL}
-                className="object-cover"
+                className="object-contain"
               />
             </motion.div>
           )}

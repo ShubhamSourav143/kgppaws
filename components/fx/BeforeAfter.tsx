@@ -38,7 +38,7 @@ export function BeforeAfter({
   return (
     <div
       ref={ref}
-      className={cn("group relative select-none overflow-hidden rounded-[2rem] shadow-lift", className)}
+      className={cn("group relative select-none overflow-hidden rounded-[2rem] bg-sand-light shadow-lift", className)}
       onPointerDown={(e) => {
         dragging.current = true;
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -49,10 +49,10 @@ export function BeforeAfter({
       onPointerCancel={() => (dragging.current = false)}
     >
       {/* after (base) */}
-      <Image src={after} alt={`${alt} — ${afterLabel}`} fill sizes="(min-width: 1024px) 40rem, 100vw" className="object-cover" />
+      <Image src={after} alt={`${alt} — ${afterLabel}`} fill sizes="(min-width: 1024px) 40rem, 100vw" className="object-contain" />
       {/* before (clipped) */}
       <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-        <Image src={before} alt={`${alt} — ${beforeLabel}`} fill sizes="(min-width: 1024px) 40rem, 100vw" className="object-cover" />
+        <Image src={before} alt={`${alt} — ${beforeLabel}`} fill sizes="(min-width: 1024px) 40rem, 100vw" className="object-contain" />
       </div>
 
       {/* divider + handle */}

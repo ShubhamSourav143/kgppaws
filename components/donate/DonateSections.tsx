@@ -268,7 +268,7 @@ export function WhyDonate({ shots }: { shots: Shot[] }) {
                         sizes="(min-width: 1024px) 23vw, (min-width: 640px) 45vw, 90vw"
                         placeholder={shot.blurDataURL ? "blur" : undefined}
                         blurDataURL={shot.blurDataURL}
-                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.07]"
+                        className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.07]"
                       />
                     )}
                     <div

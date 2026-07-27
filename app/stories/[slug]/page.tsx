@@ -14,6 +14,8 @@ import { Chip } from "@/components/ui/Chip";
 import { StoryTimeline } from "@/components/stories/StoryTimeline";
 import type { Shot } from "@/components/stories/StorySections";
 import { listMedia } from "@/lib/media";
+import { IMAGE_FOLDERS } from "@/lib/image-config";
+import { withCoverPhoto } from "@/lib/animal-covers";
 import { poolForSpecies } from "@/lib/demo/photo-pool";
 import { STORY_CATEGORY_LABELS } from "@/lib/demo/stories";
 import { formatDate } from "@/lib/utils";
@@ -125,12 +127,13 @@ export default async function StoryPage({
   const story = await getStory(slug);
   if (!story) notFound();
 
-  const [animal, allStories, adoptMedia, gridMedia] = await Promise.all([
+  const [rawAnimal, allStories, adoptMedia, gridMedia] = await Promise.all([
     story.animalSlug ? getAnimal(story.animalSlug) : Promise.resolve(undefined),
     listStories(),
-    listMedia("adopt"),
-    listMedia("hero-grid"),
+    listMedia(IMAGE_FOLDERS.adopt),
+    listMedia(IMAGE_FOLDERS.heroGrid),
   ]);
+  const animal = await withCoverPhoto(rawAnimal);
   const related = allStories.filter((s) => s.slug !== story.slug).slice(0, 2);
 
   // Photography for the hero and the journey. The story's own uploads win;
@@ -283,7 +286,7 @@ export default async function StoryPage({
               <h2 className="eyebrow mb-4 text-terracotta-deep">
                 The paw in this story
               </h2>
-              <AnimalCard animal={animal} />
+              <AnimalCard animal={animal} fit="contain" />
             </div>
           )}
           <div>

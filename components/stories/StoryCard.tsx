@@ -51,7 +51,7 @@ export function StoryCard({
         />
 
         {/* visual */}
-        <div className={cn("relative overflow-hidden rounded-xl", large ? "aspect-[16/8]" : "aspect-[16/10]")}>
+        <div className={cn("relative overflow-hidden rounded-xl bg-sand-light", large ? "aspect-[16/8]" : "aspect-[16/10]")}>
           {photo ? (
             <SmartImage
               src={photo.url}
@@ -59,7 +59,7 @@ export function StoryCard({
               fill
               sizes={large ? "(min-width: 1024px) 60rem, 100vw" : "(min-width: 768px) 28rem, 100vw"}
               className="h-full w-full"
-              imgClassName="object-cover transition-transform duration-700 group-hover:scale-105"
+              imgClassName="object-contain transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
             <div

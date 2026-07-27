@@ -147,7 +147,7 @@ function FeaturedArticle({ article: a, shot }: { article: Article; shot?: Shot }
             sizes="(min-width: 1024px) 46vw, 92vw"
             placeholder={shot.blurDataURL ? "blur" : undefined}
             blurDataURL={shot.blurDataURL}
-            className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
+            className="object-contain transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
           />
         )}
         <span className="absolute left-4 top-4 rounded-full bg-marigold px-3 py-1 text-[11px] font-black uppercase tracking-wider text-night">
@@ -183,7 +183,7 @@ function ArticleCard({ article: a, shot }: { article: Article; shot?: Shot }) {
             sizes="(min-width: 1024px) 31vw, (min-width: 640px) 46vw, 92vw"
             placeholder={shot.blurDataURL ? "blur" : undefined}
             blurDataURL={shot.blurDataURL}
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+            className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.06]"
           />
         )}
         <span className="absolute left-3 top-3 rounded-full bg-ivory/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-saffron-deep shadow-soft backdrop-blur-sm">

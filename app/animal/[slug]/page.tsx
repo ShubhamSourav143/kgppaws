@@ -112,6 +112,7 @@ export default async function AnimalProfilePage({
               idle
               frame="arch"
               photoUrl={animal.photos.find((p) => p.url)?.url}
+              fit="contain"
               className="aspect-[4/4.6] shadow-lift"
             />
             <SaveButton

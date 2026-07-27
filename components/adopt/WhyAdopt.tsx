@@ -139,7 +139,7 @@ function SlideBody({
               sizes="(min-width: 1024px) 30vw, 92vw"
               placeholder={photo.blurDataURL ? "blur" : undefined}
               blurDataURL={photo.blurDataURL}
-              className="object-cover"
+              className="object-contain"
             />
           </motion.div>
         ) : (

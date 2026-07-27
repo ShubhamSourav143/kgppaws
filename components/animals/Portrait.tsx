@@ -21,6 +21,7 @@ export function AnimalPortrait({
   className,
   photoUrl,
   photos,
+  fit = "cover",
 }: {
   animal: Pick<Animal, "name" | "species" | "portrait">;
   /** enable subtle blink/head-tilt idle animation */
@@ -34,6 +35,19 @@ export function AnimalPortrait({
    * Anything other than exactly three falls back to the single-photo frame.
    */
   photos?: { src: string; alt: string }[];
+  /**
+   * How the single `photoUrl` still fills its box. "cover" (default) fills
+   * edge to edge and crops — right for avatars, thumbnail grids and the
+   * `photos` story mode, all small enough or square enough that cropping
+   * reads as normal. "contain" never crops: the whole photograph stays
+   * visible, letterboxed against a neutral fill if the container's aspect
+   * ratio doesn't match the source. Use "contain" for a primary,
+   * identity-defining photo of one specific animal (a card's main image, a
+   * profile hero) where cutting off the subject would be a real loss — most
+   * of this site's real photography is portrait-oriented phone photos, and
+   * "cover" inside a landscape-ish box was cropping heads and legs.
+   */
+  fit?: "cover" | "contain";
 }) {
   const p = animal.portrait;
   const isCat = animal.species === "cat";
@@ -86,6 +100,7 @@ export function AnimalPortrait({
       <div
         className={cn(
           "relative overflow-hidden",
+          fit === "contain" && "bg-sand-light",
           frame === "arch" ? "rounded-b-3xl rounded-t-[999px]" : "rounded-3xl",
           className
         )}
@@ -95,7 +110,7 @@ export function AnimalPortrait({
           alt={`Photo of ${animal.name}`}
           fill
           sizes="(min-width: 1024px) 28rem, 90vw"
-          className="object-cover"
+          className={fit === "contain" ? "object-contain" : "object-cover"}
           priority
         />
       </div>

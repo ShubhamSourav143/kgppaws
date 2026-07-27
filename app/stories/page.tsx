@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { listStories } from "@/services/stories";
 import { listMedia } from "@/lib/media";
+import { IMAGE_FOLDERS } from "@/lib/image-config";
 import { INITIATIVES } from "@/lib/stories/our-work";
 import { ARTICLES } from "@/lib/stories/knowledge";
 import { KnowledgeCenter } from "@/components/stories/KnowledgeCenter";
@@ -33,8 +34,8 @@ export default async function StoriesPage() {
   // slots than dedicated photographs; see the shortfall note in the audit.
   const [stories, storyMedia, adoptMedia] = await Promise.all([
     listStories(),
-    listMedia("stories"),
-    listMedia("adopt"),
+    listMedia(IMAGE_FOLDERS.stories),
+    listMedia(IMAGE_FOLDERS.adopt),
   ]);
 
   const byStem = new Map<string, Shot>();

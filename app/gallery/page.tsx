@@ -5,7 +5,8 @@ import { Reveal } from "@/components/fx/Reveal";
 import { TextReveal } from "@/components/fx/TextReveal";
 import { listAnimals } from "@/services/animals";
 import { listStories } from "@/services/stories";
-import { listMedia, type MediaCollection } from "@/lib/media";
+import { listMedia } from "@/lib/media";
+import { IMAGE_FOLDERS, type MediaCollection } from "@/lib/image-config";
 
 export const metadata: Metadata = {
   title: "Gallery",
@@ -15,14 +16,14 @@ export const metadata: Metadata = {
 };
 
 const COLLECTION_CATEGORY: Partial<Record<MediaCollection, string>> = {
-  gallery: "Campus life",
-  events: "Events",
-  transformation: "Transformation",
-  "campus-compawnions": "Campus life",
-  "shelter-residents": "Shelter residents",
-  volunteer: "Volunteers",
-  adopt: "Dogs",
-  hero: "Campus life",
+  [IMAGE_FOLDERS.gallery]: "Campus life",
+  [IMAGE_FOLDERS.events]: "Events",
+  [IMAGE_FOLDERS.transformation]: "Transformation",
+  [IMAGE_FOLDERS.companions]: "Campus life",
+  [IMAGE_FOLDERS.shelterResidents]: "Shelter residents",
+  [IMAGE_FOLDERS.volunteer]: "Volunteers",
+  [IMAGE_FOLDERS.adopt]: "Dogs",
+  [IMAGE_FOLDERS.hero]: "Campus life",
 };
 
 const STORY_CATEGORY: Record<string, string> = {

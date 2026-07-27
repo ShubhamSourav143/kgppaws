@@ -4,6 +4,7 @@ import { PawPrint, ArrowUpRight, ArrowDown } from "lucide-react";
 import { listAnimals } from "@/services/animals";
 import { getAdoptionContent } from "@/services/content";
 import { listMedia } from "@/lib/media";
+import { IMAGE_FOLDERS } from "@/lib/image-config";
 import { withCoverPhotos } from "@/lib/animal-covers";
 import { AdoptExplorer } from "@/components/adopt/AdoptExplorer";
 import { WhyAdopt, type WhyPhotos } from "@/components/adopt/WhyAdopt";
@@ -28,10 +29,10 @@ export default async function AdoptPage() {
   const [animals, content, adoptMedia, storyMedia] = await Promise.all([
     listAnimals(),
     getAdoptionContent(),
-    listMedia("adopt"),
+    listMedia(IMAGE_FOLDERS.adopt),
     // the "Why Adoption Matters" slideshow has its own photography
     // (public/images/stories) so it never re-shows an animal's card photo
-    listMedia("stories"),
+    listMedia(IMAGE_FOLDERS.stories),
   ]);
 
   const intro = content.find((c) => c.section === "intro");

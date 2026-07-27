@@ -132,7 +132,7 @@ export function CampaignGallery({
                   sizes="(min-width: 1024px) 60vw, 92vw"
                   placeholder={active.blurDataURL ? "blur" : undefined}
                   blurDataURL={active.blurDataURL}
-                  className="object-cover"
+                  className="object-contain"
                 />
               </motion.div>
             </motion.div>

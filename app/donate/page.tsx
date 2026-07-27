@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { listCampaigns } from "@/services/campaigns";
 import { listMedia } from "@/lib/media";
+import { IMAGE_FOLDERS } from "@/lib/image-config";
 import { DEMO_DONORS } from "@/lib/demo/donors";
 import { editorialFor } from "@/lib/donate/editorial";
 import { CampaignFeature } from "@/components/donate/CampaignFeature";
@@ -26,20 +27,25 @@ export default async function DonatePage() {
   // Campaign money comes from the backend exactly as before — this page only
   // changes how it's told. Photography is resolved from the filesystem media
   // manifest, keyed by the stems in lib/donate/editorial.ts.
-  const [campaigns, adoptMedia, gridMedia, donateMedia] = await Promise.all([
+  const [campaigns, adoptMedia, gridMedia, ...donationMedia] = await Promise.all([
     listCampaigns(),
-    listMedia("adopt"),
-    listMedia("hero-grid"),
-    listMedia("donate"),
+    listMedia(IMAGE_FOLDERS.adopt),
+    listMedia(IMAGE_FOLDERS.heroGrid),
+    listMedia(IMAGE_FOLDERS.donationFeeding),
+    listMedia(IMAGE_FOLDERS.donationSterilization),
+    listMedia(IMAGE_FOLDERS.donationVaccination),
+    listMedia(IMAGE_FOLDERS.donationMedical),
+    listMedia(IMAGE_FOLDERS.donationRescue),
   ]);
 
   // Two disjoint pools so no photo appears in two sections of the donate page:
-  //   * campaign galleries pull from donate/*.jpg (dedicated per-campaign stems
-  //     — see lib/donate/editorial.ts)
+  //   * campaign galleries pull from public/images/donation/<programme>/,
+  //     one folder per programme (dedicated per-campaign stems — see
+  //     lib/donate/editorial.ts)
   //   * the hero collage, "Why donate" tiles and final CTA backdrop pull from
   //     the shared adopt/ + hero-grid/ pool, and are sliced disjointly below.
   const byStem = new Map<string, Shot>();
-  for (const m of donateMedia) {
+  for (const m of donationMedia.flat()) {
     const file = m.src.split("/").pop() ?? "";
     const stem = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
     if (stem && !byStem.has(stem)) {

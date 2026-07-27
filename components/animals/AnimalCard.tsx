@@ -25,10 +25,14 @@ export function AnimalCard({
   animal,
   tilt = false,
   className,
+  fit = "contain",
 }: {
   animal: Animal;
   tilt?: boolean;
   className?: string;
+  /** See `AnimalPortrait`'s `fit` prop — defaults to "contain" here since
+   *  this card's photo is the primary way visitors see each animal. */
+  fit?: "cover" | "contain";
 }) {
   const sex = SEX_META[animal.sex];
   // The card cycles through the first three uploaded photos as a story; with
@@ -56,7 +60,8 @@ export function AnimalCard({
             animal={animal}
             photoUrl={shots[0]?.src}
             photos={shots.length === STORY_SHOTS ? shots : undefined}
-            className="aspect-[5/4] rounded-none"
+            fit={shots.length === STORY_SHOTS ? "cover" : fit}
+            className="aspect-[4/5] rounded-none"
           />
         </div>
         {/* hover veil + peek */}

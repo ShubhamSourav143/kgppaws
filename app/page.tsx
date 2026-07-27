@@ -12,6 +12,8 @@ import { listStories } from "@/services/stories";
 
 import { getHomeContent, getHelpContent } from "@/services/content";
 import { listMedia } from "@/lib/media";
+import { IMAGE_FOLDERS } from "@/lib/image-config";
+import { withCoverPhotos } from "@/lib/animal-covers";
 
 export default async function HomePage() {
   const [
@@ -27,9 +29,9 @@ export default async function HomePage() {
     listStories(),
     getHomeContent(),
     getHelpContent(),
-    listMedia("hero"),
-    listMedia("transformation"),
-    listMedia("adopt"),
+    listMedia(IMAGE_FOLDERS.hero),
+    listMedia(IMAGE_FOLDERS.transformation),
+    listMedia(IMAGE_FOLDERS.adopt),
   ]);
 
   const cmsHero = homeContent.find((c) => c.section === "Hero");
@@ -64,17 +66,17 @@ export default async function HomePage() {
   // database has an animal but no uploaded photo for it — which put thirteen
   // cartoon dogs on the home page while real photographs sat in
   // public/images/adopt/ unused.
-  const animalsWithCovers = animals.map((a) =>
-    a.photos.some((p) => p.url) || !covers[a.slug]
-      ? a
-      : {
-          ...a,
-          photos: [
-            { id: `cover-${a.slug}`, caption: a.name, date: "", url: covers[a.slug] },
-            ...a.photos,
-          ],
-        }
-  );
+  //
+  // Featured Rescues and Com-Paw-Nions each check their own override folder
+  // first (public/images/featured-dogs/, public/images/companions/) so a
+  // different photo can be dropped in for just that section — falling back
+  // to the shared adopt/ cover when no override exists, same as everywhere
+  // else. See lib/image-config.ts.
+  const [animalsWithCovers, featuredAnimals, companionAnimals] = await Promise.all([
+    withCoverPhotos(animals),
+    withCoverPhotos(animals, IMAGE_FOLDERS.featuredDogs),
+    withCoverPhotos(animals, IMAGE_FOLDERS.companions),
+  ]);
 
   const transformationPairs = buildTransformationPairs(transformationMedia, stories);
 
@@ -88,10 +90,10 @@ export default async function HomePage() {
       />
       <Mission cms={cmsMission} animals={animalsWithCovers.slice(0, 2)} />
 
-      <FeaturedRescues animals={animalsWithCovers} cms={cmsFeatured} />
+      <FeaturedRescues animals={featuredAnimals} cms={cmsFeatured} />
       <IdentitySection animal={identityAnimal} />
       <Transformations pairs={transformationPairs} />
-      <Compawnions animals={animalsWithCovers} />
+      <Compawnions animals={companionAnimals} />
       <HelpBand cms={cmsHelp} />
       <DonateCta />
     </>

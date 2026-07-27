@@ -128,7 +128,22 @@ const EMERGENCY: CampaignEditorial = {
     { amount: 8000, label: "Fracture plating for one dog" },
     { amount: 25000, label: "A full critical surgery" },
   ],
-  gallery: ["emer-01", "emer-02", "emer-03"],
+  gallery: ["medical-01", "medical-02", "medical-03"],
+};
+
+/**
+ * Individual animal-specific appeals (campaign category "recovery" or
+ * "treatment" — e.g. one dog's own surgery fundraiser) get their own
+ * photography pool, separate from the standing Medical Emergency Fund
+ * above. public/images/donation/rescue/ is empty until the org uploads
+ * real rescue-operation photos; until then `galleryFor()` in
+ * app/donate/page.tsx just renders nothing for these stems, the same way
+ * any campaign gallery degrades gracefully when a file is missing.
+ */
+const RESCUE: CampaignEditorial = {
+  ...EMERGENCY,
+  eyebrow: "One animal, one rescue",
+  gallery: ["rescue-01", "rescue-02", "rescue-03"],
 };
 
 const BY_SLUG: Record<string, CampaignEditorial> = {
@@ -144,8 +159,8 @@ const BY_CATEGORY: Record<DonationCampaign["category"], CampaignEditorial> = {
   sterilization: STERILIZATION,
   vaccination: VACCINATION,
   emergency: EMERGENCY,
-  treatment: EMERGENCY,
-  recovery: EMERGENCY,
+  treatment: RESCUE,
+  recovery: RESCUE,
 };
 
 /**
