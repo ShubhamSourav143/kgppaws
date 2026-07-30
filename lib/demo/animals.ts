@@ -164,7 +164,7 @@ export const DEMO_ANIMALS: Animal[] = [
     pawsId: "PAWS-KGP-DOG-0021",
     slug: "bunti",
     qrToken: "bnt1w8rd",
-    name: "Bunti",
+    name: "rocket",
     species: "dog",
     sex: "male",
     ageLabel: "~2 years",

@@ -1,134 +1,167 @@
 import type { Metadata } from "next";
-import { listStories } from "@/services/stories";
 import { listMedia } from "@/lib/media";
-import { IMAGE_FOLDERS } from "@/lib/image-config";
-import { INITIATIVES } from "@/lib/stories/our-work";
-import { ARTICLES } from "@/lib/stories/knowledge";
-import { KnowledgeCenter } from "@/components/stories/KnowledgeCenter";
+import { IMAGE_FOLDERS, type MediaCollection } from "@/lib/image-config";
 import {
-  StoriesHero,
-  FeaturedStories,
-  OurWork,
-  BeforeAfterSection,
-  HappyEndings,
-  StoriesFinalCta,
-  type Shot,
-} from "@/components/stories/StorySections";
+  SHELTER_MEMBERS,
+  WORK_SECTIONS,
+  KNOWLEDGE_ARTICLES,
+  type ShelterMember,
+  type KnowledgeArticle,
+} from "@/lib/our-work/content";
+import type { SlidePhoto } from "@/components/our-work/OurWorkSlideshow";
+import {
+  OurWorkHero,
+  WorkSection,
+  ShelterFamilySection,
+  KnowledgeCentreSection,
+  OurWorkFooterCta,
+} from "@/components/our-work/OurWorkSections";
 
 export const metadata: Metadata = {
-  title: "Stories",
+  title: "Our Work",
   description:
-    "Every life has a story worth telling. Rescue journeys, our work, and practical animal care from the campus animals of IIT Kharagpur.",
+    "A year of KGP PAWS on IIT Kharagpur's campus — feeding, rescue, sterilization, vaccination, chemotherapy, daily medical care and adoption, told through real photographs.",
   alternates: { canonical: "/stories" },
 };
 
-export default async function StoriesPage() {
-  // Stories come from the backend untouched. Photography is resolved from the
-  // filesystem media manifest — a story's own uploaded photo wins, and the
-  // shared pool fills in behind it until real story photography exists.
-  // Story photography comes from public/images/stories first. The home hero
-  // collage (public/images/hero-grid) is deliberately NOT in this pool — those
-  // fourteen photographs belong to the hero alone, and pulling them in here is
-  // what used to put the same pictures on three different pages. The adopt
-  // covers trail the story photos so the page still fills when there are more
-  // slots than dedicated photographs; see the shortfall note in the audit.
-  const [stories, storyMedia, adoptMedia] = await Promise.all([
-    listStories(),
-    listMedia(IMAGE_FOLDERS.stories),
-    listMedia(IMAGE_FOLDERS.adopt),
-  ]);
+/** All the image folders the page might read from. Kept in one place so we
+ *  only walk the filesystem once. */
+const FOLDERS: MediaCollection[] = [
+  IMAGE_FOLDERS.adopt,
+  IMAGE_FOLDERS.stories,
+  IMAGE_FOLDERS.donationFeeding,
+  IMAGE_FOLDERS.donationMedical,
+  IMAGE_FOLDERS.donationSterilization,
+  IMAGE_FOLDERS.donationVaccination,
+  IMAGE_FOLDERS.donationRescue,
+  IMAGE_FOLDERS.heroGrid,
+];
 
-  const byStem = new Map<string, Shot>();
-  for (const m of [...storyMedia, ...adoptMedia]) {
-    const file = m.src.split("/").pop() ?? "";
-    const stem = file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
-    if (stem && !byStem.has(stem)) {
-      byStem.set(stem, { src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
+/** Turn a `/images/donation/medical/medical-01.jpg` src into `medical-01` so
+ *  the content module can name photos without paths. */
+function stemOf(src: string): string {
+  const file = src.split("/").pop() ?? "";
+  return file.replace(/\.[^.]+$/, "").split("--")[0].toLowerCase();
+}
+
+export default async function OurWorkPage() {
+  const collections = await Promise.all(FOLDERS.map((f) => listMedia(f)));
+  const all = collections.flat();
+
+  // Only rasterised images — the hero-grid folder holds a couple of MP4s, and
+  // the slideshow uses next/image, not <video>.
+  const stills = all.filter((m) => /\.(jpe?g|png|webp|avif)$/i.test(m.src));
+
+  const byStem = new Map<string, SlidePhoto>();
+  const byFolder = new Map<string, SlidePhoto[]>();
+  for (const m of stills) {
+    const s = stemOf(m.src);
+    if (s && !byStem.has(s)) {
+      byStem.set(s, { src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
     }
+    const list = byFolder.get(m.collection) ?? [];
+    list.push({ src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
+    byFolder.set(m.collection, list);
   }
-  const stemCovers = Object.fromEntries(byStem);
 
-  // "Why Adoption Matters" on /adopt owns story-01…04, so this page starts at
-  // story-05 and never shows a photograph that page already used.
-  const pool = [...byStem.values()].filter(
-    (s) => !/\/stories\/story-0[1-4]\./.test(s.src)
-  );
+  const pool: SlidePhoto[] = stills.map((m) => ({
+    src: m.src,
+    alt: m.alt,
+    blurDataURL: m.blurDataURL,
+  }));
 
   /**
-   * Cover for each story: its own first uploaded photo if it has one, else the
-   * photo of the animal it is about, else a pool image chosen by position so
-   * two stories never open with the same picture.
+   * Photos for a section, in order of preference:
+   *   1. named stems from the content module (own photography)
+   *   2. everything in the section's preferred folder(s)
+   *   3. the general pool, so shorter folders still fill up
    */
-  const storyCovers: Record<string, Shot | undefined> = {};
-  stories.forEach((s, i) => {
-    const own = s.photos.find((p) => p.url);
-    if (own) {
-      storyCovers[s.slug] = { src: own.url, alt: own.caption || s.title };
-      return;
+  function pickFor({
+    photoKeys,
+    folders,
+    target,
+    offset,
+  }: {
+    photoKeys: string[];
+    folders: string[];
+    target: number;
+    offset: number;
+  }): SlidePhoto[] {
+    const seen = new Set<string>();
+    const out: SlidePhoto[] = [];
+    const push = (p?: SlidePhoto) => {
+      if (!p || seen.has(p.src) || out.length >= target) return;
+      seen.add(p.src);
+      out.push(p);
+    };
+
+    for (const key of photoKeys) push(byStem.get(key));
+    for (const folder of folders) {
+      const list = byFolder.get(folder) ?? [];
+      for (const p of list) push(p);
     }
-    const byAnimal = s.animalSlug ? byStem.get(s.animalSlug) : undefined;
-    storyCovers[s.slug] =
-      byAnimal ?? (pool.length ? pool[(i * 3 + 1) % pool.length] : undefined);
-  });
+    for (let i = 0; i < pool.length && out.length < target; i++) {
+      push(pool[(i + offset) % pool.length]);
+    }
+    return out;
+  }
 
-  // Featured first, then newest — the lead tile is whatever the team flagged.
-  const ordered = stories
-    .slice()
-    .sort((a, b) =>
-      a.featured === b.featured
-        ? a.publishedAt < b.publishedAt
-          ? 1
-          : -1
-        : a.featured
-          ? -1
-          : 1
-    );
+  const shelter: ShelterMember[] = SHELTER_MEMBERS.map((m, i) => ({
+    ...m,
+    photos: pickFor({
+      photoKeys: m.photoKeys,
+      folders: [IMAGE_FOLDERS.adopt, IMAGE_FOLDERS.stories, IMAGE_FOLDERS.heroGrid],
+      target: 5,
+      offset: i * 5 + 3,
+    }),
+  }));
 
-  /**
-   * Before/after pairs. These are two different placeholder photographs, not
-   * two moments of one animal — the repo has no real before/after photography
-   * yet. The captions say so rather than implying a transformation that these
-   * particular images do not show.
-   */
-  const baSpecs = [
-    { b: 4, a: 9, name: "Bunty", note: "Spinal injury to walking again — four months of daily physiotherapy." },
-    { b: 6, a: 11, name: "Laika", note: "Six weeks of round-the-clock distemper nursing." },
-    { b: 3, a: 8, name: "Muesli", note: "From the campus gate, underweight, to healthy and adopted." },
-    { b: 5, a: 12, name: "Percy", note: "Six rounds of chemotherapy at twelve years old, into remission." },
-  ];
-  const baPairs = pool.length >= 14
-    ? baSpecs.map((s) => ({
-        before: pool[s.b],
-        after: pool[s.a],
-        name: s.name,
-        // These are two different placeholder photographs, not two moments of
-        // one animal — the repo has no real before/after pairs yet.
-        note: `${s.note} Illustrative photographs.`,
-      }))
-    : [];
+  const sections = WORK_SECTIONS.map((s, i) => ({
+    ...s,
+    photos: pickFor({
+      photoKeys: s.photoKeys,
+      folders: s.folders,
+      target: s.targetCount,
+      offset: i * 3 + 7,
+    }),
+  }));
+
+  const articles: KnowledgeArticle[] = KNOWLEDGE_ARTICLES.map((a, i) => ({
+    ...a,
+    photo:
+      byStem.get(a.photoKey) ??
+      pool[(i * 5 + 2) % Math.max(1, pool.length)],
+  }));
+
+  // Hero shot — a strong, warm image if we have one, otherwise anything.
+  const heroShot =
+    byStem.get("story-05") ??
+    byStem.get("bunti") ??
+    pool[0];
 
   return (
     <div className="bg-cream">
-      {/* 1 · Hero */}
-      <StoriesHero shot={pool[0]} />
+      <OurWorkHero shot={heroShot} />
 
-      {/* 2 · Featured rescue stories */}
-      <FeaturedStories stories={ordered} covers={storyCovers} />
+      <ShelterFamilySection members={shelter} />
 
-      {/* 3 · Our work */}
-      <OurWork initiatives={INITIATIVES} covers={stemCovers} />
+      {sections.map((s) => (
+        <WorkSection
+          key={s.id}
+          id={s.id}
+          eyebrow={s.eyebrow}
+          title={s.title}
+          intro={s.intro}
+          description={s.description}
+          photos={s.photos}
+          tone={s.tone}
+          aspect={s.aspect}
+        />
+      ))}
 
-      {/* 4 · Knowledge Center */}
-      <KnowledgeCenter articles={ARTICLES} covers={stemCovers} />
+      <KnowledgeCentreSection articles={articles} />
 
-      {/* 5 · Before & after */}
-      <BeforeAfterSection pairs={baPairs} />
-
-      {/* 6 · Happy endings */}
-      <HappyEndings shots={pool.slice(2, 14)} />
-
-      {/* 7 · Final CTA */}
-      <StoriesFinalCta shot={pool[pool.length - 1]} />
+      <OurWorkFooterCta />
     </div>
   );
 }

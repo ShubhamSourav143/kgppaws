@@ -147,7 +147,7 @@ export const DEMO_FOOTER: FooterItem[] = [
   { id: "demo-f2", section: "social_link", displayOrder: 1, label: "Facebook", url: "https://facebook.com/kgppaws", icon: "facebook", value: null },
   { id: "demo-f3", section: "social_link", displayOrder: 2, label: "Email", url: "mailto:hello@kgppaws.org", icon: "mail", value: null },
   { id: "demo-f4", section: "quick_link", displayOrder: 0, label: "Adopt a Paw", url: "/adopt", icon: null, value: null },
-  { id: "demo-f5", section: "quick_link", displayOrder: 1, label: "Stories", url: "/stories", icon: null, value: null },
+  { id: "demo-f5", section: "quick_link", displayOrder: 1, label: "Our Work", url: "/stories", icon: null, value: null },
   { id: "demo-f7", section: "quick_link", displayOrder: 2, label: "About KGP PAWS", url: "/about", icon: null, value: null },
   { id: "demo-f8", section: "contact", displayOrder: 0, label: "Report an Animal", url: "/report", icon: null, value: null },
   { id: "demo-f9", section: "contact", displayOrder: 1, label: "Donate", url: "/donate", icon: null, value: null },
@@ -159,7 +159,7 @@ export const DEMO_FOOTER: FooterItem[] = [
 export const DEMO_NAVIGATION: NavigationItem[] = [
   { id: "demo-n0", label: "Home", url: "/", icon: null, parentLabel: null, displayOrder: 0, openInNewTab: false },
   { id: "demo-n1", label: "Adopt", url: "/adopt", icon: null, parentLabel: null, displayOrder: 1, openInNewTab: false },
-  { id: "demo-n2", label: "Stories", url: "/stories", icon: null, parentLabel: null, displayOrder: 2, openInNewTab: false },
+  { id: "demo-n2", label: "Our Work", url: "/stories", icon: null, parentLabel: null, displayOrder: 2, openInNewTab: false },
   { id: "demo-n4", label: "Donate", url: "/donate", icon: null, parentLabel: null, displayOrder: 4, openInNewTab: false },
   { id: "demo-n5", label: "Volunteer", url: "/volunteer", icon: null, parentLabel: null, displayOrder: 5, openInNewTab: false },
   { id: "demo-n6", label: "About", url: "/about", icon: null, parentLabel: null, displayOrder: 6, openInNewTab: false },
