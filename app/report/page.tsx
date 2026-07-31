@@ -11,15 +11,15 @@ export const metadata: Metadata = {
 
 export default function ReportPage() {
   return (
-    <div className="container-page max-w-2xl py-8 sm:py-14">
+    <div data-cursor="solo" className="container-page max-w-2xl py-8 sm:py-14">
       <header>
         <p className="eyebrow mb-3 text-terracotta-deep">Help / Report an Animal</p>
         <h1 className="text-balance font-display text-4xl font-bold leading-[1.05] text-forest-deep sm:text-5xl">
           See Something? Help Them&nbsp;Faster.
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-moss">
-          Under sixty seconds, start to finish. Every field except the problem
-          and location is optional.
+          Under sixty seconds, start to finish. Every field except the exact
+          spot is optional.
         </p>
       </header>
 

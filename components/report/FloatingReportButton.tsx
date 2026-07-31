@@ -96,9 +96,6 @@ export function FloatingReportButton() {
     saveLocalReport({
       id,
       createdAt: now,
-      // The floating flow does not ask the user to classify the animal or
-      // its problem type — that would defeat the purpose of a fast lane.
-      // Volunteers set these when they triage the report.
       animalType: "dog",
       problem: "other",
       severity: "urgent",
@@ -118,6 +115,26 @@ export function FloatingReportButton() {
       ],
       demo: true,
     });
+
+    fetch("/api/sheets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        form: "report",
+        data: {
+          id,
+          timestamp: now,
+          animal: "dog",
+          problem: "other",
+          severity: "urgent",
+          location: v.address,
+          description: v.symptoms,
+          mapsLink: v.mapsLink || "",
+          contact: "",
+        },
+      }),
+    }).catch(() => {});
+
     setSubmittedId(id);
     reset();
     setPhotoName(null);

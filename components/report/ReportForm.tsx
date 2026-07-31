@@ -13,9 +13,8 @@ import {
   Siren,
   X,
 } from "lucide-react";
-import { Input, Select, Textarea, FieldWrap } from "@/components/ui/Field";
+import { Input, Textarea, FieldWrap } from "@/components/ui/Field";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { CAMPUS_ZONES } from "@/lib/demo/zones";
 import { PROBLEM_LABELS, SEVERITY_LABELS } from "@/lib/demo/reports";
 import { nextReportId, saveLocalReport } from "@/lib/local-store";
 import { isSupabaseConfigured } from "@/lib/config";
@@ -31,10 +30,9 @@ const schema = z.object({
     "vehicle_accident", "distressed", "puppies_kittens_at_risk", "other",
   ], { error: "Please pick the closest match" }),
   severity: z.enum(["emergency", "urgent", "moderate", "low"]),
-  zoneId: z.string().min(1, "Pick the nearest landmark"),
-  locationNote: z.string().max(200),
+  locationNote: z.string().min(1, "Tell us where you spotted the animal").max(200),
   description: z.string().min(10, "One short line helps volunteers find them"),
-  contact: z.string(),
+  contact: z.string().min(1, "We need a way to reach you for follow-up"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -104,7 +102,6 @@ export function ReportForm() {
     defaultValues: {
       animalType: "dog",
       severity: "urgent",
-      zoneId: "",
       locationNote: "",
       contact: "",
     },
@@ -138,7 +135,7 @@ export function ReportForm() {
     );
   };
 
-  const onSubmit = (v: FormValues) => {
+  const onSubmit = async (v: FormValues) => {
     const id = nextReportId();
     const now = new Date().toISOString();
     saveLocalReport({
@@ -147,7 +144,7 @@ export function ReportForm() {
       animalType: v.animalType as Species,
       problem: v.problem as ReportProblem,
       severity: v.severity as ReportSeverity,
-      zoneId: v.zoneId,
+      zoneId: "",
       locationNote: v.locationNote,
       description: v.description,
       status: "reported",
@@ -161,6 +158,25 @@ export function ReportForm() {
       ],
       demo: true,
     });
+
+    fetch("/api/sheets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        form: "report",
+        data: {
+          id,
+          timestamp: now,
+          animal: v.animalType,
+          problem: v.problem,
+          severity: v.severity,
+          location: v.locationNote,
+          description: v.description,
+          contact: v.contact,
+        },
+      }),
+    }).catch(() => {});
+
     setSubmittedId(id);
   };
 
@@ -287,22 +303,10 @@ export function ReportForm() {
 
       {/* location */}
       <div className="space-y-4 rounded-3xl border border-line bg-parchment p-5">
-        <Select
-          label="Nearest campus landmark"
-          required
-          error={errors.zoneId?.message}
-          {...register("zoneId")}
-        >
-          <option value="">Select a landmark…</option>
-          {CAMPUS_ZONES.map((z) => (
-            <option key={z.id} value={z.id}>
-              {z.name}
-            </option>
-          ))}
-        </Select>
         <Input
-          label="Exact spot (optional)"
-          placeholder="e.g. behind the tea stalls, near the cycle stand"
+          label="Exact spot"
+          required
+          placeholder="e.g. RP Hall Main Gate, ECE Department canteen"
           error={errors.locationNote?.message}
           {...register("locationNote")}
         />
@@ -326,7 +330,7 @@ export function ReportForm() {
             : geo === "asking"
               ? "Requesting permission…"
               : geo === "denied"
-                ? "Location unavailable — landmark is enough"
+                ? "Location unavailable — describe the spot above"
                 : "Attach my device location"}
         </button>
         <p className="text-xs leading-relaxed text-moss">
@@ -345,7 +349,7 @@ export function ReportForm() {
       />
 
       <FieldWrap
-        label="Your phone or email (optional)"
+        label="Your phone or email"
         htmlFor="report-contact"
         hint="Only used if volunteers need to ask a follow-up. Never public."
       >

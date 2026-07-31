@@ -55,22 +55,20 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
 
   const onSubmit = (values: FormValues) => {
     const id = nextApplicationId();
+    const now = new Date().toISOString();
     saveLocalApplication({
       id,
       animalSlug: animal.slug,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       status: "submitted",
       applicant: {
         name: values.name,
         email: values.email,
         phone: values.phone,
-        affiliation: "", // legacy wizard field — new form does not collect
+        affiliation: "",
         address: values.address,
         mapsLink: values.mapsLink,
       },
-      // legacy wizard fields kept so any older admin view that reads them
-      // does not crash on missing keys; new admin table shows the fields
-      // that are actually present
       living: {
         housing: "",
         ownOrRent: "",
@@ -85,6 +83,27 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
       motivation: values.concern ?? "",
       demo: true,
     });
+
+    fetch("/api/sheets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        form: "adoption",
+        data: {
+          id,
+          timestamp: now,
+          animalName: animal.name,
+          animalSlug: animal.slug,
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          address: values.address,
+          mapsLink: values.mapsLink,
+          concern: values.concern || "",
+        },
+      }),
+    }).catch(() => {});
+
     setSubmittedId(id);
   };
 

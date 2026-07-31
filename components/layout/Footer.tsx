@@ -53,7 +53,7 @@ const LEGAL = [
   { href: "/about#animal-data", label: "Animal Data Policy" },
 ];
 
-const MANTRA = ["Rescue", "Heal", "Protect", "Remember"];
+const MANTRA = ["Rescue", "Heal", "Protect", "Peace"];
 
 /**
  * The four rescues who peek over the top of the footer.

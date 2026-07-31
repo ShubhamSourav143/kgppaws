@@ -73,9 +73,24 @@ export function VolunteerForm() {
     setValue("workOptions", next, { shouldValidate: true });
   };
 
-  const onSubmit = () => {
-    // Live mode: insert into `volunteers` with status "applied" (see schema).
-    // Demo mode: registration is acknowledged without a backend write.
+  const onSubmit = (v: FormValues) => {
+    fetch("/api/sheets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        form: "volunteer",
+        data: {
+          timestamp: new Date().toISOString(),
+          name: v.name,
+          phone: v.phone,
+          email: v.email,
+          affiliation: v.affiliation,
+          hall: v.hall,
+          workOptions: v.workOptions.join(", "),
+        },
+      }),
+    }).catch(() => {});
+
     setSubmitted(true);
   };
 
@@ -160,7 +175,7 @@ export function VolunteerForm() {
           label="Email address"
           type="email"
           required
-          placeholder="you@iitkgp.ac.in"
+          placeholder="you@gmail.com"
           autoComplete="email"
           error={errors.email?.message}
           {...register("email")}

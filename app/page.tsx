@@ -2,7 +2,6 @@ import { Hero } from "@/components/home/Hero";
 import { Mission } from "@/components/home/Mission";
 
 import { FeaturedRescues } from "@/components/home/FeaturedRescues";
-import { IdentitySection } from "@/components/home/IdentitySection";
 import { Transformations, buildTransformationPairs } from "@/components/home/Transformations";
 import { Compawnions } from "@/components/home/Compawnions";
 import { HelpBand } from "@/components/home/HelpBand";
@@ -44,7 +43,6 @@ export default async function HomePage() {
     animals.find((a) => a.slug === "simba") ??
     animals.find((a) => a.species === "dog");
   const heroCat = animals.find((a) => a.species === "cat");
-  const identityAnimal = heroDog ?? animals[0];
 
   // Per-animal cover photos, keyed by filename in public/images/adopt/ —
   // the hero foreground uses these (see public/images/adopt/README.md).
@@ -91,7 +89,6 @@ export default async function HomePage() {
       <Mission cms={cmsMission} animals={animalsWithCovers.slice(0, 2)} />
 
       <FeaturedRescues animals={featuredAnimals} cms={cmsFeatured} />
-      <IdentitySection animal={identityAnimal} />
       <Transformations pairs={transformationPairs} />
       <Compawnions animals={companionAnimals} />
       <HelpBand cms={cmsHelp} />

@@ -3,6 +3,7 @@ import { listCampaigns } from "@/services/campaigns";
 import { listMedia } from "@/lib/media";
 import { IMAGE_FOLDERS } from "@/lib/image-config";
 import { DEMO_DONORS } from "@/lib/demo/donors";
+import { fetchDonorsFromSheet } from "@/lib/google-sheets";
 import { editorialFor } from "@/lib/donate/editorial";
 import { CampaignFeature } from "@/components/donate/CampaignFeature";
 import { DonorWall, type DonorRow } from "@/components/donate/DonorWall";
@@ -101,13 +102,18 @@ export default async function DonatePage() {
   // wall silently empties the moment a real database is connected.
   const wallCampaigns = programmes.length ? programmes : campaigns;
   const byRealSlug = new Map(wallCampaigns.map((c) => [c.slug, c]));
+
+  const sheetDonors = await fetchDonorsFromSheet();
+  const donorSource = sheetDonors ?? DEMO_DONORS;
+  const donorsAreDemo = !sheetDonors;
+
   const donors: DonorRow[] = wallCampaigns.length
-    ? DEMO_DONORS.map((d, i) => {
+    ? donorSource.map((d, i) => {
         const target =
           byRealSlug.get(d.campaignSlug) ??
           wallCampaigns[i % wallCampaigns.length];
         return {
-          id: d.id,
+          id: "id" in d ? (d as { id: string }).id : `sheet-${i}`,
           name: d.name,
           date: d.date,
           campaignSlug: target.slug,
@@ -116,13 +122,6 @@ export default async function DonatePage() {
         };
       })
     : [];
-
-  // The donor rows are illustrative regardless of where the campaigns came
-  // from — the schema has no public donor feed yet, so they are ALWAYS demo
-  // and must always say so. Tying this to `campaign.demo` would have hidden
-  // the label as soon as a real database was connected, leaving invented
-  // names looking like genuine donations.
-  const donorsAreDemo = true;
 
   return (
     <div className="bg-cream">

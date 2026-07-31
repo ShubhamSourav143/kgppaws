@@ -79,7 +79,7 @@ const STERILIZATION: CampaignEditorial = {
     { amount: 8000, label: "A week's transport for four dogs" },
     { amount: 20000, label: "An entire surgical camp" },
   ],
-  gallery: ["ster-01", "ster-02", "ster-03"],
+  gallery: ["ster-01", "ster-02", "ster-03", "ster-04", "ster-05", "ster-06", "ster-07", "ster-08"],
 };
 
 const VACCINATION: CampaignEditorial = {

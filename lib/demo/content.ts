@@ -152,7 +152,6 @@ export const DEMO_FOOTER: FooterItem[] = [
   { id: "demo-f8", section: "contact", displayOrder: 0, label: "Report an Animal", url: "/report", icon: null, value: null },
   { id: "demo-f9", section: "contact", displayOrder: 1, label: "Donate", url: "/donate", icon: null, value: null },
   { id: "demo-f10", section: "contact", displayOrder: 2, label: "Volunteer", url: "/volunteer", icon: null, value: null },
-  { id: "demo-f11", section: "contact", displayOrder: 3, label: "Create an Account", url: "/signup", icon: null, value: null },
   { id: "demo-f12", section: "newsletter_blurb", displayOrder: 0, label: null, url: null, icon: null, value: "Made with compassion for every paw that calls Kharagpur home." },
 ];
 
