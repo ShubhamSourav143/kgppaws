@@ -30,13 +30,19 @@ export interface SheetDonor {
 }
 
 export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
-  if (!DONORS_CSV_URL) return null;
+  if (!DONORS_CSV_URL) {
+    console.log("[donors] GOOGLE_SHEET_DONORS_CSV_URL not set");
+    return null;
+  }
   try {
     const res = await fetch(DONORS_CSV_URL, { next: { revalidate: 300 } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.log("[donors] CSV fetch failed:", res.status, res.statusText);
+      return null;
+    }
     const text = await res.text();
     const lines = text.trim().split("\n").slice(1);
-    return lines
+    const donors = lines
       .map((line) => {
         const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
         return {
@@ -47,7 +53,10 @@ export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
         };
       })
       .filter((d) => d.date && d.amount > 0);
-  } catch {
+    console.log("[donors] fetched", donors.length, "donors from sheet");
+    return donors;
+  } catch (err) {
+    console.log("[donors] fetch error:", err);
     return null;
   }
 }
