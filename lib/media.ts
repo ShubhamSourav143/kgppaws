@@ -29,7 +29,9 @@ export interface MediaAsset {
   collection: MediaCollection;
 }
 
-const EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+const VIDEO_EXTENSIONS = new Set([".mp4"]);
+const EXTENSIONS = new Set([...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS]);
 const cache = new Map<string, MediaAsset[]>();
 
 function captionFromFilename(file: string): string {
@@ -57,6 +59,14 @@ export async function listMedia(collection: MediaCollection): Promise<MediaAsset
   const assets = await Promise.all(
     files.sort().map(async (file): Promise<MediaAsset | null> => {
       try {
+        const ext = path.extname(file).toLowerCase();
+        const src = `/images/${collection}/${file}`;
+        const alt = captionFromFilename(file);
+
+        if (VIDEO_EXTENSIONS.has(ext)) {
+          return { src, alt, width: 1280, height: 720, blurDataURL: "", collection };
+        }
+
         const abs = path.join(dir, file);
         const image = sharp(abs);
         const meta = await image.metadata();
@@ -66,8 +76,8 @@ export async function listMedia(collection: MediaCollection): Promise<MediaAsset
           .webp({ quality: 40 })
           .toBuffer();
         return {
-          src: `/images/${collection}/${file}`,
-          alt: captionFromFilename(file),
+          src,
+          alt,
           width: meta.width ?? 1200,
           height: meta.height ?? 800,
           blurDataURL: `data:image/webp;base64,${tiny.toString("base64")}`,

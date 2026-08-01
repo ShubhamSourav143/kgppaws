@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SlidePhoto {
@@ -39,7 +39,6 @@ export function OurWorkSlideshow({
   const [dir, setDir] = useState(1);
   const [hovered, setHovered] = useState(false);
   const [visible, setVisible] = useState(true);
-  const [fullscreen, setFullscreen] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
 
   const len = photos.length;
@@ -54,10 +53,12 @@ export function OurWorkSlideshow({
   );
 
   useEffect(() => {
-    if (reduced || hovered || !visible || fullscreen || len < 2) return;
+    const currentSrc = photos[index]?.src ?? "";
+    if (reduced || hovered || !visible || len < 2 || currentSrc.endsWith(".mp4")) return;
     const t = window.setTimeout(() => go(index + 1, 1), autoplayMs);
     return () => window.clearTimeout(t);
-  }, [index, reduced, hovered, visible, fullscreen, len, go, autoplayMs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, reduced, hovered, visible, len, go, autoplayMs]);
 
   useEffect(() => {
     const el = frameRef.current;
@@ -70,20 +71,6 @@ export function OurWorkSlideshow({
     return () => io.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!fullscreen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreen(false);
-      if (e.key === "ArrowRight") go(index + 1, 1);
-      if (e.key === "ArrowLeft") go(index - 1, -1);
-    };
-    window.addEventListener("keydown", onKey);
-    document.documentElement.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.documentElement.style.overflow = "";
-    };
-  }, [fullscreen, index, go]);
 
   if (!len) {
     return (
@@ -101,9 +88,9 @@ export function OurWorkSlideshow({
   }
 
   const active = photos[index];
+  const isVideo = active.src.endsWith(".mp4");
 
   return (
-    <>
       <div
         ref={frameRef}
         className={cn("group/reel relative", className)}
@@ -131,24 +118,32 @@ export function OurWorkSlideshow({
               exit={reduced ? { opacity: 0 } : { opacity: 0, x: dir > 0 ? -50 : 50 }}
               transition={{ duration: reduced ? 0 : 0.7, ease: [0.16, 1, 0.3, 1] }}
             >
-              <Image
-                src={active.src}
-                alt={active.alt}
-                fill
-                sizes="(min-width: 1024px) 80vw, 100vw"
-                placeholder={active.blurDataURL ? "blur" : undefined}
-                blurDataURL={active.blurDataURL}
-                className="object-cover"
-              />
+              {isVideo ? (
+                <video
+                  src={active.src}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              ) : (
+                <Image
+                  src={active.src}
+                  alt={active.alt}
+                  fill
+                  sizes="(min-width: 1024px) 80vw, 100vw"
+                  placeholder={active.blurDataURL ? "blur" : undefined}
+                  blurDataURL={active.blurDataURL}
+                  className="object-contain"
+                />
+              )}
             </motion.div>
           </AnimatePresence>
 
-          {/* swipe surface + fullscreen click */}
-          <motion.button
-            type="button"
-            className="absolute inset-0 z-10 cursor-zoom-in"
-            aria-label="Open image in fullscreen"
-            onClick={() => setFullscreen(true)}
+          {/* swipe surface */}
+          <motion.div
+            className="absolute inset-0 z-10"
             onPanEnd={(e, info) => {
               const pt = (e as PointerEvent).pointerType;
               if (pt && pt !== "touch") return;
@@ -156,12 +151,6 @@ export function OurWorkSlideshow({
               else if (info.offset.x > 60) go(index - 1, -1);
             }}
           />
-
-          {/* expand hint */}
-          <span className="pointer-events-none absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-full bg-night/45 px-2.5 py-1 text-[11px] font-semibold text-ivory opacity-0 backdrop-blur-sm transition-opacity duration-200 group-hover/reel:opacity-100">
-            <Expand className="h-3.5 w-3.5" aria-hidden="true" />
-            Click to expand
-          </span>
 
           {len > 1 && (
             <>
@@ -217,79 +206,5 @@ export function OurWorkSlideshow({
           )}
         </div>
       </div>
-
-      {/* Fullscreen lightbox */}
-      <AnimatePresence>
-        {fullscreen && (
-          <motion.div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-night/95 backdrop-blur"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Photo viewer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            <button
-              type="button"
-              onClick={() => setFullscreen(false)}
-              aria-label="Close fullscreen"
-              className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-ivory/10 text-ivory backdrop-blur-sm transition-colors hover:bg-ivory/20"
-            >
-              <X className="h-5 w-5" aria-hidden="true" />
-            </button>
-
-            {len > 1 && (
-              <>
-                <button
-                  type="button"
-                  aria-label="Previous photo"
-                  onClick={() => go(index - 1, -1)}
-                  className="absolute left-4 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-ivory/10 text-ivory backdrop-blur-sm transition-colors hover:bg-ivory/20"
-                >
-                  <ChevronLeft className="h-6 w-6" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next photo"
-                  onClick={() => go(index + 1, 1)}
-                  className="absolute right-4 top-1/2 z-10 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-ivory/10 text-ivory backdrop-blur-sm transition-colors hover:bg-ivory/20"
-                >
-                  <ChevronRight className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </>
-            )}
-
-            <motion.div
-              key={index}
-              className="relative h-[85vh] w-[92vw] max-w-6xl"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <Image
-                src={active.src}
-                alt={active.alt}
-                fill
-                sizes="92vw"
-                placeholder={active.blurDataURL ? "blur" : undefined}
-                blurDataURL={active.blurDataURL}
-                className="object-contain"
-              />
-            </motion.div>
-
-            <div className="absolute inset-x-0 bottom-6 z-10 mx-auto flex max-w-2xl items-center justify-center gap-3">
-              <span className="rounded-full bg-ivory/10 px-3 py-1 font-mono text-xs font-semibold text-ivory backdrop-blur-sm">
-                {index + 1} / {len}
-              </span>
-              {active.alt && (
-                <p className="max-w-lg truncate text-sm text-ivory/80">{active.alt}</p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
   );
 }

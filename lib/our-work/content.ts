@@ -59,7 +59,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     slug: "bunti",
     name: "Bunti",
     status: "In our care",
-    photoKeys: ["bunti", "story-01", "story-02", "grid-01", "grid-13"],
+    photoKeys: ["bunty"],
     intro:
       "Bunti became part of our shelter family when he was only two months old, after suffering a severe spinal injury near the Gas Godown Gate.",
     journey:
@@ -71,7 +71,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     slug: "muesli",
     name: "Muesli",
     status: "In our care",
-    photoKeys: ["muesli", "story-03", "story-04", "grid-02", "grid-14"],
+    photoKeys: ["muesli-04", "muesli-05", "muesli-02", "muesli-03", "muesli-01", "muesli-vid"],
     intro:
       "Muesli was found weak and underweight near the campus gate and has been part of our shelter family since her recovery.",
     journey:
@@ -83,7 +83,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     slug: "checker",
     name: "Checker",
     status: "In our care",
-    photoKeys: ["shanti", "story-05", "story-06", "grid-05", "grid-06"],
+    photoKeys: ["checker"],
     intro:
       "Checker joined the shelter family after a serious campus rescue and has been under our long-term care ever since.",
     journey:
@@ -120,7 +120,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     name: "Romeo",
     status: "In loving memory",
     memoriam: true,
-    photoKeys: ["rocket", "story-11", "story-12", "grid-13", "grid-04"],
+    photoKeys: ["romie"],
     intro:
       "Romeo was one of the shelter's long-standing residents and a familiar face to every batch of volunteers who passed through KGP PAWS.",
     journey:
@@ -133,7 +133,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     name: "3 Leg",
     status: "In loving memory",
     memoriam: true,
-    photoKeys: ["odin", "story-05", "story-06", "grid-08", "grid-10"],
+    photoKeys: ["three-leg-01", "three-leg-02", "three-leg-03"],
     intro:
       "3 Leg earned his name after losing a leg in a road accident on campus, and joined the shelter family once his surgery had healed.",
     journey:
@@ -146,7 +146,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     name: "Shanti",
     status: "In loving memory",
     memoriam: true,
-    photoKeys: ["shanti", "story-07", "story-08", "grid-05", "grid-06"],
+    photoKeys: ["shanti-vid"],
     intro:
       "Shanti was the unofficial dean of the Main Building steps for many years before joining the shelter in her senior years.",
     journey:
@@ -256,16 +256,16 @@ export const WORK_SECTIONS: WorkSectionContent[] = [
       "KGP PAWS conducts vaccination drives throughout the year to reduce the spread of rabies, distemper and other preventable diseases. A single vaccination in time can save an animal's life and prevent a serious health risk for anyone sharing the road with them.",
     folders: ["donation/vaccination", "stories"],
     photoKeys: [
-      "vacc-01",
-      "vacc-02",
-      "vacc-03",
-      "simba",
-      "story-09",
-      "grid-13",
-      "grid-14",
-      "grid-15",
+      "vacc-vid",
+      "vacc-04",
+      "vacc-05",
+      "vacc-06",
+      "vacc-07",
+      "vacc-08",
+      "vacc-09",
+      "vacc-10",
     ],
-    targetCount: 10,
+    targetCount: 8,
     tone: "cream",
   },
   {
@@ -310,7 +310,7 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     category: "Health",
     summary:
       "A single anti-rabies vaccine protects the animal and every person sharing the road with them. Simple, cheap, and one of the highest-impact things we do all year.",
-    photoKey: "vacc-01",
+    photoKey: "vacc-04",
   },
   {
     slug: "basic-first-aid-before-help-arrives",

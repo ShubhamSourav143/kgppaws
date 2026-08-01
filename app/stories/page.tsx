@@ -48,9 +48,8 @@ export default async function OurWorkPage() {
   const collections = await Promise.all(FOLDERS.map((f) => listMedia(f)));
   const all = collections.flat();
 
-  // Only rasterised images — the hero-grid folder holds a couple of MP4s, and
-  // the slideshow uses next/image, not <video>.
   const stills = all.filter((m) => /\.(jpe?g|png|webp|avif)$/i.test(m.src));
+  const videos = all.filter((m) => /\.mp4$/i.test(m.src));
 
   const byStem = new Map<string, SlidePhoto>();
   const byFolder = new Map<string, SlidePhoto[]>();
@@ -62,6 +61,12 @@ export default async function OurWorkPage() {
     const list = byFolder.get(m.collection) ?? [];
     list.push({ src: m.src, alt: m.alt, blurDataURL: m.blurDataURL });
     byFolder.set(m.collection, list);
+  }
+  for (const m of videos) {
+    const s = stemOf(m.src);
+    if (s && !byStem.has(s)) {
+      byStem.set(s, { src: m.src, alt: m.alt });
+    }
   }
 
   const pool: SlidePhoto[] = stills.map((m) => ({
@@ -111,7 +116,7 @@ export default async function OurWorkPage() {
     photos: pickFor({
       photoKeys: m.photoKeys,
       folders: [IMAGE_FOLDERS.adopt, IMAGE_FOLDERS.stories, IMAGE_FOLDERS.heroGrid],
-      target: 5,
+      target: m.photoKeys.length,
       offset: i * 5 + 3,
     }),
   }));
