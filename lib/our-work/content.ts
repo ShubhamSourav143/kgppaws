@@ -107,7 +107,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     slug: "nami",
     name: "Nami",
     status: "In our care",
-    photoKeys: ["laika", "story-09", "story-10", "grid-09", "grid-11"],
+    photoKeys: ["nami-01", "nami-02", "nami-03"],
     intro:
       "Nami came into our care as a young dog after a health issue that meant she could not safely return to campus life.",
     journey:
