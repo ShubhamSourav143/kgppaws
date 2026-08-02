@@ -139,13 +139,17 @@ export function DonateHero({ shots }: { shots: Shot[] }) {
           </Reveal>
           <Reveal delay={0.5} className="mt-10 flex flex-wrap items-center gap-4">
             <Magnetic strength={0.22}>
-              <Link
+              <a
                 href="#give"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.hash = "give";
+                }}
                 className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-8 py-4 text-base font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
               >
                 <HeartHandshake className="h-5 w-5" aria-hidden="true" />
                 Donate Now
-              </Link>
+              </a>
             </Magnetic>
             <Link
               href="#campaigns"
@@ -347,8 +351,12 @@ export function FinalCta({ shots }: { shots: Shot[] }) {
         </Reveal>
         <Reveal delay={0.4} className="mt-10 flex flex-wrap justify-center gap-4">
           <Magnetic strength={0.25}>
-            <Link
+            <a
               href="#give"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.hash = "give";
+              }}
               className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-9 py-4 text-lg font-bold text-ivory shadow-ember transition-all hover:brightness-105 active:scale-95"
             >
               <HeartHandshake className="h-5 w-5" aria-hidden="true" />
@@ -357,7 +365,7 @@ export function FinalCta({ shots }: { shots: Shot[] }) {
                 className="h-5 w-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                 aria-hidden="true"
               />
-            </Link>
+            </a>
           </Magnetic>
         </Reveal>
       </div>

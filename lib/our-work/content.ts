@@ -95,7 +95,7 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     slug: "sai",
     name: "Sai",
     status: "In our care",
-    photoKeys: ["odin", "story-07", "story-08", "grid-07", "grid-15"],
+    photoKeys: ["sai-1", "sai-2"],
     intro:
       "Sai was found at Kharagpur Railway Station, suffering from an unknown neurological condition that left her quadriplegic. When she was rescued by KGP PAWS, she was so weak that she couldn't even lift her head. Every movement was a struggle, and her future was uncertain.",
     journey:
@@ -197,9 +197,8 @@ export const WORK_SECTIONS: WorkSectionContent[] = [
       "ster-05",
       "ster-06",
       "ster-07",
-      "ster-08",
     ],
-    targetCount: 12,
+    targetCount: 7,
     tone: "parchment",
   },
   {

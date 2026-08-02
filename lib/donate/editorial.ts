@@ -55,7 +55,7 @@ const FEEDING: CampaignEditorial = {
     { amount: 3200, label: "Sponsors one full day of feeding" },
     { amount: 22400, label: "Sponsors an entire week" },
   ],
-  gallery: ["feed-01", "feed-02", "feed-03"],
+  gallery: ["feed-04", "feed-05", "feed-06", "feed-07", "feed-08", "feed-09", "feed-10"],
 };
 
 const STERILIZATION: CampaignEditorial = {
