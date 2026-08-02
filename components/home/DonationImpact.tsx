@@ -62,7 +62,7 @@ export function DonationImpact({ campaigns }: { campaigns: DonationCampaign[] })
 
         <Reveal delay={0.2}>
           <div className="mt-10 flex flex-col items-center gap-3">
-            <ButtonLink href="/donate" variant="accent" size="lg">
+            <ButtonLink href="/donate#give" variant="accent" size="lg">
               Support a Paw
             </ButtonLink>
             <DemoNotice>

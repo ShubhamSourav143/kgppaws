@@ -9,7 +9,7 @@ const TABS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/adopt", label: "Adopt", icon: PawPrint },
   { href: "/report", label: "Report", icon: Siren, primary: true },
-  { href: "/donate", label: "Donate", icon: Heart },
+  { href: "/donate#give", label: "Donate", icon: Heart },
   { href: "/volunteer", label: "Volunteer", icon: HandHeart },
 ];
 
@@ -35,8 +35,9 @@ export function MobileDock() {
     >
       <div className="glass mx-auto flex max-w-sm items-end justify-between rounded-[1.75rem] px-3 pb-2 pt-2 shadow-lift">
         {TABS.map(({ href, label, icon: Icon, primary }) => {
+          const path = href.split("#")[0];
           const active =
-            pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+            pathname === path || (path !== "/" && pathname.startsWith(path + "/"));
           if (primary) {
             return (
               <Link

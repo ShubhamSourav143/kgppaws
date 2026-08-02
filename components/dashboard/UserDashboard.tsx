@@ -252,7 +252,7 @@ export function UserDashboard() {
                 <div className="mt-5">
                   <EmptyRow
                     text="No donations yet. Even ₹100 keeps the feeding rickshaw rolling."
-                    href="/donate"
+                    href="/donate#give"
                     cta="Support a paw"
                   />
                 </div>
