@@ -10,7 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, X, PawPrint, BookOpen, Compass, HelpCircle } from "lucide-react";
-import type { SearchResult } from "@/app/api/search/route";
+import type { SearchResult } from "@/app/api/search/handler";
 import { cn } from "@/lib/utils";
 
 const TYPE_META: Record<SearchResult["type"], { label: string; icon: typeof PawPrint }> = {

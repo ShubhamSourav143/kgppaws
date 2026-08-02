@@ -104,7 +104,7 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
   const lightTop =
     !pathname.startsWith("/adopt/apply") &&
     (pathname === "/" ||
-      ["/gallery", "/stories", "/about", "/adopt", "/donate", "/volunteer"].some(
+      ["/stories", "/about", "/adopt", "/donate", "/volunteer"].some(
         (p) => pathname === p || pathname.startsWith(p + "/")
       ));
   const pill = scrolled || !lightTop;

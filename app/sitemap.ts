@@ -12,7 +12,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/donate",
     "/stories",
     "/report",
-    "/map",
     "/about",
     "/volunteer",
   ].map((path) => ({

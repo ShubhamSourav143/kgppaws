@@ -20,7 +20,6 @@ const PAGES: SearchResult[] = [
   { type: "page", title: "Volunteer", subtitle: "Roles for veterinary, rescue, tech, design and social media", href: "/volunteer" },
   { type: "page", title: "About KGP PAWS", subtitle: "Who we are and how we work", href: "/about" },
   { type: "page", title: "FAQ", subtitle: "Common questions about adoption, donations and volunteering", href: "/about#faq" },
-  { type: "page", title: "Campus Paws Map", subtitle: "Where the campus animals live", href: "/map" },
   { type: "page", title: "Report an Animal", subtitle: "Report a sick or injured animal on campus", href: "/report" },
   { type: "page", title: "Login", subtitle: "Sign in to your KGP PAWS account", href: "/login" },
   { type: "page", title: "Sign up", subtitle: "Create an account — pending admin approval", href: "/signup" },
