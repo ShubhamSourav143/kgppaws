@@ -17,6 +17,10 @@ import {
 import type { GalleryPhoto } from "@/components/donate/CampaignGallery";
 import { Reveal } from "@/components/motion/Reveal";
 
+/** ISR: rebuild every 5 min so new campaigns and donor entries appear without
+ *  paying for a per-request Serverless Function on Vercel Hobby. */
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Donate",
   description:

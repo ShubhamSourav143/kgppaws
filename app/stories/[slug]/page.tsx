@@ -22,6 +22,9 @@ import { STORY_CATEGORY_LABELS } from "@/lib/demo/stories";
 import { formatDate } from "@/lib/utils";
 import type { StoryBlock } from "@/types";
 
+export const revalidate = 300;
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
   const stories = await listStories();
   return stories.map((s) => ({ slug: s.slug }));

@@ -7,6 +7,11 @@ import { listMedia } from "@/lib/media";
 import { IMAGE_FOLDERS } from "@/lib/image-config";
 import { withCoverPhotos } from "@/lib/animal-covers";
 import { AdoptExplorer } from "@/components/adopt/AdoptExplorer";
+
+/** ISR: rebuild every 5 min so new adoptable animals appear without paying for
+ *  a per-request Serverless Function on Vercel Hobby. */
+export const revalidate = 300;
+
 import { WhyAdopt, type WhyPhotos } from "@/components/adopt/WhyAdopt";
 import {
   RescueStories,

@@ -28,6 +28,9 @@ import { zoneName } from "@/lib/demo/zones";
 import { formatDate } from "@/lib/utils";
 import { SITE } from "@/lib/config";
 
+export const revalidate = 300;
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
   const animals = await listAnimals();
   return animals.map((a) => ({ slug: a.slug }));

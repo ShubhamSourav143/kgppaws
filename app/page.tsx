@@ -19,6 +19,13 @@ import { IMAGE_FOLDERS } from "@/lib/image-config";
 import { VOLUNTEER_ROLE_CARDS } from "@/lib/volunteer/roles";
 
 /**
+ * ISR: rebuilt in the background every 5 minutes. Keeps the home OFF Vercel's
+ * per-deployment Serverless Function count — the site's public pages don't need
+ * per-request rendering, just periodic refreshes as CMS data changes.
+ */
+export const revalidate = 300;
+
+/**
  * The homepage is a live summary of the whole site. Every section below the
  * hero previews a dedicated page and pulls from that page's own data source,
  * so new animals, articles, shelter members, work sections or volunteer roles
