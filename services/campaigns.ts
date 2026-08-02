@@ -1,4 +1,4 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createStaticSupabase } from "@/lib/supabase/server";
 import { DEMO_CAMPAIGNS, getDemoCampaign } from "@/lib/demo/campaigns";
 import type { DonationCampaign } from "@/types";
 
@@ -28,7 +28,7 @@ function mapCampaignRow(row: any): DonationCampaign {
 }
 
 export async function listCampaigns(): Promise<DonationCampaign[]> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("campaigns_with_totals")
@@ -43,7 +43,7 @@ export async function listCampaigns(): Promise<DonationCampaign[]> {
 }
 
 export async function getCampaign(slug: string): Promise<DonationCampaign | undefined> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("campaigns_with_totals")

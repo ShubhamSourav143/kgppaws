@@ -1,16 +1,18 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createStaticSupabase } from "@/lib/supabase/server";
 import { DEMO_ANIMALS, getDemoAnimal, getDemoAnimalByToken } from "@/lib/demo/animals";
 import { mapAnimalRow, PUBLIC_ANIMAL_SELECT as PUBLIC_SELECT } from "@/services/animal-mapper";
 import type { Animal } from "@/types";
 
 /**
  * Animals service — server-side reads.
- * Live mode queries Supabase (public-safe columns only, enforced by RLS);
- * demo mode returns the labelled seed dataset.
+ * Uses the cookie-free anon client so pages that only need public animal
+ * data stay statically renderable (RSC → prerender + ISR). Reads are
+ * scoped by RLS to `is_public = true` columns, so the anon session is
+ * fine here. Live mode queries Supabase; demo mode returns the seed set.
  */
 
 export async function listAnimals(): Promise<Animal[]> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("animals")
@@ -29,7 +31,7 @@ export async function listAnimals(): Promise<Animal[]> {
 }
 
 export async function getAnimal(slug: string): Promise<Animal | undefined> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("animals")
@@ -45,7 +47,7 @@ export async function getAnimal(slug: string): Promise<Animal | undefined> {
 
 /** Resolve a QR token (from /p/{token}) to an animal — never exposes the DB UUID. */
 export async function resolveQrToken(token: string): Promise<Animal | undefined> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data } = await supabase
       .from("qr_tags")

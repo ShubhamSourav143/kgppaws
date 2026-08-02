@@ -1,4 +1,4 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createStaticSupabase } from "@/lib/supabase/server";
 import { storagePublicUrl } from "@/lib/config";
 import { DEMO_STORIES, getDemoStory } from "@/lib/demo/stories";
 import type { Story } from "@/types";
@@ -34,7 +34,7 @@ function mapStoryRow(row: any): Story {
 }
 
 export async function listStories(): Promise<Story[]> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("stories")
@@ -50,7 +50,7 @@ export async function listStories(): Promise<Story[]> {
 }
 
 export async function getStory(slug: string): Promise<Story | undefined> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data, error } = await supabase
       .from("stories")

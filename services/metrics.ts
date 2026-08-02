@@ -1,4 +1,4 @@
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createStaticSupabase } from "@/lib/supabase/server";
 import { DEMO_IMPACT } from "@/lib/demo/metrics";
 import type { ImpactMetrics } from "@/types";
 
@@ -7,7 +7,7 @@ import type { ImpactMetrics } from "@/types";
  * `impact_metrics` table — never hardcoded facts.
  */
 export async function getImpactMetrics(): Promise<ImpactMetrics> {
-  const supabase = await createServerSupabase();
+  const supabase = createStaticSupabase();
   if (supabase) {
     const { data } = await supabase
       .from("impact_metrics")

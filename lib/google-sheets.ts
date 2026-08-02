@@ -33,7 +33,7 @@ export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
   if (!DONORS_CSV_URL) return null;
   try {
     const res = await fetch(DONORS_CSV_URL, {
-      cache: "no-store",
+      next: { revalidate: 300 },
       redirect: "follow",
     });
     if (!res.ok) return null;
