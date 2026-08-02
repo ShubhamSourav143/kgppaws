@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ReportForm } from "@/components/report/ReportForm";
 import { TrackLookup } from "@/components/report/TrackLookup";
 
@@ -24,6 +25,17 @@ export default function ReportPage() {
       </header>
 
       <ReportForm />
+
+      <p className="mt-8 rounded-2xl border border-line bg-cream px-5 py-4 text-sm leading-relaxed text-moss">
+        Bitten by a dog on campus?{" "}
+        <Link
+          href="/report/bite"
+          className="font-bold text-terracotta-deep underline underline-offset-2"
+        >
+          File a dog bite incident report
+        </Link>{" "}
+        instead — it collects the medical details we need to follow up.
+      </p>
 
       <div className="mt-10 border-t border-line pt-8">
         <TrackLookup />

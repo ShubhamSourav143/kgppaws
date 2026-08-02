@@ -21,7 +21,7 @@ import type { Animal } from "@/types";
 export const metadata: Metadata = {
   title: "Adopt, Don't Shop",
   description:
-    "Every animal deserves a loving home. Meet the adoptable dogs and cats of IIT Kharagpur — vaccinated, health-assessed, and waiting for a forever family.",
+    "Every animal deserves a loving home. Meet the adoptable dogs of IIT Kharagpur — vaccinated, health-assessed, and waiting for a forever family.",
   alternates: { canonical: "/adopt" },
 };
 

@@ -57,15 +57,15 @@ export interface WorkSectionContent {
 export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
   {
     slug: "bunti",
-    name: "Bunti",
+    name: "Bunty",
     status: "In our care",
     photoKeys: ["bunty"],
     intro:
-      "Bunti became part of our shelter family when he was only two months old, after suffering a severe spinal injury near the Gas Godown Gate.",
+      "Bunty's story began with heartbreak. At just one and a half months old, he was found abandoned near the Gas Godown Gate of IIT Kharagpur. Alone and defenseless, he was attacked by a group of dogs from the nearby New Area, leaving him with a devastating spinal injury that permanently paralyzed his hind legs.",
     journey:
-      "He was brought under our care straight after the rescue and has been with the shelter ever since. Regular physiotherapy and medication have helped him remain comfortable.",
+      "He came into KGP PAWS' care in 2023, when his chances of survival were uncertain. With constant medical attention, physiotherapy, and the unwavering dedication of our volunteers, Bunty fought through the hardest days. Although he never regained the ability to walk, he learned to live with courage, trust, and an unbreakable spirit.",
     condition:
-      "He cannot walk on his own, but he is cheerful, alert, and looked after every day by volunteers who know him well.",
+      "Bunty is now the heart of our temporary shelter. Affectionately known as the \"Boss\" by everyone who meets him, he greets volunteers with excitement, keeps a watchful eye on every new arrival, and reminds us every day that resilience is stronger than tragedy. Bunty is a paraplegic dog, but he has never let his disability define him—he defines our shelter instead.",
   },
   {
     slug: "muesli",
@@ -73,11 +73,11 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     status: "In our care",
     photoKeys: ["muesli-04", "muesli-05", "muesli-02", "muesli-03", "muesli-01", "muesli-vid"],
     intro:
-      "Muesli was found weak and underweight near the campus gate and has been part of our shelter family since her recovery.",
+      "Muesli was just two months old when she was found abandoned near Azad Hall of Residence at IIT Kharagpur. Alone and vulnerable, she had been attacked by a much larger dog, leaving her with a severe spinal injury that caused permanent paralysis in her hind legs.",
     journey:
-      "She spent her first weeks with us regaining her strength, and now spends her days indoors with the other shelter dogs. She is fully vaccinated and sterilised.",
+      "She was rescued by KGP PAWS and has been part of our shelter family ever since. Despite everything she has been through, Muesli never lost her joyful spirit. Surrounded by love, care, and daily support from our volunteers, she has grown into one of the happiest members of our shelter.",
     condition:
-      "Healthy, playful and fond of anyone carrying food. She is affectionate with other dogs and comfortable around people.",
+      "Muesli may not be able to walk, but she makes up for it with boundless energy and endless affection. She is incredibly friendly, playful, and always excited to meet new people. One look at her bright eyes and cheerful personality is enough to steal anyone's heart. Her disability has never stopped her from spreading happiness wherever she goes.",
   },
   {
     slug: "checker",
@@ -85,11 +85,11 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     status: "In our care",
     photoKeys: ["checker"],
     intro:
-      "Checker joined the shelter family after a serious campus rescue and has been under our long-term care ever since.",
+      "Checker's journey is one of extraordinary strength. While pregnant, she was chased by a pack of dogs and desperately tried to escape by running into a nearby house. Frightened residents forced her back outside, where the chase continued. In the panic, she fell backwards from a wall, suffering a devastating spinal injury that left her permanently paralyzed.",
     journey:
-      "He was treated and rehabilitated by our volunteer team, and has slowly settled into the shelter routine. He is fully vaccinated.",
+      "The accident claimed the lives of all her unborn kittens, but Checker refused to give up. She was rescued by KGP PAWS and received the medical care, love, and rehabilitation she desperately needed. Over time, she recovered from her injuries and learned to trust people again, becoming a cherished member of our shelter family.",
     condition:
-      "Stable and comfortable. He continues to receive daily care and attention from the volunteers he trusts.",
+      "Although Checker remains paraplegic, she is now healthy, comfortable, and surrounded by people who care for her every day. She enjoys the safety of the shelter, the company of other rescued animals, and the affection of our volunteers. Her quiet resilience reminds us that even after unimaginable loss, life can still be filled with love, dignity, and hope.",
   },
   {
     slug: "sai",
@@ -97,11 +97,11 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     status: "In our care",
     photoKeys: ["odin", "story-07", "story-08", "grid-07", "grid-15"],
     intro:
-      "Sai was rescued from the campus after an injury made it unsafe for him to live on his own, and has stayed with the shelter since.",
+      "Sai was found at Kharagpur Railway Station, suffering from an unknown neurological condition that left her quadriplegic. When she was rescued by KGP PAWS, she was so weak that she couldn't even lift her head. Every movement was a struggle, and her future was uncertain.",
     journey:
-      "He recovered with regular treatment and now shares the shelter with the rest of the family. He is calm around the volunteers who feed and clean for him every day.",
+      "With dedicated medical care, daily support, and endless love from our volunteers, Sai slowly began to regain her strength. Although she still cannot walk, she has learned to move around by crawling on her belly. Every small step in her recovery has been a victory, and we continue to hope that one day she may stand and walk again.",
     condition:
-      "Healthy and settled. He is gentle by nature and prefers a quiet corner of the shelter to the busier spaces.",
+      "Sai is one of the most affectionate members of our shelter family. She greets every familiar face with trust and warmth, and has formed an especially deep bond with our volunteers. Her gentle nature, unwavering spirit, and determination inspire everyone who meets her. To us, Sai is a daily reminder that hope is worth holding onto, no matter how difficult the journey.",
   },
   {
     slug: "nami",
@@ -109,11 +109,11 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     status: "In our care",
     photoKeys: ["nami-01", "nami-02", "nami-03"],
     intro:
-      "Nami came into our care as a young dog after a health issue that meant she could not safely return to campus life.",
+      "Nami was just two months old when she was found abandoned near MMM Hall of Residence at IIT Kharagpur. Soon after being rescued, she developed a severe case of canine distemper. Despite being vaccinated, the disease attacked her nervous system, leaving her partially paralyzed. There were days when we feared she would not survive.",
     journey:
-      "Her treatment ran for several months, and she has been part of the shelter family since. She is vaccinated and sterilised.",
+      "For more than six months, Nami received intensive medical treatment, physiotherapy, and round-the-clock care from our dedicated volunteers. Every tiny sign of improvement gave us hope, and Nami never stopped fighting. Her determination amazed everyone who cared for her.",
     condition:
-      "Bright and affectionate. She recognises the daily volunteers and is comfortable being handled for feeding and care.",
+      "Today, Nami is living proof that miracles can happen. She has regained the ability to run, play, and enjoy life like any other happy dog. Full of energy, affection, and endless excitement, she reminds us that love, patience, and perseverance can change a life forever. Nami's journey is one of our greatest success stories—and we couldn't be prouder of her.",
   },
   {
     slug: "romeo",
@@ -122,11 +122,11 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     memoriam: true,
     photoKeys: ["romie"],
     intro:
-      "Romeo was one of the shelter's long-standing residents and a familiar face to every batch of volunteers who passed through KGP PAWS.",
+      "Romeo was a true campus legend. His territory stretched from the IIT Kharagpur Main Building all the way to the Agricultural Department, where generations of students and staff came to know and love him. Friendly, confident, and impossibly charming, Romeo had a way of making everyone smile.",
     journey:
-      "He spent his years with the shelter family, cared for by generations of student volunteers. He passed away peacefully after a full life under our care.",
+      "One tragic day, Romeo became the victim of a hit-and-run accident near the Agricultural Department. The impact left him permanently paralyzed. From that moment on, KGP PAWS became his family. Despite his disability, Romeo never lost his gentle spirit or his love for people. He spent his remaining years surrounded by the care and affection of countless volunteers who made sure he was never alone.",
     condition:
-      "Remembered as a calm, gentle presence at the shelter — the dog who taught many first-time volunteers how to be trusted.",
+      "Romeo passed away in 2025, leaving behind memories that will never fade. Being adorable was his full-time job, and he carried it out perfectly every single day. His courage, quiet strength, and unconditional love touched everyone who met him. Though he is no longer with us, Romeo will forever remain a part of the KGP PAWS family and in the hearts of those who loved him.",
   },
   {
     slug: "three-leg",
@@ -135,11 +135,11 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     memoriam: true,
     photoKeys: ["three-leg-01", "three-leg-02", "three-leg-03"],
     intro:
-      "3 Leg earned his name after losing a leg in a road accident on campus, and joined the shelter family once his surgery had healed.",
+      "In August 2024, 3 Leg was just four months old when a tragic train accident near IIT Kharagpur changed her life forever. The accident left her with devastating injuries, and one of her legs had to be amputated to save her life. Despite such a painful beginning, she faced every new day with remarkable courage and an endless capacity for love.",
     journey:
-      "He adapted quickly to life on three legs and continued to move around the shelter with the same energy as before. He remained with us until his final days.",
+      "After recovering from surgery, she returned to her home at the NE Hospital campus of IIT Kharagpur. She quickly became a favorite among students, staff, and volunteers. Over-friendly by nature, she greeted everyone with complete trust, loved every meal with unmatched enthusiasm, and spread happiness wherever she went.",
     condition:
-      "Remembered for showing everyone what recovery actually looks like — patient, uncomplaining, and always ready for the next meal.",
+      "In March 2025, her health began to decline unexpectedly. She gradually became fully paralyzed, and despite every effort to help her, she peacefully crossed the Rainbow Bridge on 7 April 2025. Though her life was heartbreakingly short, 3 Leg filled it with unconditional love, boundless joy, and unwavering trust. She taught us that courage is not measured by how many legs you have, but by how fearlessly you choose to live.",
   },
   {
     slug: "shanti",
@@ -148,11 +148,11 @@ export const SHELTER_MEMBERS: Omit<ShelterMember, "photos">[] = [
     memoriam: true,
     photoKeys: ["shanti-vid"],
     intro:
-      "Shanti was the unofficial dean of the Main Building steps for many years before joining the shelter in her senior years.",
+      "Shanti was rescued from Kolkata and brought to the KGP PAWS temporary shelter by one of our dedicated volunteers. She was paraplegic, but her disability never stopped her from sharing love with everyone she met. From the moment she arrived, she became part of our family.",
     journey:
-      "Generations of students knew her. She appeared in more convocation photos than some faculty members. In her final years the shelter became her home and the volunteers her people.",
+      "Though life had been unkind to her, Shanti greeted every new day with warmth and affection. She loved meeting people, happily showering volunteers and visitors with gentle licks in her own sweet way of asking for love. Her cheerful spirit and trusting nature made her impossible to forget, and she quickly won the hearts of everyone at the shelter.",
     condition:
-      "Remembered by every batch that walked past her post — dignified, patient, and never in a hurry.",
+      "We said goodbye to Shanti in 2025, but the love she gave continues to live on in our memories. She taught us that kindness needs no words—sometimes, a wagging tail and a gentle lick are enough to brighten someone's day. Her gentle soul will always remain a cherished part of the KGP PAWS family.",
   },
 ];
 
@@ -234,16 +234,15 @@ export const WORK_SECTIONS: WorkSectionContent[] = [
       "During these periods — and every other day of the year — KGP PAWS volunteers continue feeding approximately 350 campus dogs. The rounds go out in the morning and again in the evening, in rain or heat, so the animals never miss a meal.",
     folders: ["donation/feeding", "stories"],
     photoKeys: [
-      "feed-01",
-      "feed-02",
-      "feed-03",
-      "romi",
-      "story-07",
-      "story-08",
-      "grid-10",
-      "grid-11",
+      "feed-04",
+      "feed-05",
+      "feed-06",
+      "feed-07",
+      "feed-08",
+      "feed-09",
+      "feed-10",
     ],
-    targetCount: 10,
+    targetCount: 7,
     tone: "parchment",
   },
   {
@@ -366,6 +365,6 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     category: "Adoption",
     summary:
       "Where the animals sold in shops actually come from, and why adopting a healthy campus dog gives you the same companion at a fraction of the cost.",
-    photoKey: "muesli",
+    photoKey: "simba",
   },
 ];

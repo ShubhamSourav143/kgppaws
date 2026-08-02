@@ -58,7 +58,7 @@ export function DonateCta() {
         <Reveal delay={0.2}>
           <div className="mt-9 flex flex-wrap gap-4">
             <Link
-              href="/donate#give"
+              href="/donate#campaigns"
               className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-saffron-deep via-saffron to-marigold px-8 py-4 font-bold text-ivory shadow-ember transition-all hover:brightness-105"
             >
               <HeartHandshake className="h-5 w-5" aria-hidden="true" />

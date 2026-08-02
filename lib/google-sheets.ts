@@ -1,7 +1,7 @@
 const WEBHOOK_URL = process.env.GOOGLE_SHEET_WEBHOOK_URL;
 const DONORS_CSV_URL = process.env.GOOGLE_SHEET_DONORS_CSV_URL;
 
-export type SheetForm = "report" | "volunteer" | "adoption";
+export type SheetForm = "report" | "volunteer" | "adoption" | "bite";
 
 export interface SheetPayload {
   form: SheetForm;

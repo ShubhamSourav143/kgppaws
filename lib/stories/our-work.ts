@@ -37,7 +37,7 @@ export const INITIATIVES: Initiative[] = [
     summary:
       "Every week a small group is driven to a partner clinic in Kolkata for surgery, three days of post-operative care, and release to the exact spot they came from.",
     why: "Humane population control is the only lasting answer. Fewer animals born on the roadside means fewer born into hunger, fighting and disease.",
-    photo: "bunti",
+    photo: "shanti",
     href: "/donate#campaigns",
     stat: { value: "500+", label: "completed" },
   },
@@ -67,7 +67,7 @@ export const INITIATIVES: Initiative[] = [
     summary:
       "Vaccinated, health-assessed and temperament-checked animals matched with families who are ready for them — and followed up afterwards.",
     why: "Every adoption frees a shelter space for the next rescue and quietly reduces the demand that drives breeding. Two lives change, not one.",
-    photo: "muesli",
+    photo: "laika",
     href: "/adopt",
     stat: { value: "Adopt", label: "don't shop" },
   },

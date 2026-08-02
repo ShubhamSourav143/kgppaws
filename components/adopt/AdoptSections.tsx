@@ -90,13 +90,12 @@ export function RescueStories({
       subjects: [{ subject: ODIN, photo: covers.odin }],
     },
     {
-      name: "Muesli & Bunti",
-      tag: "Street puppies · lifelong care",
-      body: "Attacked by larger dogs as puppies, both survived — but their injuries left lasting damage and a lifelong need for patient, committed care.",
-      href: "/animal/bunti",
+      name: "Laika",
+      tag: "Puppy · rescued after rains",
+      body: "The sole survivor of a litter found behind Nalanda during the March rains. Bottle-fed by volunteers, she is now a confident, curious puppy ready for a family.",
+      href: "/animal/laika",
       subjects: [
-        { subject: subjectFor(animals, "muesli", ROMI), photo: covers.muesli },
-        { subject: subjectFor(animals, "bunti", ODIN), photo: covers.bunti },
+        { subject: subjectFor(animals, "laika", ROMI), photo: covers.laika },
       ],
     },
   ];
@@ -163,7 +162,7 @@ const STEPS = [
   {
     icon: PawPrint,
     title: "Browse our animals",
-    body: "Meet the dogs and cats waiting on campus — each with a full health record and personality.",
+    body: "Meet the dogs waiting on campus — each with a full health record and personality.",
   },
   {
     icon: Heart,
@@ -255,14 +254,12 @@ export function FinalCta({
 }) {
   const bySlug = (slug: string) => animals.find((a) => a.slug === slug);
   const tiles: { subject: Subject; slug: string }[] = [
-    { subject: bySlug("bunti") ?? ODIN, slug: "bunti" },
-    { subject: bySlug("muesli") ?? ROMI, slug: "muesli" },
+    { subject: bySlug("simba") ?? ROMI, slug: "simba" },
+    { subject: bySlug("shanti") ?? ODIN, slug: "shanti" },
     { subject: ROMI, slug: "romi" },
     { subject: ODIN, slug: "odin" },
-    { subject: bySlug("simba") ?? ROMI, slug: "simba" },
-    { subject: bySlug("laika") ?? ODIN, slug: "laika" },
-    { subject: bySlug("percy") ?? ROMI, slug: "percy" },
-    { subject: bySlug("mishti") ?? ODIN, slug: "mishti" },
+    { subject: bySlug("laika") ?? ROMI, slug: "laika" },
+    { subject: bySlug("rocket") ?? ODIN, slug: "rocket" },
   ];
 
   return (
@@ -283,7 +280,7 @@ export function FinalCta({
           </Reveal>
         </div>
 
-        <Stagger className="mx-auto mt-12 grid max-w-4xl grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4">
+        <Stagger className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 sm:gap-4">
           {tiles.map((t, i) => (
             <Item key={i}>
               <figure className="overflow-hidden rounded-2xl bg-ivory/5 ring-1 ring-ivory/10">

@@ -159,9 +159,10 @@ export const DEMO_NAVIGATION: NavigationItem[] = [
   { id: "demo-n0", label: "Home", url: "/", icon: null, parentLabel: null, displayOrder: 0, openInNewTab: false },
   { id: "demo-n1", label: "Adopt", url: "/adopt", icon: null, parentLabel: null, displayOrder: 1, openInNewTab: false },
   { id: "demo-n2", label: "Our Work", url: "/stories", icon: null, parentLabel: null, displayOrder: 2, openInNewTab: false },
-  { id: "demo-n4", label: "Donate", url: "/donate", icon: null, parentLabel: null, displayOrder: 4, openInNewTab: false },
-  { id: "demo-n5", label: "Volunteer", url: "/volunteer", icon: null, parentLabel: null, displayOrder: 5, openInNewTab: false },
-  { id: "demo-n6", label: "About", url: "/about", icon: null, parentLabel: null, displayOrder: 6, openInNewTab: false },
+  { id: "demo-n4", label: "Donate", url: "/donate", icon: null, parentLabel: null, displayOrder: 3, openInNewTab: false },
+  { id: "demo-n5", label: "Volunteer", url: "/volunteer", icon: null, parentLabel: null, displayOrder: 4, openInNewTab: false },
+  { id: "demo-n6", label: "About", url: "/about", icon: null, parentLabel: null, displayOrder: 5, openInNewTab: false },
+  { id: "demo-n3", label: "Help", url: "/report/bite", icon: null, parentLabel: null, displayOrder: 6, openInNewTab: false },
 ];
 
 export interface EventItem {
