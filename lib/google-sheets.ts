@@ -9,15 +9,27 @@ export interface SheetPayload {
 }
 
 export async function submitToGoogleSheet(payload: SheetPayload): Promise<boolean> {
-  if (!WEBHOOK_URL) return false;
+  if (!WEBHOOK_URL) {
+    console.error("[sheets] WEBHOOK_URL is not set");
+    return false;
+  }
   try {
+    // Google Apps Script webhooks reject requests with a JSON content-type
+    // (they return a redirect and drop the body). Send as text/plain — Apps
+    // Script's doPost still receives the JSON in e.postData.contents.
     const res = await fetch(WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
+      redirect: "follow",
     });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "<no body>");
+      console.error(`[sheets] webhook non-ok: ${res.status} ${res.statusText} body=${body.slice(0, 200)}`);
+    }
     return res.ok;
-  } catch {
+  } catch (err) {
+    console.error("[sheets] webhook threw:", err instanceof Error ? err.message : err);
     return false;
   }
 }
