@@ -1,5 +1,10 @@
-const WEBHOOK_URL = process.env.GOOGLE_SHEET_WEBHOOK_URL;
-const DONORS_CSV_URL = process.env.GOOGLE_SHEET_DONORS_CSV_URL;
+// Strip whitespace and any stray BOM (﻿) the value may have picked up
+// on its way into Vercel's env store — piping a URL via PowerShell prepends
+// a UTF-8 BOM, which then makes fetch throw "Failed to parse URL from …"
+// at request time.
+const clean = (v: string | undefined) => v?.replace(/^[\s﻿]+|[\s﻿]+$/g, "");
+const WEBHOOK_URL = clean(process.env.GOOGLE_SHEET_WEBHOOK_URL);
+const DONORS_CSV_URL = clean(process.env.GOOGLE_SHEET_DONORS_CSV_URL);
 
 export type SheetForm = "report" | "volunteer" | "adoption" | "bite";
 
