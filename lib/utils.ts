@@ -13,18 +13,38 @@ export function formatINR(amount: number) {
   }).format(amount);
 }
 
+/**
+ * Parse a date string tolerantly and return the Date only if it's valid.
+ * Handles date-only ISO (YYYY-MM-DD) by anchoring to local midnight so a
+ * value like "2026-07-24" renders as 24 Jul, not 23 Jul in negative TZs.
+ * Returns null for empty / malformed / non-parseable inputs so callers can
+ * render a placeholder instead of "Invalid Date".
+ */
+export function parseDateSafe(value: unknown): Date | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const anchored = /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
+    ? `${trimmed}T00:00:00`
+    : trimmed;
+  const d = new Date(anchored);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export function formatDate(iso: string) {
-  return new Date(iso + (iso.length === 10 ? "T00:00:00" : "")).toLocaleDateString(
-    "en-IN",
-    { day: "numeric", month: "short", year: "numeric" }
-  );
+  const d = parseDateSafe(iso);
+  if (!d) return "—";
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function formatDateShort(iso: string) {
-  return new Date(iso + (iso.length === 10 ? "T00:00:00" : "")).toLocaleDateString(
-    "en-IN",
-    { day: "numeric", month: "short" }
-  );
+  const d = parseDateSafe(iso);
+  if (!d) return "—";
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
 export function pct(raised: number, goal: number) {

@@ -42,10 +42,16 @@ export async function submitToGoogleSheet(payload: SheetPayload): Promise<boolea
 export interface SheetDonor {
   name: string;
   date: string;
-  campaignSlug: string;
   amount: number;
 }
 
+/**
+ * Fetches the published Donors sheet as CSV. Columns expected:
+ *   Name | Date | Amount
+ * A row with a missing/malformed amount is dropped; a row with a missing
+ * date is kept (rendered as "—" by the wall and pushed to the bottom of
+ * the sort).
+ */
 export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
   if (!DONORS_CSV_URL) return null;
   try {
@@ -62,11 +68,10 @@ export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
         return {
           name: cols[0] || "Anonymous",
           date: cols[1] || "",
-          campaignSlug: cols[2] || "",
-          amount: parseInt(cols[3] || "0", 10),
+          amount: parseInt(cols[2] || "0", 10),
         };
       })
-      .filter((d) => d.date && d.amount > 0);
+      .filter((d) => d.amount > 0);
   } catch {
     return null;
   }

@@ -96,36 +96,19 @@ export default async function DonatePage() {
     return { campaign, editorial, photos: galleryFor(editorial.gallery) };
   });
 
-  // Donor wall. There is no public donor feed in the schema yet, so this runs
-  // on clearly-labelled demo entries; when one exists it drops in here
-  // unchanged, since the wall only needs {name, date, campaign, amount}.
-  //
-  // The demo rows name the seed campaigns, which won't match a connected
-  // database — so attach each one to a campaign that actually exists (its own
-  // where the slug lines up, otherwise spread round-robin). Without this the
-  // wall silently empties the moment a real database is connected.
-  const wallCampaigns = programmes.length ? programmes : campaigns;
-  const byRealSlug = new Map(wallCampaigns.map((c) => [c.slug, c]));
-
+  // Donor wall. The Donors tab in the sheet has three columns —
+  // Name | Date | Amount — matching the row shape below. Sorting and
+  // date validation happen inside the wall component.
   const sheetDonors = await fetchDonorsFromSheet();
   const donorSource = sheetDonors ?? DEMO_DONORS;
   const donorsAreDemo = !sheetDonors;
 
-  const donors: DonorRow[] = wallCampaigns.length
-    ? donorSource.map((d, i) => {
-        const target =
-          byRealSlug.get(d.campaignSlug) ??
-          wallCampaigns[i % wallCampaigns.length];
-        return {
-          id: "id" in d ? (d as { id: string }).id : `sheet-${i}`,
-          name: d.name,
-          date: d.date,
-          campaignSlug: target.slug,
-          campaignTitle: target.title,
-          amount: d.amount,
-        };
-      })
-    : [];
+  const donors: DonorRow[] = donorSource.map((d, i) => ({
+    id: "id" in d ? (d as { id: string }).id : `sheet-${i}`,
+    name: d.name,
+    date: d.date,
+    amount: d.amount,
+  }));
 
   return (
     <div className="bg-cream">
@@ -175,7 +158,7 @@ export default async function DonatePage() {
           nothing to scroll to. */}
 
       {/* 4 · Transparency — donor wall */}
-      <DonorWall donors={donors} campaigns={wallCampaigns} isDemo={donorsAreDemo} />
+      <DonorWall donors={donors} isDemo={donorsAreDemo} />
 
       {/* 5 · Why donate */}
       <WhyDonate shots={whyShots} />

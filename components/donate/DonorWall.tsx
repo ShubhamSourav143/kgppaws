@@ -2,15 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { Search, ShieldCheck, Heart } from "lucide-react";
-import { formatINR, formatDate, cn } from "@/lib/utils";
+import { formatINR, formatDate, parseDateSafe, cn } from "@/lib/utils";
 import { DemoNotice } from "@/components/ui/Section";
 
 export interface DonorRow {
   id: string;
   name: string;
+  /** Raw date string from the source. Validated at display time. */
   date: string;
-  campaignSlug: string;
-  campaignTitle: string;
   amount: number;
 }
 
@@ -18,35 +17,34 @@ export interface DonorRow {
  * Donor wall — the public half of the transparency story.
  *
  * Only donors who opted in are ever named; everyone else appears as
- * "Anonymous", which is why that value is a normal row here rather than a
- * placeholder. The list is sorted newest first, scrolls inside a fixed frame
- * with a sticky header, and can be searched or narrowed to one campaign.
+ * "Anonymous". Rows sort newest first; rows with a missing or unparseable
+ * date sink to the bottom rather than breaking the page or floating up top
+ * on a lexicographic accident.
  */
 export function DonorWall({
   donors,
-  campaigns,
   isDemo,
 }: {
   donors: DonorRow[];
-  campaigns: { slug: string; title: string }[];
   isDemo: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const [slug, setSlug] = useState("all");
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return donors
-      .filter((d) => (slug === "all" ? true : d.campaignSlug === slug))
-      .filter((d) =>
-        !q
-          ? true
-          : d.name.toLowerCase().includes(q) ||
-            d.campaignTitle.toLowerCase().includes(q)
-      )
+      .filter((d) => (!q ? true : d.name.toLowerCase().includes(q)))
       .slice()
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  }, [donors, query, slug]);
+      .sort((a, b) => {
+        const da = parseDateSafe(a.date);
+        const db = parseDateSafe(b.date);
+        // invalid dates always to the bottom
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return db.getTime() - da.getTime();
+      });
+  }, [donors, query]);
 
   const total = useMemo(() => rows.reduce((s, d) => s + d.amount, 0), [rows]);
 
@@ -72,7 +70,7 @@ export function DonorWall({
 
         <div className="mt-10 overflow-hidden rounded-3xl border border-line bg-ivory shadow-card">
           {/* controls */}
-          <div className="flex flex-col gap-3 border-b border-line p-4 sm:flex-row sm:items-center sm:p-5">
+          <div className="flex border-b border-line p-4 sm:p-5">
             <div className="relative flex-1">
               <Search
                 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-moss"
@@ -82,27 +80,11 @@ export function DonorWall({
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search donors or campaigns…"
+                placeholder="Search donors…"
                 aria-label="Search donors"
                 className="w-full rounded-full border border-line bg-cream py-2.5 pl-10 pr-4 text-sm placeholder:text-moss/70 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15"
               />
             </div>
-            <label htmlFor="donor-campaign" className="sr-only">
-              Filter by campaign
-            </label>
-            <select
-              id="donor-campaign"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              className="rounded-full border border-line bg-cream px-4 py-2.5 text-sm font-semibold text-forest focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/15 sm:w-64"
-            >
-              <option value="all">All campaigns</option>
-              {campaigns.map((c) => (
-                <option key={c.slug} value={c.slug}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* scrolling table */}
@@ -115,7 +97,6 @@ export function DonorWall({
                 <tr className="bg-mist/95 backdrop-blur-sm">
                   <Th className="pl-5">Donor</Th>
                   <Th className="hidden sm:table-cell">Date</Th>
-                  <Th>Campaign</Th>
                   <Th className="pr-5 text-right">Amount</Th>
                 </tr>
               </thead>
@@ -148,9 +129,6 @@ export function DonorWall({
                     <td className="hidden whitespace-nowrap py-3.5 pr-3 text-moss sm:table-cell">
                       {formatDate(d.date)}
                     </td>
-                    <td className="py-3.5 pr-3 text-charcoal/75">
-                      {d.campaignTitle}
-                    </td>
                     <td className="whitespace-nowrap py-3.5 pr-5 text-right font-bold text-forest-deep">
                       {formatINR(d.amount)}
                     </td>
@@ -158,7 +136,7 @@ export function DonorWall({
                 ))}
                 {!rows.length && (
                   <tr>
-                    <td colSpan={4} className="px-5 py-12 text-center text-moss">
+                    <td colSpan={3} className="px-5 py-12 text-center text-moss">
                       No donations match that search.
                     </td>
                   </tr>

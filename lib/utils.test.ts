@@ -38,6 +38,15 @@ describe("formatDate", () => {
   it("formats a full ISO timestamp", () => {
     expect(formatDate("2026-01-05T10:30:00.000Z")).toMatch(/5 Jan 2026|4 Jan 2026/);
   });
+
+  it("returns em dash placeholder for empty, garbage or unparseable input", () => {
+    expect(formatDate("")).toBe("—");
+    expect(formatDate("   ")).toBe("—");
+    expect(formatDate("not a date")).toBe("—");
+    // guards against runtime callers that lie about types
+    expect(formatDate(undefined as unknown as string)).toBe("—");
+    expect(formatDate(null as unknown as string)).toBe("—");
+  });
 });
 
 describe("pct", () => {

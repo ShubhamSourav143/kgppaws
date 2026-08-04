@@ -18,9 +18,9 @@ All form submissions go to Google Sheets. The donor wall on the donate page can 
 `ID | Timestamp | Animal Name | Animal Slug | Name | Email | Phone | Address | Maps Link | Concern`
 
 **Donors** tab (for the donate page to read):
-`Name | Date | Campaign Slug | Amount`
+`Name | Date | Amount`
 
-Campaign slugs for the Donors tab: `100-day-feeding-program`, `annual-vaccination-program`, `campus-sterilization-program`, `medical-emergency-fund`
+Date column: use ISO format `YYYY-MM-DD` (e.g. `2026-08-03`) — the wall parses this into a real date, sorts newest first, and gracefully shows "—" for any row where the date is missing or malformed. Amount is a plain integer in rupees, no currency symbol or commas.
 
 ## Step 2: Deploy the Apps Script
 
