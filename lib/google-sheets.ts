@@ -46,11 +46,14 @@ export interface SheetDonor {
 }
 
 /**
- * Fetches the published Donors sheet as CSV. Columns expected:
+ * Fetches the published Donors sheet as CSV. Preferred schema:
  *   Name | Date | Amount
- * A row with a missing/malformed amount is dropped; a row with a missing
- * date is kept (rendered as "—" by the wall and pushed to the bottom of
- * the sort).
+ * A legacy schema with a Campaign Slug column between Date and Amount is
+ * also accepted so the wall keeps working while the sheet is being
+ * migrated. Amount is always taken from the LAST integer-parseable column
+ * on the row. A row with no such column is dropped; a row with a missing
+ * or unparseable date is kept (rendered as "—" by the wall and pushed to
+ * the bottom of the sort).
  */
 export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
   if (!DONORS_CSV_URL) return null;
@@ -61,14 +64,27 @@ export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
     });
     if (!res.ok) return null;
     const text = await res.text();
-    const lines = text.trim().split("\n").slice(1);
+    const lines = text.trim().split(/\r?\n/).slice(1);
     return lines
       .map((line) => {
-        const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+        const cols = line
+          .split(",")
+          .map((c) => c.trim().replace(/^"|"$/g, ""));
+        // Amount = last cell whose digits parse to a positive integer.
+        // Tolerates any middle columns (e.g. legacy Campaign Slug).
+        let amount = 0;
+        for (let i = cols.length - 1; i >= 2; i--) {
+          const cleaned = cols[i].replace(/[₹,\s]/g, "");
+          const n = parseInt(cleaned, 10);
+          if (Number.isFinite(n) && n > 0) {
+            amount = n;
+            break;
+          }
+        }
         return {
           name: cols[0] || "Anonymous",
           date: cols[1] || "",
-          amount: parseInt(cols[2] || "0", 10),
+          amount,
         };
       })
       .filter((d) => d.amount > 0);
