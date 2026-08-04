@@ -6,11 +6,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Camera, MapPin, PawPrint, Siren, X } from "lucide-react";
+import { AlertTriangle, Camera, Loader2, MapPin, PawPrint, Siren, X } from "lucide-react";
 import { Textarea, FieldWrap } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { nextReportId, saveLocalReport } from "@/lib/local-store";
 import { isSupabaseConfigured } from "@/lib/config";
+import { uploadAll, type FileToUpload } from "@/lib/client/upload";
 import { cn } from "@/lib/utils";
 
 const MAX_PHOTO_MB = 8;
@@ -44,8 +45,11 @@ export function FloatingReportButton() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -87,12 +91,18 @@ export function FloatingReportButton() {
       setPhotoError(`Please choose an image under ${MAX_PHOTO_MB} MB.`);
       return;
     }
+    setPhotoFile(file);
     setPhotoName(file.name);
   };
 
-  const onSubmit = (v: FormValues) => {
+  const onSubmit = async (v: FormValues) => {
+    setSubmitError(null);
+    setUploading(true);
+
     const id = nextReportId();
     const now = new Date().toISOString();
+    const submissionId = crypto.randomUUID();
+
     saveLocalReport({
       id,
       createdAt: now,
@@ -116,28 +126,51 @@ export function FloatingReportButton() {
       demo: true,
     });
 
-    fetch("/api/sheets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        form: "report",
-        data: {
-          id,
-          timestamp: now,
-          animal: "dog",
-          problem: "other",
-          severity: "urgent",
-          location: v.address,
-          description: v.symptoms,
-          mapsLink: v.mapsLink || "",
-          contact: "",
-        },
-      }),
-    }).catch(() => {});
+    try {
+      const toUpload: FileToUpload[] = photoFile
+        ? [{ slot: "photo", file: photoFile }]
+        : [];
+      const attachments = await uploadAll("rescue-reports", submissionId, toUpload);
 
-    setSubmittedId(id);
-    reset();
-    setPhotoName(null);
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form: "report",
+          submissionId,
+          data: {
+            id,
+            animal: "dog",
+            problem: "other",
+            severity: "urgent",
+            location: v.address,
+            description: v.symptoms,
+            mapsLink: v.mapsLink || "",
+            contact: "",
+            zoneId: "unknown",
+          },
+          attachments,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Submission failed" }));
+        throw new Error(body?.error ?? "Submission failed");
+      }
+
+      setSubmittedId(id);
+      reset();
+      setPhotoFile(null);
+      setPhotoName(null);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while submitting. Please try again."
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   const resetForNext = () => {
@@ -351,17 +384,35 @@ export function FloatingReportButton() {
                     <p className="text-xs text-moss">
                       Shared only with the responding volunteers.
                     </p>
+                    {submitError && (
+                      <div
+                        role="alert"
+                        className="flex items-start gap-2 rounded-xl border border-terracotta/40 bg-clay/50 p-3 text-xs text-terracotta-deep"
+                      >
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <span className="leading-relaxed">{submitError}</span>
+                      </div>
+                    )}
                     <div className="flex gap-2">
-                      <Button variant="outline" type="button" onClick={close}>
+                      <Button variant="outline" type="button" onClick={close} disabled={uploading}>
                         Cancel
                       </Button>
                       <Button
                         type="submit"
                         variant="accent"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || uploading}
                       >
-                        <Siren className="h-4 w-4" aria-hidden="true" />
-                        Submit report
+                        {uploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            Submitting…
+                          </>
+                        ) : (
+                          <>
+                            <Siren className="h-4 w-4" aria-hidden="true" />
+                            Submit report
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>

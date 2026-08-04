@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { HandHeart, MapPin, PawPrint } from "lucide-react";
+import { AlertTriangle, HandHeart, Loader2, MapPin, PawPrint } from "lucide-react";
 import { AnimalPortrait } from "@/components/animals/Portrait";
 import { Input, Textarea, FieldWrap } from "@/components/ui/Field";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -43,6 +43,7 @@ type FormValues = z.infer<typeof schema>;
 
 export function ApplyFlow({ animal }: { animal: Animal }) {
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -53,9 +54,11 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
     mode: "onTouched",
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
+    setSubmitError(null);
     const id = nextApplicationId();
     const now = new Date().toISOString();
+
     saveLocalApplication({
       id,
       animalSlug: animal.slug,
@@ -84,27 +87,40 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
       demo: true,
     });
 
-    fetch("/api/sheets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        form: "adoption",
-        data: {
-          id,
-          timestamp: now,
-          animalName: animal.name,
-          animalSlug: animal.slug,
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          address: values.address,
-          mapsLink: values.mapsLink,
-          concern: values.concern || "",
-        },
-      }),
-    }).catch(() => {});
+    try {
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form: "adoption",
+          submissionId: crypto.randomUUID(),
+          data: {
+            id,
+            animalName: animal.name,
+            animalSlug: animal.slug,
+            name: values.name,
+            email: values.email,
+            phone: values.phone,
+            address: values.address,
+            mapsLink: values.mapsLink,
+            concern: values.concern || "",
+          },
+        }),
+      });
 
-    setSubmittedId(id);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Submission failed" }));
+        throw new Error(body?.error ?? "Submission failed");
+      }
+
+      setSubmittedId(id);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while submitting. Please try again."
+      );
+    }
   };
 
   /* ——— thank-you state ——— */
@@ -264,6 +280,16 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
             {...register("concern")}
           />
 
+          {submitError && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-2xl border border-terracotta/40 bg-clay/50 p-4 text-sm text-terracotta-deep"
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="leading-relaxed">{submitError}</span>
+            </div>
+          )}
+
           <Button
             type="submit"
             variant="accent"
@@ -271,8 +297,17 @@ export function ApplyFlow({ animal }: { animal: Animal }) {
             className="w-full"
             disabled={isSubmitting}
           >
-            <HandHeart className="h-5 w-5" aria-hidden="true" />
-            Submit Adoption Request
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                Submitting…
+              </>
+            ) : (
+              <>
+                <HandHeart className="h-5 w-5" aria-hidden="true" />
+                Submit Adoption Request
+              </>
+            )}
           </Button>
           <p className="text-center text-xs leading-relaxed text-moss">
             Your details are visible only to the adoption coordinators.

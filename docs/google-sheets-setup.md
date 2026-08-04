@@ -9,7 +9,7 @@ All form submissions go to Google Sheets. The donor wall on the donate page can 
 3. Create these tabs with headers in row 1:
 
 **Reports** tab:
-`ID | Timestamp | Animal | Problem | Severity | Location | Description | Contact`
+`ID | Timestamp | Animal | Problem | Severity | Location | Description | Contact | Photo`
 
 **Volunteers** tab:
 `Timestamp | Name | Phone | Email | Affiliation | Hall | Work Options`
@@ -18,9 +18,9 @@ All form submissions go to Google Sheets. The donor wall on the donate page can 
 `ID | Timestamp | Animal Name | Animal Slug | Name | Email | Phone | Address | Maps Link | Concern`
 
 **Bite Reports** tab:
-`Timestamp | Full Name | Phone | Location | Incident Date | Incident Time | Maps Link | Dog Photo | Wound Photo | Medical Report | Description`
+`Timestamp | Report Code | Full Name | Phone | Location | Incident Date | Incident Time | Maps Link | Dog Photo | Wound Photo | Medical Report | Description`
 
-The Dog Photo / Wound Photo / Medical Report columns hold the original filenames the reporter attached — the binaries stay on the reporter's device until a Storage bucket is wired up. A follow-up call from the volunteer team collects the actual files.
+Image columns (Photo on Reports, Dog Photo / Wound Photo on Bite Reports): the Apps Script writes `=IMAGE(url)` formulas that render the actual image inline. Medical Report uses `=HYPERLINK(url, filename)` for the clickable PDF link. Files live in the `submissions` bucket on Supabase Storage — the app uploads them at submission time and passes the public URL to the sheet.
 
 **Donors** tab (for the donate page to read):
 `Name | Date | Amount`
@@ -40,6 +40,23 @@ Date column: use ISO format `YYYY-MM-DD` (e.g. `2026-08-03`) — the wall parses
 ### Apps Script Code
 
 ```javascript
+// Helper: write formulas alongside plain values. Photos become
+// =IMAGE(url) so volunteers see a preview inline; PDFs become
+// =HYPERLINK(url,"filename") so the label reads sanely.
+function imgFormula(url)      { return url ? '=IMAGE("' + url + '")' : ""; }
+function linkFormula(url, ln) { return url ? '=HYPERLINK("' + url + '","' + (ln || "open") + '")' : ""; }
+
+function appendRowWithFormulas(sheet, values) {
+  sheet.appendRow(values.map(function (v) { return v; }));
+  // Re-set formula cells with setFormula so Sheets evaluates them.
+  var row = sheet.getLastRow();
+  values.forEach(function (v, i) {
+    if (typeof v === "string" && v.indexOf("=") === 0) {
+      sheet.getRange(row, i + 1).setFormula(v);
+    }
+  });
+}
+
 function doPost(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -51,9 +68,9 @@ function doPost(e) {
       var sheet = ss.getSheetByName("Reports");
       if (!sheet) {
         sheet = ss.insertSheet("Reports");
-        sheet.appendRow(["ID", "Timestamp", "Animal", "Problem", "Severity", "Location", "Description", "Contact"]);
+        sheet.appendRow(["ID", "Timestamp", "Animal", "Problem", "Severity", "Location", "Description", "Contact", "Photo"]);
       }
-      sheet.appendRow([
+      appendRowWithFormulas(sheet, [
         data.id || "",
         data.timestamp || "",
         data.animal || "",
@@ -61,7 +78,8 @@ function doPost(e) {
         data.severity || "",
         data.location || "",
         data.description || "",
-        data.contact || ""
+        data.contact || "",
+        imgFormula(data.photoUrl)
       ]);
     }
 
@@ -106,19 +124,20 @@ function doPost(e) {
       var sheet = ss.getSheetByName("Bite Reports");
       if (!sheet) {
         sheet = ss.insertSheet("Bite Reports");
-        sheet.appendRow(["Timestamp", "Full Name", "Phone", "Location", "Incident Date", "Incident Time", "Maps Link", "Dog Photo", "Wound Photo", "Medical Report", "Description"]);
+        sheet.appendRow(["Timestamp", "Report Code", "Full Name", "Phone", "Location", "Incident Date", "Incident Time", "Maps Link", "Dog Photo", "Wound Photo", "Medical Report", "Description"]);
       }
-      sheet.appendRow([
+      appendRowWithFormulas(sheet, [
         data.timestamp || "",
+        data.reportCode || "",
         data.fullName || "",
         data.phone || "",
         data.location || "",
         data.incidentDate || "",
         data.incidentTime || "",
         data.mapsLink || "",
-        data.dogPhoto || "",
-        data.woundPhoto || "",
-        data.medicalReport || "",
+        imgFormula(data.dogPhotoUrl),
+        imgFormula(data.woundPhotoUrl),
+        linkFormula(data.medicalReportUrl, data.medicalReportName || "medical report"),
         data.description || ""
       ]);
     }

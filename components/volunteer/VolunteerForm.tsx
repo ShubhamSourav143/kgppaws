@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Award, HandHeart, PawPrint } from "lucide-react";
+import { AlertTriangle, Award, HandHeart, Loader2, PawPrint } from "lucide-react";
 import { Input, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { isSupabaseConfigured } from "@/lib/config";
@@ -53,6 +53,7 @@ type FormValues = z.infer<typeof schema>;
 
 export function VolunteerForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -73,25 +74,39 @@ export function VolunteerForm() {
     setValue("workOptions", next, { shouldValidate: true });
   };
 
-  const onSubmit = (v: FormValues) => {
-    fetch("/api/sheets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        form: "volunteer",
-        data: {
-          timestamp: new Date().toISOString(),
-          name: v.name,
-          phone: v.phone,
-          email: v.email,
-          affiliation: v.affiliation,
-          hall: v.hall,
-          workOptions: v.workOptions.join(", "),
-        },
-      }),
-    }).catch(() => {});
+  const onSubmit = async (v: FormValues) => {
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form: "volunteer",
+          submissionId: crypto.randomUUID(),
+          data: {
+            name: v.name,
+            phone: v.phone,
+            email: v.email,
+            affiliation: v.affiliation,
+            hall: v.hall,
+            workOptions: v.workOptions.join(", "),
+          },
+        }),
+      });
 
-    setSubmitted(true);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Submission failed" }));
+        throw new Error(body?.error ?? "Submission failed");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while submitting. Please try again."
+      );
+    }
   };
 
   if (submitted) {
@@ -240,8 +255,25 @@ export function VolunteerForm() {
         )}
       </fieldset>
 
+      {submitError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-2xl border border-terracotta/40 bg-clay/50 p-4 text-sm text-terracotta-deep"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="leading-relaxed">{submitError}</span>
+        </div>
+      )}
+
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-        Submit registration
+        {isSubmitting ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            Submitting…
+          </>
+        ) : (
+          "Submit registration"
+        )}
       </Button>
       <p className="rounded-2xl bg-sand-light p-3 text-xs leading-relaxed text-forest-deep">
         <Award className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 text-saffron-deep" aria-hidden="true" />

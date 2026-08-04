@@ -18,6 +18,7 @@ import { POST as syncResolve } from "@/app/api/sync/resolve/handler";
 import { POST as syncRun } from "@/app/api/sync/run/handler";
 import { GET as syncStatus } from "@/app/api/sync/status/handler";
 import { POST as syncWorker } from "@/app/api/sync/worker/handler";
+import { POST as uploadSign } from "@/app/api/upload/sign/handler";
 
 /**
  * Single API dispatcher.
@@ -55,6 +56,7 @@ const POST_ROUTES: Record<string, Handler> = {
   "sync/resolve": syncResolve as unknown as Handler,
   "sync/run": syncRun as unknown as Handler,
   "sync/worker": syncWorker as unknown as Handler,
+  "upload/sign": uploadSign as unknown as Handler,
 };
 
 function pathOf(slug: string[] | undefined): string {

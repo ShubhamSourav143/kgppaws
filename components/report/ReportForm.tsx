@@ -6,8 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import {
+  AlertTriangle,
   Camera,
   Check,
+  Loader2,
   LocateFixed,
   PawPrint,
   Siren,
@@ -18,6 +20,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { PROBLEM_LABELS, SEVERITY_LABELS } from "@/lib/demo/reports";
 import { nextReportId, saveLocalReport } from "@/lib/local-store";
 import { isSupabaseConfigured } from "@/lib/config";
+import { uploadAll, type FileToUpload } from "@/lib/client/upload";
 import { cn } from "@/lib/utils";
 import type { ReportProblem, ReportSeverity, Species } from "@/types";
 
@@ -86,8 +89,11 @@ function ChipGroup<T extends string>({
 
 export function ReportForm() {
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [geo, setGeo] = useState<"idle" | "asking" | "captured" | "denied">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +128,7 @@ export function ReportForm() {
       setPhotoError(`Images up to ${MAX_PHOTO_MB} MB only.`);
       return;
     }
+    setPhotoFile(file);
     setPhotoName(file.name);
   };
 
@@ -136,8 +143,15 @@ export function ReportForm() {
   };
 
   const onSubmit = async (v: FormValues) => {
+    setSubmitError(null);
+    setUploading(true);
+
     const id = nextReportId();
     const now = new Date().toISOString();
+    const submissionId = crypto.randomUUID();
+
+    // Save to localStorage immediately so /report/[id] tracking works
+    // even if the network write fails partway through.
     saveLocalReport({
       id,
       createdAt: now,
@@ -159,25 +173,47 @@ export function ReportForm() {
       demo: true,
     });
 
-    fetch("/api/sheets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        form: "report",
-        data: {
-          id,
-          timestamp: now,
-          animal: v.animalType,
-          problem: v.problem,
-          severity: v.severity,
-          location: v.locationNote,
-          description: v.description,
-          contact: v.contact,
-        },
-      }),
-    }).catch(() => {});
+    try {
+      const toUpload: FileToUpload[] = photoFile
+        ? [{ slot: "photo", file: photoFile }]
+        : [];
+      const attachments = await uploadAll("rescue-reports", submissionId, toUpload);
 
-    setSubmittedId(id);
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form: "report",
+          submissionId,
+          data: {
+            id,
+            animal: v.animalType,
+            problem: v.problem,
+            severity: v.severity,
+            location: v.locationNote,
+            description: v.description,
+            contact: v.contact,
+            zoneId: "unknown",
+          },
+          attachments,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Submission failed" }));
+        throw new Error(body?.error ?? "Submission failed");
+      }
+
+      setSubmittedId(id);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while submitting. Please try again."
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (submittedId) {
@@ -361,9 +397,34 @@ export function ReportForm() {
         />
       </FieldWrap>
 
-      <Button type="submit" variant="accent" size="lg" className="w-full" disabled={isSubmitting}>
-        <Siren className="h-5 w-5" aria-hidden="true" />
-        Submit report
+      {submitError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-2xl border border-terracotta/40 bg-clay/50 p-4 text-sm text-terracotta-deep"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="leading-relaxed">{submitError}</span>
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        variant="accent"
+        size="lg"
+        className="w-full"
+        disabled={isSubmitting || uploading}
+      >
+        {uploading ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            {photoFile ? "Uploading photo…" : "Submitting…"}
+          </>
+        ) : (
+          <>
+            <Siren className="h-5 w-5" aria-hidden="true" />
+            Submit report
+          </>
+        )}
       </Button>
       <p className="text-center text-xs leading-relaxed text-moss">
         Reports go to the volunteer response queue. For life-threatening

@@ -5,10 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Camera, FileText, PawPrint, Siren, X } from "lucide-react";
+import { AlertTriangle, Camera, FileText, Loader2, PawPrint, Siren, X } from "lucide-react";
 import { Input, Textarea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { isSupabaseConfigured } from "@/lib/config";
+import { uploadAll, type FileToUpload } from "@/lib/client/upload";
 import { cn } from "@/lib/utils";
 
 const MAX_FILE_MB = 8;
@@ -186,6 +187,8 @@ function FileField({
 
 export function BiteReportForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [files, setFiles] = useState<Record<Slot, File | null>>({
     dogPhoto: null,
     wound: null,
@@ -234,35 +237,58 @@ export function BiteReportForm() {
     return Object.keys(next).length === 0;
   };
 
-  const onSubmit = (v: FormValues) => {
+  const onSubmit = async (v: FormValues) => {
     if (!validateFiles()) return;
+    setSubmitError(null);
+    setUploading(true);
 
-    // Fire-and-forget like the other forms — a slow or unreachable webhook
-    // must never leave the reporter staring at a disabled button.
-    // Attachments are recorded by filename alongside the report; the binaries
-    // stay on the reporter's device until a storage bucket is wired up.
-    fetch("/api/sheets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        form: "bite",
-        data: {
-          timestamp: new Date().toISOString(),
-          fullName: v.fullName,
-          phone: v.phone,
-          location: v.location,
-          incidentDate: v.date,
-          incidentTime: v.time,
-          mapsLink: v.mapsLink,
-          dogPhoto: files.dogPhoto?.name ?? "",
-          woundPhoto: files.wound?.name ?? "",
-          medicalReport: files.medical?.name ?? "",
-          description: v.description,
-        },
-      }),
-    }).catch(() => {});
+    try {
+      // One id ties the bytes on the CDN to the row in Supabase to the
+      // row in the Sheet. Minted before any upload starts.
+      const submissionId = crypto.randomUUID();
 
-    setSubmitted(true);
+      const toUpload: FileToUpload[] = [
+        files.dogPhoto ? { slot: "dogPhoto", file: files.dogPhoto } : null,
+        files.wound ? { slot: "wound", file: files.wound } : null,
+        files.medical ? { slot: "medical", file: files.medical } : null,
+      ].filter((x): x is FileToUpload => x !== null);
+
+      const attachments = await uploadAll("bite-reports", submissionId, toUpload);
+
+      const res = await fetch("/api/sheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form: "bite",
+          submissionId,
+          data: {
+            fullName: v.fullName,
+            phone: v.phone,
+            location: v.location,
+            incidentDate: v.date,
+            incidentTime: v.time,
+            mapsLink: v.mapsLink,
+            description: v.description,
+          },
+          attachments,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Submission failed" }));
+        throw new Error(body?.error ?? "Submission failed");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong while submitting. Please try again."
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (submitted) {
@@ -411,15 +437,34 @@ export function BiteReportForm() {
         />
       </div>
 
+      {submitError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-2xl border border-terracotta/40 bg-clay/50 p-4 text-sm text-terracotta-deep"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="leading-relaxed">{submitError}</span>
+        </div>
+      )}
+
       <Button
         type="submit"
         variant="accent"
         size="lg"
         className="w-full"
-        disabled={isSubmitting}
+        disabled={isSubmitting || uploading}
       >
-        <Siren className="h-5 w-5" aria-hidden="true" />
-        Submit Bite Report
+        {uploading ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            Uploading files…
+          </>
+        ) : (
+          <>
+            <Siren className="h-5 w-5" aria-hidden="true" />
+            Submit Bite Report
+          </>
+        )}
       </Button>
 
       <p className="text-center text-xs leading-relaxed text-moss">
