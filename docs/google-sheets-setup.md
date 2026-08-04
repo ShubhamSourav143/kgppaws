@@ -17,6 +17,11 @@ All form submissions go to Google Sheets. The donor wall on the donate page can 
 **Adoptions** tab:
 `ID | Timestamp | Animal Name | Animal Slug | Name | Email | Phone | Address | Maps Link | Concern`
 
+**Bite Reports** tab:
+`Timestamp | Full Name | Phone | Location | Incident Date | Incident Time | Maps Link | Dog Photo | Wound Photo | Medical Report | Description`
+
+The Dog Photo / Wound Photo / Medical Report columns hold the original filenames the reporter attached — the binaries stay on the reporter's device until a Storage bucket is wired up. A follow-up call from the volunteer team collects the actual files.
+
 **Donors** tab (for the donate page to read):
 `Name | Date | Amount`
 
@@ -97,6 +102,27 @@ function doPost(e) {
       ]);
     }
 
+    if (form === "bite") {
+      var sheet = ss.getSheetByName("Bite Reports");
+      if (!sheet) {
+        sheet = ss.insertSheet("Bite Reports");
+        sheet.appendRow(["Timestamp", "Full Name", "Phone", "Location", "Incident Date", "Incident Time", "Maps Link", "Dog Photo", "Wound Photo", "Medical Report", "Description"]);
+      }
+      sheet.appendRow([
+        data.timestamp || "",
+        data.fullName || "",
+        data.phone || "",
+        data.location || "",
+        data.incidentDate || "",
+        data.incidentTime || "",
+        data.mapsLink || "",
+        data.dogPhoto || "",
+        data.woundPhoto || "",
+        data.medicalReport || "",
+        data.description || ""
+      ]);
+    }
+
     return ContentService
       .createTextOutput(JSON.stringify({ success: true }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -128,7 +154,7 @@ Restart the dev server after adding the env variables.
 ## How it works
 
 **Form submissions (write):**
-Report, Volunteer, and Adoption forms POST to `/api/sheets`, which forwards data to the Google Apps Script. The script writes a row to the matching tab. Submissions are fire-and-forget — users see the success screen immediately.
+Report, Volunteer, Adoption and Bite Report forms POST to `/api/sheets`, which forwards data to the Google Apps Script. The script writes a row to the matching tab. Submissions are fire-and-forget — users see the success screen immediately, so if you add a fifth form you MUST also add a matching `if (form === "...")` branch to the Apps Script before submissions will land in the sheet; without one, the script returns `{success:true}` and silently drops the row.
 
 **Donor wall (read):**
 The donate page fetches the published Donors CSV at build time (revalidates every 5 minutes). If the CSV URL is not configured, the page falls back to demo donor data. To add a real donor, just add a row in the Donors tab of the Google Sheet.
