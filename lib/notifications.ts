@@ -99,8 +99,13 @@ export async function sendNotifications(
 /* ————————————————————————— email (Resend) ————————————————————————— */
 
 async function sendEmail(input: NotificationInput): Promise<NotificationOutcome> {
-  const apiKey = process.env.RESEND_API_KEY ?? process.env.EMAIL_PROVIDER_API_KEY;
-  const from = process.env.NOTIFY_FROM_EMAIL;
+  // Sanitize like the webhook URL — a BOM or trailing newline from a
+  // copy-paste is invisible in the Vercel dashboard but makes Resend
+  // reject the request as "API key is invalid".
+  const apiKey = cleanEnv(
+    process.env.RESEND_API_KEY ?? process.env.EMAIL_PROVIDER_API_KEY
+  );
+  const from = cleanEnv(process.env.NOTIFY_FROM_EMAIL);
   const to = parseList(process.env.NOTIFY_TO_EMAILS);
 
   if (!apiKey || !from || to.length === 0) {
@@ -145,8 +150,10 @@ async function sendEmail(input: NotificationInput): Promise<NotificationOutcome>
 async function sendWhatsApp(
   input: NotificationInput
 ): Promise<NotificationOutcome> {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN ?? process.env.WHATSAPP_PROVIDER_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token = cleanEnv(
+    process.env.WHATSAPP_ACCESS_TOKEN ?? process.env.WHATSAPP_PROVIDER_TOKEN
+  );
+  const phoneNumberId = cleanEnv(process.env.WHATSAPP_PHONE_NUMBER_ID);
   const to = normalizePhone(process.env.RESCUE_WHATSAPP_TO);
 
   if (!token || !phoneNumberId || !to) {
@@ -450,10 +457,22 @@ function renderWhatsAppText(input: NotificationInput): string {
 
 /* ————————————————————————— helpers ————————————————————————— */
 
+/**
+ * Strip whitespace and any stray BOM (﻿) from an env-var value. Vercel's
+ * dashboard input strips a lot of things but not always the UTF-8 BOM
+ * that comes with copy-paste from some editors; a leading BOM makes
+ * Resend's `Authorization: Bearer …` reject the key with "API key is
+ * invalid" and Meta's Graph API reject the token with an opaque 400.
+ * Same trick that fixed the GOOGLE_SHEET_WEBHOOK_URL earlier.
+ */
+function cleanEnv(v: string | undefined): string | undefined {
+  return v?.replace(/^[\s﻿]+|[\s﻿]+$/g, "") || undefined;
+}
+
 function parseList(value: string | undefined): string[] {
   return (value ?? "")
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => s.trim().replace(/^﻿/, ""))
     .filter(Boolean);
 }
 
