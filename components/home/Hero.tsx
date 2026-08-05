@@ -49,23 +49,23 @@ const g = (n: number, ext = "jpg") =>
 
 const CELLS: Cell[] = [
   // right half — always visible (these 8 form the mobile collage)
-  { src: g(1), pos: "lg:col-start-3 lg:row-start-1", duration: 17, delay: -3 },
+  { src: g(1, "mp4"), type: "video", pos: "lg:col-start-3 lg:row-start-1", duration: 17, delay: -3 },
   { src: g(2), pos: "lg:col-start-4 lg:row-start-1", duration: 21, delay: -11 },
   { src: g(3), pos: "lg:col-start-3 lg:row-start-2", duration: 15, delay: -7 },
   { src: g(4), pos: "lg:col-start-4 lg:row-start-2", duration: 19, delay: -1 },
   { src: g(5), pos: "lg:col-start-3 lg:row-start-3", duration: 22, delay: -14 },
   { src: g(6), pos: "lg:col-start-4 lg:row-start-3", duration: 16, delay: -5 },
-  { src: g(7), pos: "lg:col-start-3 lg:row-start-4", duration: 20, delay: -9 },
+  { src: g(7, "mp4"), type: "video", pos: "lg:col-start-3 lg:row-start-4", duration: 20, delay: -9 },
   { src: g(8), pos: "lg:col-start-4 lg:row-start-4", duration: 18, delay: -13 },
   // left half — under the text overlay, desktop only
   { src: g(9),  pos: "lg:col-start-1 lg:row-start-1", desktopOnly: true, duration: 19, delay: -6 },
   { src: g(10), pos: "lg:col-start-2 lg:row-start-1", desktopOnly: true, duration: 16, delay: -12 },
   { src: g(11), pos: "lg:col-start-1 lg:row-start-2", desktopOnly: true, duration: 21, delay: -2 },
-  { src: g(12, "mp4"), type: "video", pos: "lg:col-start-2 lg:row-start-2", desktopOnly: true, duration: 17, delay: -8 },
+  { src: g(12), pos: "lg:col-start-2 lg:row-start-2", desktopOnly: true, duration: 17, delay: -8 },
   { src: g(13), pos: "lg:col-start-1 lg:row-start-3", desktopOnly: true, duration: 20, delay: -15 },
   { src: g(14), pos: "lg:col-start-2 lg:row-start-3", desktopOnly: true, duration: 15, delay: -4 },
   { src: g(15), pos: "lg:col-start-1 lg:row-start-4", desktopOnly: true, duration: 22, delay: -10 },
-  { src: g(16, "mp4"), type: "video", pos: "lg:col-start-2 lg:row-start-4", desktopOnly: true, duration: 18, delay: -1.5 },
+  { src: g(16), pos: "lg:col-start-2 lg:row-start-4", desktopOnly: true, duration: 18, delay: -1.5 },
 ];
 
 export function Hero({
