@@ -107,7 +107,7 @@ export function Hero({
               show: { opacity: 1 },
             }}
             transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className={`group relative overflow-hidden bg-night ${cell.pos} ${
+            className={`group relative overflow-hidden ${cell.pos} ${
               cell.desktopOnly ? "hidden lg:block" : ""
             }`}
           >
@@ -118,7 +118,7 @@ export function Hero({
                 loop
                 muted
                 playsInline
-                className="absolute inset-0 h-full w-full object-contain"
+                className="absolute inset-0 h-full w-full object-cover object-center"
               />
             ) : (
               <Image
@@ -127,7 +127,7 @@ export function Hero({
                 fill
                 sizes="(min-width: 1024px) 25vw, 50vw"
                 priority={!cell.desktopOnly}
-                className="anim-kenburns object-contain"
+                className="anim-kenburns object-cover object-center"
                 style={{
                   animationDuration: `${cell.duration}s`,
                   animationDelay: `${cell.delay}s`,
