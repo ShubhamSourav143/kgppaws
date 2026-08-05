@@ -1,5 +1,6 @@
 import { createServiceSupabase } from "@/lib/supabase/server";
 import { submitToGoogleSheet } from "@/lib/google-sheets";
+import { sendNotifications, type NotificationChannel } from "@/lib/notifications";
 import type { UploadedFile } from "@/lib/uploads";
 
 /**
@@ -107,6 +108,23 @@ async function persistBite(input: SubmissionInput): Promise<SubmissionResult> {
     medicalReportName: nameForSlot(attachments, "medical"),
   });
 
+  await notify({
+    kind: "bite",
+    channels: ["email"],
+    code,
+    title: "Bite Incident Report",
+    fields: [
+      { label: "Reporter", value: d.fullName ?? "" },
+      { label: "Phone", value: d.phone ?? "" },
+      { label: "Location", value: d.location ?? "" },
+      { label: "Incident date", value: d.incidentDate ?? "" },
+      { label: "Incident time", value: d.incidentTime ?? "" },
+      { label: "Maps", value: d.mapsLink ?? "" },
+    ],
+    body: d.description,
+    attachments,
+  });
+
   return { ok: true, code };
 }
 
@@ -170,6 +188,24 @@ async function persistReport(input: SubmissionInput): Promise<SubmissionResult> 
     photoName: primaryPhoto?.filename ?? "",
   });
 
+  await notify({
+    kind: "report",
+    // Rescue is the one form that also pages WhatsApp — life-safety.
+    channels: ["email", "whatsapp"],
+    code,
+    title: "Animal Rescue Report",
+    fields: [
+      { label: "Animal", value: d.animal ?? "" },
+      { label: "Problem", value: d.problem ?? "" },
+      { label: "Severity", value: (d.severity ?? "").toUpperCase() },
+      { label: "Location", value: d.location ?? "" },
+      { label: "Contact", value: d.contact ?? "" },
+    ],
+    body: d.description,
+    attachments,
+    adminUrl: `https://kgp-paws.vercel.app/report/${code}`,
+  });
+
   return { ok: true, code };
 }
 
@@ -210,6 +246,20 @@ async function persistVolunteer(input: SubmissionInput): Promise<SubmissionResul
     affiliation: d.affiliation ?? "",
     hall: d.hall ?? "",
     workOptions: d.workOptions ?? "",
+  });
+
+  await notify({
+    kind: "volunteer",
+    channels: ["email"],
+    title: "Volunteer Registration",
+    fields: [
+      { label: "Name", value: d.name ?? "" },
+      { label: "Phone", value: d.phone ?? "" },
+      { label: "Email", value: d.email ?? "" },
+      { label: "Affiliation", value: d.affiliation ?? "" },
+      { label: "Hall / dept", value: d.hall ?? "" },
+      { label: "Roles wanted", value: d.workOptions ?? "" },
+    ],
   });
 
   return { ok: true };
@@ -274,6 +324,22 @@ async function persistAdoption(input: SubmissionInput): Promise<SubmissionResult
     concern: d.concern ?? "",
   });
 
+  await notify({
+    kind: "adoption",
+    channels: ["email"],
+    code,
+    title: `Adoption Request — ${d.animalName ?? d.animalSlug ?? ""}`,
+    fields: [
+      { label: "Animal", value: d.animalName ?? "" },
+      { label: "Applicant", value: d.name ?? "" },
+      { label: "Email", value: d.email ?? "" },
+      { label: "Phone", value: d.phone ?? "" },
+      { label: "Address", value: d.address ?? "" },
+      { label: "Maps", value: d.mapsLink ?? "" },
+    ],
+    body: d.concern,
+  });
+
   return { ok: true, code };
 }
 
@@ -290,6 +356,37 @@ async function forwardToSheet(
     // user-facing. Sync-engine reconciliation covers the gap.
     console.warn(
       `[submissions] forwardToSheet(${form}) failed:`,
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
+/**
+ * Fires notification channels for one submission. Wraps sendNotifications
+ * in an outer try/catch so the caller (persistBite, persistReport, …)
+ * cannot fail its own successful DB write on a notification bug — the
+ * user-facing invariant is "if you see the thank-you screen, your report
+ * is stored", not "your report is stored AND everyone was paged."
+ *
+ * `channels` shape is passed by the caller, so a future form kind opts
+ * into any combination without a change here. Rescue is currently the
+ * only kind that pages WhatsApp.
+ */
+async function notify(input: {
+  kind: "bite" | "report" | "adoption" | "volunteer";
+  channels: NotificationChannel[];
+  code?: string;
+  title: string;
+  fields: Array<{ label: string; value: string }>;
+  body?: string;
+  attachments?: UploadedFile[];
+  adminUrl?: string;
+}): Promise<void> {
+  try {
+    await sendNotifications(input);
+  } catch (err) {
+    console.warn(
+      `[submissions] notify(${input.kind}) threw:`,
       err instanceof Error ? err.message : err
     );
   }
