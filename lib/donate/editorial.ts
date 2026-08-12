@@ -103,7 +103,11 @@ const VACCINATION: CampaignEditorial = {
     { amount: 5500, label: "A full hall-area round of 25" },
     { amount: 13000, label: "A tenth of the entire year's drive" },
   ],
-  gallery: ["vacc-01", "vacc-02", "vacc-03"],
+  // Real filenames in public/images/donation/vaccination/ start at vacc-04
+  // (04-10). The old vacc-01/02/03 stems matched no file, so galleryFor()
+  // dropped all three and the campaign rendered with no photos. vacc-vid.mp4
+  // is deliberately excluded — the gallery renders <Image>, not <video>.
+  gallery: ["vacc-04", "vacc-05", "vacc-06", "vacc-07", "vacc-08", "vacc-09", "vacc-10"],
 };
 
 const EMERGENCY: CampaignEditorial = {
