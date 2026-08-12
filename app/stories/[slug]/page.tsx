@@ -38,6 +38,12 @@ export async function generateMetadata({
   const { slug } = await params;
   const story = await getStory(slug);
   if (!story) return { title: "Story not found" };
+  // Share the story's own hero photo, not a generic logo. Setting openGraph
+  // here replaces the root file-convention image, so without this the card was
+  // imageless — every shared rescue story looked like a bare link. Falls back
+  // to the site OG image when a story has no photo. Relative paths resolve
+  // against metadataBase (set in app/layout.tsx).
+  const ogImage = story.photos.find((p) => p.url)?.url ?? "/opengraph-image.png";
   return {
     title: story.title,
     description: story.excerpt,
@@ -47,6 +53,13 @@ export async function generateMetadata({
       description: story.excerpt,
       type: "article",
       publishedTime: story.publishedAt,
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: story.title,
+      description: story.excerpt,
+      images: [ogImage],
     },
   };
 }

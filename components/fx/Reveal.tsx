@@ -1,37 +1,17 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "framer-motion";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { useReveal } from "./use-reveal";
 
 type Effect = "rise" | "fade" | "scale" | "blur" | "slide-left" | "slide-right";
 
-const EFFECTS: Record<Effect, Variants> = {
-  rise: {
-    hidden: { opacity: 0, y: 36 },
-    show: { opacity: 1, y: 0 },
-  },
-  fade: {
-    hidden: { opacity: 0 },
-    show: { opacity: 1 },
-  },
-  scale: {
-    hidden: { opacity: 0, scale: 0.92 },
-    show: { opacity: 1, scale: 1 },
-  },
-  blur: {
-    hidden: { opacity: 0, filter: "blur(12px)", y: 18 },
-    show: { opacity: 1, filter: "blur(0px)", y: 0 },
-  },
-  "slide-left": {
-    hidden: { opacity: 0, x: 48 },
-    show: { opacity: 1, x: 0 },
-  },
-  "slide-right": {
-    hidden: { opacity: 0, x: -48 },
-    show: { opacity: 1, x: 0 },
-  },
-};
-
+/**
+ * Scroll reveal. Rendered visible in SSR; the hidden pre-reveal state is CSS
+ * gated on html[data-reveal-ready] (see app/globals.css and useReveal), so the
+ * content is never invisible when JavaScript is absent or slow. Same effects,
+ * durations and easing as the previous framer-motion version.
+ */
 export function Reveal({
   children,
   effect = "rise",
@@ -49,57 +29,60 @@ export function Reveal({
   amount?: number;
   className?: string;
 }) {
-  const reduced = useReducedMotion();
-  if (reduced) return <div className={className}>{children}</div>;
+  const ref = useReveal<HTMLDivElement>({ once, amount });
   return (
-    <motion.div
-      className={className}
-      variants={EFFECTS[effect]}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, amount }}
-      transition={{ duration, delay, ease: [0.16, 1, 0.3, 1] }}
+    <div
+      ref={ref}
+      className={cn("reveal", className)}
+      data-reveal={effect}
+      style={
+        { "--reveal-dur": `${duration}s`, "--reveal-delay": `${delay}s` } as CSSProperties
+      }
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
-/** Parent that staggers any nested `<Item>`s when scrolled into view. */
+/**
+ * Staggers its direct children into view. The per-child delay is applied by
+ * the `.reveal-stagger` CSS (nth-child transition delays), so `<Item>` can stay
+ * a plain wrapper and no per-child JS is needed.
+ */
 export function Stagger({
   children,
-  gap = 0.09,
   delay = 0,
   once = true,
   amount = 0.2,
   className,
 }: {
   children: ReactNode;
+  /** Retained for API compatibility; the visual gap is fixed in CSS. */
   gap?: number;
   delay?: number;
   once?: boolean;
   amount?: number;
   className?: string;
 }) {
-  const reduced = useReducedMotion();
-  if (reduced) return <div className={className}>{children}</div>;
+  const ref = useReveal<HTMLDivElement>({ once, amount });
   return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, amount }}
-      transition={{ staggerChildren: gap, delayChildren: delay }}
+    <div
+      ref={ref}
+      className={cn("reveal-stagger", className)}
+      style={{ "--reveal-delay": `${delay}s` } as CSSProperties}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
+/**
+ * A single staggered child. The motion comes from the parent `.reveal-stagger`
+ * targeting its direct children, so this is just a styled wrapper. `effect` and
+ * `duration` are kept in the signature for call-site compatibility.
+ */
 export function Item({
   children,
-  effect = "rise",
-  duration = 0.65,
   className,
 }: {
   children: ReactNode;
@@ -107,13 +90,5 @@ export function Item({
   duration?: number;
   className?: string;
 }) {
-  return (
-    <motion.div
-      className={className}
-      variants={EFFECTS[effect]}
-      transition={{ duration, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }

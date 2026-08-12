@@ -43,8 +43,12 @@ export async function listStories(): Promise<Story[]> {
       .order("published_at", { ascending: false });
     // Intentionally NOT gated on `data.length > 0` — see services/animals.ts
     // for why: a real, legitimately empty result must never fall back to
-    // fictional demo stories on a connected production database.
+    // fictional demo stories on a connected production database. The same must
+    // hold on an ERROR: a transient DB failure returning DEMO_STORIES would
+    // present fictional rescues as real published stories. Empty, not invented.
     if (!error && data) return data.map(mapStoryRow);
+    console.error("[stories] listStories query failed:", error?.message);
+    return [];
   }
   return DEMO_STORIES;
 }

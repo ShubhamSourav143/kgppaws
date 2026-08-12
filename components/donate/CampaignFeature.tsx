@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Check, HeartHandshake, Users } from "lucide-react";
 import { CampaignGallery, type GalleryPhoto } from "@/components/donate/CampaignGallery";

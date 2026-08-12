@@ -28,44 +28,60 @@ export function MobileDock() {
   }
 
   return (
-    <nav
-      aria-label="Quick navigation"
-      className="fixed inset-x-3 bottom-3 z-40 md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-    >
-      <div className="glass mx-auto flex max-w-sm items-end justify-between rounded-[1.75rem] px-3 pb-2 pt-2 shadow-lift">
-        {TABS.map(({ href, label, icon: Icon, primary }) => {
-          const path = href.split("#")[0];
-          const active =
-            pathname === path || (path !== "/" && pathname.startsWith(path + "/"));
-          if (primary) {
+    <>
+      {/*
+        The dock is position:fixed, so it sits outside flow and used to cover
+        the last ~72px of every page on mobile — the footer's bottom row and,
+        on short pages, a form's submit button. This spacer restores that
+        height in flow. It lives here rather than as padding on <main> so it
+        only applies when the dock is actually rendered: the routes that
+        return null above (report, admin, dashboard, auth) keep their full
+        viewport.
+      */}
+      <div
+        aria-hidden="true"
+        className="h-[4.5rem] md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      />
+      <nav
+        aria-label="Quick navigation"
+        className="fixed inset-x-3 bottom-3 z-40 md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="glass mx-auto flex max-w-sm items-end justify-between rounded-[1.75rem] px-3 pb-2 pt-2 shadow-lift">
+          {TABS.map(({ href, label, icon: Icon, primary }) => {
+            const path = href.split("#")[0];
+            const active =
+              pathname === path || (path !== "/" && pathname.startsWith(path + "/"));
+            if (primary) {
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-label="Report an animal in need"
+                  className="-mt-7 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember ring-4 ring-ivory transition-transform active:scale-90"
+                >
+                  <Icon className="h-6 w-6" aria-hidden="true" />
+                </Link>
+              );
+            }
             return (
               <Link
                 key={href}
                 href={href}
-                aria-label="Report an animal in need"
-                className="-mt-7 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember ring-4 ring-ivory transition-transform active:scale-90"
+                className={cn(
+                  "flex w-14 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-bold transition-colors",
+                  active ? "text-saffron-deep" : "text-moss hover:text-forest"
+                )}
+                aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-6 w-6" aria-hidden="true" />
+                <Icon className={cn("h-5 w-5", active && "scale-110")} aria-hidden="true" />
+                {label}
               </Link>
             );
-          }
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex w-14 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-bold transition-colors",
-                active ? "text-saffron-deep" : "text-moss hover:text-forest"
-              )}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon className={cn("h-5 w-5", active && "scale-110")} aria-hidden="true" />
-              {label}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

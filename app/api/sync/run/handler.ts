@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceSupabase } from "@/lib/supabase/server";
 import { enqueueJob } from "@/lib/sync/queue";
+import { cronUnauthorized, isCronAuthorized } from "@/lib/api/cron-auth";
 
 /**
  * POST /api/sync/run — COMPATIBILITY SHIM (M-CMS-1, 2026-07-17).
@@ -16,8 +17,8 @@ import { enqueueJob } from "@/lib/sync/queue";
  * it in a later milestone. Not deleted until owner sign-off.
  */
 export async function POST(request: NextRequest) {
-  if (request.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   const supabase = createServiceSupabase();
@@ -47,9 +48,7 @@ export async function POST(request: NextRequest) {
       { status: 202 }
     );
   } catch (e) {
-    return NextResponse.json(
-      { error: "shim failed", details: e instanceof Error ? e.message : String(e) },
-      { status: 500 }
-    );
+    console.error("[sync/run] shim failed:", e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: "shim failed" }, { status: 500 });
   }
 }

@@ -114,22 +114,38 @@ export const InlineSearch = forwardRef<InlineSearchHandle, InlineSearchProps>(
       router.push(href);
     };
 
+    /**
+     * The order results are displayed in — and, because `ordered` below is
+     * what both the renderer and the keyboard handler walk, the order they
+     * are selected in.
+     *
+     * "faq" used to be missing from this list, with two consequences: FAQ
+     * matches were fetched from /api/search and then silently dropped (a query
+     * matching only FAQs rendered an empty dropdown with no "no matches"
+     * message, because results.length was non-zero), and keyboard selection
+     * indexed the raw API array — which orders animals, stories, FAQs, pages —
+     * while the visible list skipped the FAQ block. Highlighting a page and
+     * pressing Enter navigated to an FAQ.
+     */
+    const GROUP_ORDER = ["animal", "story", "faq", "page"] as const;
+
+    /** Flattened in display order, so visual position === keyboard index. */
+    const ordered = GROUP_ORDER.flatMap((type) => results.filter((r) => r.type === type));
+
     const onKeyDown = (e: React.KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActive((a) => Math.min(a + 1, Math.max(results.length - 1, 0)));
+        setActive((a) => Math.min(a + 1, Math.max(ordered.length - 1, 0)));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setActive((a) => Math.max(a - 1, 0));
-      } else if (e.key === "Enter" && results[active]) {
+      } else if (e.key === "Enter" && ordered[active]) {
         e.preventDefault();
-        go(results[active].href);
+        go(ordered[active].href);
       }
     };
-
-    let runningIndex = -1;
 
     return (
       <div ref={rootRef} className="relative">
@@ -172,12 +188,22 @@ export const InlineSearch = forwardRef<InlineSearchHandle, InlineSearchProps>(
                 placeholder="Search animals, breeds, stories…"
                 aria-label="Search KGP PAWS"
                 autoComplete="off"
-                initial={reduced ? { opacity: 0, width: 0 } : { opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "min(32rem, 60vw)" }}
+                initial={{ opacity: 0, width: 0 }}
+                /**
+                 * 60vw was measured overflowing the header row by 86px at
+                 * 360px wide: the logo and the menu button share that row, so
+                 * the expanded input pushed its own container past the right
+                 * edge of the viewport — taking the absolutely-positioned
+                 * results panel with it. `calc(100vw - 15rem)` reserves space
+                 * for both siblings and the row's padding; the 32rem cap still
+                 * governs on desktop, where the row has room to spare.
+                 */
+                animate={{ opacity: 1, width: "min(32rem, 60vw, calc(100vw - 15rem))" }}
                 exit={{ opacity: 0, width: 0 }}
                 transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                 className={cn(
-                  "h-11 min-w-0 bg-transparent pr-3 text-sm outline-none placeholder:text-moss/70",
+                  // text-base on mobile: below 16px iOS zooms the page on focus.
+                  "h-11 min-w-0 bg-transparent pr-3 text-base sm:text-sm outline-none placeholder:text-moss/70",
                   light ? "text-ivory placeholder:text-ivory/60" : "text-charcoal"
                 )}
               />
@@ -212,16 +238,30 @@ export const InlineSearch = forwardRef<InlineSearchHandle, InlineSearchProps>(
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="glass absolute right-0 top-full z-40 mt-3 w-[min(28rem,calc(100vw-2rem))] overflow-hidden rounded-2xl shadow-lift"
+              /**
+               * Anchored to the viewport on phones, to the button from sm up.
+               *
+               * `absolute right-0` is only correct while the container it
+               * belongs to is itself inside the viewport. In the header row on
+               * a narrow screen it is not, so the panel inherited that overflow
+               * and its results were clipped off the right edge. Pinning it to
+               * `inset-x-3` on mobile makes it independent of the row's layout;
+               * the sm: half restores the original desktop positioning exactly.
+               */
+              className="glass fixed inset-x-3 top-[4.75rem] z-40 overflow-hidden rounded-2xl shadow-lift sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-3 sm:w-[min(28rem,calc(100vw-2rem))]"
             >
-              <div className="max-h-[60vh] overflow-y-auto p-2">
-                {results.length === 0 ? (
+              {/* data-lenis-prevent: let this scroll container use native
+                  wheel scrolling instead of the site-wide Lenis smooth scroll,
+                  which otherwise captures the wheel and can leave a long
+                  results list unscrollable on desktop. */}
+              <div data-lenis-prevent className="max-h-[60vh] overflow-y-auto p-2">
+                {ordered.length === 0 ? (
                   <p className="px-4 py-8 text-center text-sm text-moss">
                     No matches for &ldquo;{query}&rdquo;.
                   </p>
                 ) : (
-                  (["animal", "story", "page"] as const).map((type) => {
-                    const items = results.filter((r) => r.type === type);
+                  GROUP_ORDER.map((type) => {
+                    const items = ordered.filter((r) => r.type === type);
                     if (items.length === 0) return null;
                     const Meta = TYPE_META[type];
                     return (
@@ -230,12 +270,14 @@ export const InlineSearch = forwardRef<InlineSearchHandle, InlineSearchProps>(
                           {Meta.label}
                         </p>
                         {items.map((r) => {
-                          runningIndex += 1;
-                          const idx = runningIndex;
+                          const idx = ordered.indexOf(r);
                           const isActive = idx === active;
                           return (
                             <button
-                              key={r.href}
+                              // Not href: every FAQ result points at the same
+                              // /about#faq anchor, so href is not unique once
+                              // the FAQ group renders.
+                              key={`${r.type}-${idx}`}
                               type="button"
                               onMouseEnter={() => setActive(idx)}
                               onClick={() => go(r.href)}

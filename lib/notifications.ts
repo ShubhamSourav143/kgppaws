@@ -62,6 +62,31 @@ export interface NotificationOutcome {
 }
 
 /**
+ * Send one channel and return its outcome, WITHOUT writing an outbox receipt.
+ *
+ * Split out from sendNotifications so the outbox drainer
+ * (app/api/notify/dispatch) can retry an existing row using the same real
+ * providers and then update that row in place — draining used to call
+ * no-op stubs and mark everything 'sent', which silently lost notifications.
+ *
+ * Never throws.
+ */
+export async function sendViaChannel(
+  channel: NotificationChannel,
+  input: NotificationInput
+): Promise<NotificationOutcome> {
+  try {
+    if (channel === "email") return await sendEmail(input);
+    if (channel === "whatsapp") return await sendWhatsApp(input);
+    return { channel, status: "skipped", reason: `unknown channel ${channel}` };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error(`[notify/${channel}] threw:`, reason);
+    return { channel, status: "failed", reason };
+  }
+}
+
+/**
  * Send notifications for one submission. Returns per-channel outcomes.
  * Never throws; caller can log the array or ignore it.
  */
@@ -71,24 +96,7 @@ export async function sendNotifications(
   const outcomes: NotificationOutcome[] = [];
 
   for (const channel of input.channels) {
-    let outcome: NotificationOutcome;
-    try {
-      if (channel === "email") {
-        outcome = await sendEmail(input);
-      } else if (channel === "whatsapp") {
-        outcome = await sendWhatsApp(input);
-      } else {
-        outcome = { channel, status: "skipped", reason: `unknown channel ${channel}` };
-      }
-    } catch (err) {
-      outcome = {
-        channel,
-        status: "failed",
-        reason: err instanceof Error ? err.message : String(err),
-      };
-      console.error(`[notify/${channel}] threw:`, outcome.reason);
-    }
-
+    const outcome = await sendViaChannel(channel, input);
     outcomes.push(outcome);
     await recordOutbox(input, outcome);
   }

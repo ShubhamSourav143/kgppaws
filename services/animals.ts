@@ -26,6 +26,13 @@ export async function listAnimals(): Promise<Animal[]> {
     // demo animals on a connected production database. Falling back to
     // DEMO_ANIMALS is correct only when Supabase itself isn't configured.
     if (!error && data) return data.map(mapAnimalRow);
+    // ...and the same rule has to hold for an ERROR, which is what the early
+    // version of this function got wrong: falling through to the return below
+    // meant a transient DB blip on a live deployment quietly replaced the real
+    // shelter with seven fictional demo animals, presented as real adoptable
+    // dogs. An empty list is honest; invented animals are not.
+    console.error("[animals] listAnimals query failed:", error?.message);
+    return [];
   }
   return DEMO_ANIMALS;
 }
@@ -49,12 +56,21 @@ export async function getAnimal(slug: string): Promise<Animal | undefined> {
 export async function resolveQrToken(token: string): Promise<Animal | undefined> {
   const supabase = createStaticSupabase();
   if (supabase) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("qr_tags")
       .select("animal:animals(slug)")
       .eq("token", token)
       .eq("active", true)
       .maybeSingle<{ animal: { slug: string } | null }>();
+    // The error was previously not destructured at all, so a transient lookup
+    // failure was indistinguishable from "no such tag" — and /p/[token]
+    // redirects the latter to /scan-not-found. Someone who has found a lost
+    // dog and scanned its collar was told the tag is not registered. Logging
+    // it at least makes the difference visible in the Vercel logs.
+    if (error) {
+      console.error("[animals] resolveQrToken lookup failed:", error.message);
+      return undefined;
+    }
     const slug = data?.animal?.slug;
     return slug ? getAnimal(slug) : undefined;
   }

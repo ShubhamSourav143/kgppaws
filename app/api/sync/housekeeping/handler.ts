@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceSupabase } from "@/lib/supabase/server";
 import { runHousekeeping } from "@/lib/sync/queue";
+import { cronUnauthorized, isCronAuthorized } from "@/lib/api/cron-auth";
 
 /**
  * POST /api/sync/housekeeping
@@ -10,8 +11,8 @@ import { runHousekeeping } from "@/lib/sync/queue";
  * See docs/API_SPEC.md §6.1 and docs/CMS_ARCHITECTURE.md §9.
  */
 export async function POST(request: NextRequest) {
-  if (request.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   const supabase = createServiceSupabase();
@@ -26,9 +27,11 @@ export async function POST(request: NextRequest) {
     const result = await runHousekeeping(supabase);
     return NextResponse.json({ ran: true, ...result }, { status: 200 });
   } catch (e) {
-    return NextResponse.json(
-      { ran: false, error: "housekeeping crash", details: e instanceof Error ? e.message : String(e) },
-      { status: 500 }
-    );
+    // Logged server-side, not echoed: the message can carry table/column names
+    // from a Postgres error and this endpoint is reachable by anyone who
+    // guesses the URL (they just won't get past the 401 — but a future
+    // misconfiguration shouldn't turn into schema disclosure).
+    console.error("[sync/housekeeping] crashed:", e instanceof Error ? e.message : e);
+    return NextResponse.json({ ran: false, error: "housekeeping crash" }, { status: 500 });
   }
 }

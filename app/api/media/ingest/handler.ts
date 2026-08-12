@@ -3,6 +3,7 @@ import { getDriveClient, DRIVE_ROOT_FOLDER_ID } from "@/lib/google/client";
 import { createServiceSupabase } from "@/lib/supabase/server";
 import { isGoogleConfigured } from "@/lib/config";
 import { processImage, variantsMetadata } from "@/lib/media/pipeline";
+import { cronUnauthorized, isCronAuthorized } from "@/lib/api/cron-auth";
 
 /**
  * Drive → Storage media ingest v2 (M-CMS-3).
@@ -24,8 +25,8 @@ import { processImage, variantsMetadata } from "@/lib/media/pipeline";
 const IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
 export async function POST(request: NextRequest) {
-  if (request.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   if (!isGoogleConfigured || !DRIVE_ROOT_FOLDER_ID) {

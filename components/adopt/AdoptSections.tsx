@@ -68,6 +68,17 @@ export function RescueStories({
   animals: Animal[];
   covers?: Covers;
 }) {
+  /**
+   * Laika's card linked to the literal "/animal/laika". That slug only exists
+   * in lib/demo/animals.ts, so the link worked in demo mode and 404'd on any
+   * real database: services/animals.ts getAnimal() deliberately returns
+   * undefined rather than falling back to demo data once Supabase is
+   * configured, and app/animal/[slug]/page.tsx then calls notFound(). Resolve
+   * it against the animals actually passed in, and fall back to the adopt
+   * listing on this same page when she is not among them.
+   */
+  const laika = animals.find((a) => a.slug === "laika");
+
   const stories: {
     name: string;
     tag: string;
@@ -93,7 +104,7 @@ export function RescueStories({
       name: "Laika",
       tag: "Puppy · rescued after rains",
       body: "The sole survivor of a litter found behind Nalanda during the March rains. Bottle-fed by volunteers, she is now a confident, curious puppy ready for a family.",
-      href: "/animal/laika",
+      href: laika ? `/animal/${laika.slug}` : "/adopt",
       subjects: [
         { subject: subjectFor(animals, "laika", ROMI), photo: covers.laika },
       ],

@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, HandHeart, HeartHandshake, Users } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowDown, ArrowUpRight, HandHeart, HeartHandshake, Users, X } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { OurWorkSlideshow, type SlidePhoto } from "./OurWorkSlideshow";
 import { cn } from "@/lib/utils";
@@ -333,6 +334,12 @@ export function KnowledgeCentreSection({
 }: {
   articles: KnowledgeArticle[];
 }) {
+  // The open article, read by the reader dialog. "Read more" used to be a
+  // <Link href="#knowledge-centre"> — a link to the very section it sits in, so
+  // clicking it scrolled a few pixels and showed nothing. It now opens the full
+  // article here.
+  const [active, setActive] = useState<KnowledgeArticle | null>(null);
+
   return (
     <section
       id="knowledge-centre"
@@ -359,20 +366,32 @@ export function KnowledgeCentreSection({
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((a, i) => (
             <Reveal key={a.slug} delay={Math.min(i * 0.06, 0.24)}>
-              <ArticleCard article={a} />
+              <ArticleCard article={a} onOpen={() => setActive(a)} />
             </Reveal>
           ))}
         </div>
       </div>
+
+      <ArticleReader article={active} onClose={() => setActive(null)} />
     </section>
   );
 }
 
-function ArticleCard({ article }: { article: KnowledgeArticle }) {
-  const href = article.href ?? "#knowledge-centre";
+function ArticleCard({
+  article,
+  onOpen,
+}: {
+  article: KnowledgeArticle;
+  onOpen: () => void;
+}) {
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-glow">
-      <div className="relative aspect-[16/10] overflow-hidden bg-sand-light">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Read the full guide: ${article.title}`}
+        className="relative block aspect-[16/10] w-full overflow-hidden bg-sand-light text-left"
+      >
         {article.photo && (
           <Image
             src={article.photo.src}
@@ -387,7 +406,7 @@ function ArticleCard({ article }: { article: KnowledgeArticle }) {
         <span className="absolute left-3 top-3 rounded-full bg-ivory/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-saffron-deep shadow-soft backdrop-blur-sm">
           {article.category}
         </span>
-      </div>
+      </button>
 
       <div className="flex flex-1 flex-col p-6">
         <h3 className="font-display text-lg font-bold leading-snug text-forest-deep sm:text-xl">
@@ -396,18 +415,125 @@ function ArticleCard({ article }: { article: KnowledgeArticle }) {
         <p className="mt-2.5 flex-1 text-sm leading-relaxed text-charcoal/70">
           {article.summary}
         </p>
-        <Link
-          href={href}
-          className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-saffron-deep transition-colors hover:text-forest"
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Read the full guide: ${article.title}`}
+          className="mt-5 inline-flex items-center gap-1.5 self-start text-sm font-bold text-saffron-deep transition-colors hover:text-forest"
         >
           Read more
           <ArrowUpRight
             className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
             aria-hidden="true"
           />
-        </Link>
+        </button>
       </div>
     </article>
+  );
+}
+
+/**
+ * Full-article reader. A focused, accessible dialog rather than a new route or
+ * an inline expand — it keeps the three-column grid intact and gives the full
+ * guide room to be read. Handles Escape, backdrop dismiss, body scroll lock and
+ * focus management; reduced motion skips the transition.
+ */
+function ArticleReader({
+  article,
+  onClose,
+}: {
+  article: KnowledgeArticle | null;
+  onClose: () => void;
+}) {
+  const reduced = useReducedMotion() ?? false;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const open = article !== null;
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    // Move focus into the dialog so keyboard and screen-reader users land here.
+    const id = requestAnimationFrame(() => closeRef.current?.focus());
+    return () => {
+      document.documentElement.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+      cancelAnimationFrame(id);
+    };
+  }, [open, onClose]);
+
+  return (
+    <AnimatePresence>
+      {article && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-night/70 p-4 backdrop-blur-sm sm:items-center sm:p-6"
+          data-lenis-prevent
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduced ? 0 : 0.2 }}
+        >
+          <motion.article
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="article-reader-title"
+            onClick={(e) => e.stopPropagation()}
+            className="relative my-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-cream shadow-lift"
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ duration: reduced ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {article.photo && (
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-sand-light">
+                <Image
+                  src={article.photo.src}
+                  alt={article.photo.alt}
+                  fill
+                  sizes="(min-width: 768px) 42rem, 92vw"
+                  placeholder={article.photo.blurDataURL ? "blur" : undefined}
+                  blurDataURL={article.photo.blurDataURL}
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-night/30 to-transparent" />
+              </div>
+            )}
+
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full bg-night/40 text-ivory backdrop-blur-sm transition-colors hover:bg-night/70"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-7 sm:px-10 sm:py-9" data-lenis-prevent>
+              <p className="eyebrow text-saffron-deep">{article.category}</p>
+              <h2
+                id="article-reader-title"
+                className="mt-2 text-balance font-display text-2xl font-bold leading-tight text-forest-deep sm:text-3xl"
+              >
+                {article.title}
+              </h2>
+              <div className="mt-5 space-y-4">
+                {article.body.map((para, i) => (
+                  <p key={i} className="text-[15px] leading-relaxed text-charcoal/80 sm:text-base">
+                    {para}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </motion.article>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

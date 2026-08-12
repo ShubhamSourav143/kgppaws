@@ -1,8 +1,9 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { Magnetic } from "@/components/fx/Magnetic";
 import { Seal } from "@/components/brand/Logo";
@@ -92,32 +93,53 @@ export function Hero({
       className="relative -mt-16 h-[100svh] min-h-[36rem] overflow-hidden bg-night md:-mt-20"
     >
       {/* — seamless 4×4 collage, edge to edge — */}
-      <motion.div
+      {/*
+        Entrance fade is CSS (.hero-tile), not framer-motion. The collage holds
+        the hero's LCP image; framer-motion's initial="hidden" shipped every
+        tile at opacity:0 and only faded them in AFTER hydration, so on a slow
+        phone the whole hero stayed blank until the bundle ran — a poor LCP.
+        A CSS animation paints from the first frame and needs no JS.
+      */}
+      <div
         aria-hidden="true"
         className="grid h-full w-full grid-cols-2 grid-rows-4 lg:grid-cols-4"
-        initial="hidden"
-        animate="show"
-        transition={{ staggerChildren: reduced ? 0 : 0.05 }}
       >
-        {CELLS.map((cell) => (
-          <motion.div
+        {CELLS.map((cell, cellIndex) => (
+          <div
             key={cell.src}
-            variants={{
-              hidden: { opacity: 0 },
-              show: { opacity: 1 },
-            }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className={`group relative overflow-hidden ${cell.pos} ${
+            className={`hero-tile group relative overflow-hidden ${cell.pos} ${
               cell.desktopOnly ? "hidden lg:block" : ""
             }`}
+            style={{ "--i": cellIndex } as CSSProperties}
           >
             {cell.type === "video" ? (
+              /**
+               * Autoplay is gated on prefers-reduced-motion: an looping video
+               * a user cannot pause is exactly what that setting exists to
+               * suppress, and skipping the fetch also spares a few MB of
+               * mobile data. `preload="metadata"` keeps the first frame
+               * available without pulling the whole file up front.
+               */
               <video
                 src={cell.src}
+                /**
+                 * autoPlay is unconditional in the markup on purpose:
+                 * useReducedMotion() returns null during SSR and on the first
+                 * client render, so `autoPlay={!reduced}` would still emit
+                 * autoplay to a reduced-motion user and only correct itself
+                 * after hydration — by which point the video is already
+                 * playing. Pausing through the ref runs as soon as the element
+                 * exists and does not depend on an attribute the browser has
+                 * already acted on.
+                 */
+                ref={(el) => {
+                  if (el && reduced) el.pause();
+                }}
                 autoPlay
                 loop
                 muted
                 playsInline
+                preload="metadata"
                 className="absolute inset-0 h-full w-full object-cover object-center"
               />
             ) : (
@@ -126,7 +148,16 @@ export function Hero({
                 alt=""
                 fill
                 sizes="(min-width: 1024px) 25vw, 50vw"
-                priority={!cell.desktopOnly}
+                /**
+                 * Only the first two tiles are preloaded. `priority` on every
+                 * mobile-visible cell emitted eight competing
+                 * <link rel=preload> hints, and the browser reported most of
+                 * them as "preloaded but not used within a few seconds of
+                 * load" — they were fighting each other and the LCP for
+                 * bandwidth. The rest are in the initial HTML, so they are
+                 * still discovered immediately, just not prioritised.
+                 */
+                priority={cellIndex < 2}
                 className="anim-kenburns object-cover object-center"
                 style={{
                   animationDuration: `${cell.duration}s`,
@@ -139,9 +170,9 @@ export function Hero({
               aria-hidden="true"
               className="absolute inset-0 bg-saffron/0 transition-colors duration-500 group-hover:bg-saffron/10"
             />
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
 
       {/* — legibility scrims: header strip + text panel over the collage — */}
       <div
@@ -155,12 +186,9 @@ export function Hero({
 
       {/* — the message, living on the collage itself — */}
       <div className="absolute inset-0 flex flex-col justify-end lg:w-1/2 lg:justify-center">
-        <motion.div
-          initial={reduced ? false : { opacity: 0, y: 32 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          className="px-6 pb-24 sm:px-10 md:pb-20 lg:px-14 lg:pb-0 xl:px-20"
-        >
+        {/* CSS entrance (.hero-enter) — paints the headline without waiting for
+            hydration; the h1 is a mobile LCP candidate. */}
+        <div className="hero-enter px-6 pb-24 sm:px-10 md:pb-20 lg:px-14 lg:pb-0 xl:px-20">
           <span className="mb-6 inline-flex w-fit items-center gap-2.5 rounded-full border border-ivory/20 bg-night/40 py-1.5 pl-1.5 pr-4 text-[11px] font-bold uppercase tracking-[0.16em] text-gold-soft backdrop-blur-sm">
             <Seal variant="light" size={24} className="h-6 w-6 shrink-0" />
             An IIT Kharagpur student initiative
@@ -196,7 +224,7 @@ export function Hero({
           <p className="mt-6 text-sm font-semibold text-ivory/60">
             Adopt a friend for life · together, we heal and grow.
           </p>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

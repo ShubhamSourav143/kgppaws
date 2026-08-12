@@ -17,6 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/report",
     "/about",
     "/volunteer",
+    "/faq",
   ].map((path) => ({
     url: `${SITE.url}${path}`,
     changeFrequency: path === "" ? "daily" : "weekly",

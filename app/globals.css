@@ -438,8 +438,125 @@ html.lenis, html.lenis body { height: auto; }
 .anim-kenburns { animation: kenburns 14s ease-in-out infinite alternate; }
 .anim-leaf { animation: fall-leaf var(--leaf-duration, 13s) linear infinite; }
 
+/*
+ * Route entrance — the whole page rises softly into place.
+ *
+ * Deliberately CSS and not framer-motion. app/template.tsx used to render a
+ * <motion.div initial={{opacity:0, y:16}}>, which meant the SERVER-RENDERED
+ * html shipped as <div style="opacity:0;transform:translateY(16px)"> around
+ * every page's entire content. Nothing became visible until the JS bundle had
+ * downloaded, parsed, hydrated and run its first frame — a blank-body window
+ * on a slow phone, and permanently blank if the bundle ever failed to execute.
+ *
+ * A CSS animation paints from the first frame of HTML, needs no hydration, and
+ * is honoured by the reduced-motion block below. Same 500ms and same easing
+ * curve as the motion values it replaces, so the feel is unchanged.
+ *
+ * `backwards` fill applies the from-state during any delay without needing an
+ * inline opacity:0 in the markup.
+ */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+.anim-page-enter {
+  animation: page-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+/*
+ * Hero entrance — CSS, not framer-motion, so the LCP (a hero collage image on
+ * mobile, the headline on wide screens) paints from the first frame instead of
+ * waiting for the JS bundle to hydrate. Same staggered fade and rise as before.
+ */
+@keyframes hero-fade { from { opacity: 0; } to { opacity: 1; } }
+.hero-tile { animation: hero-fade 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--i, 0) * 0.05s); }
+@keyframes hero-rise { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+.hero-enter { animation: hero-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both; }
+
+/*
+ * Scroll reveal — CSS replacement for the framer-motion Reveal / Stagger /
+ * TextReveal wrappers (components/fx/Reveal.tsx, components/motion/Reveal.tsx,
+ * components/fx/TextReveal.tsx).
+ *
+ * The pre-reveal HIDDEN state is gated behind html[data-reveal-ready], which
+ * the boot script in app/layout.tsx sets synchronously before first paint.
+ * When JavaScript is disabled or the bundle fails, the attribute is never set,
+ * so nothing here applies and every wrapper renders in its natural, fully
+ * visible state. This is the fix for "content invisible when JS fails/delayed":
+ * the old version server-rendered opacity:0, so a dead bundle meant a blank page.
+ */
+.reveal {
+  transition:
+    opacity var(--reveal-dur, 0.7s) var(--reveal-delay, 0s) cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--reveal-dur, 0.7s) var(--reveal-delay, 0s) cubic-bezier(0.16, 1, 0.3, 1),
+    filter var(--reveal-dur, 0.7s) var(--reveal-delay, 0s) cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-reveal-ready] .reveal:not(.reveal-in) { opacity: 0; }
+[data-reveal-ready] .reveal[data-reveal="rise"]:not(.reveal-in) { transform: translateY(var(--reveal-y, 36px)); }
+[data-reveal-ready] .reveal[data-reveal="scale"]:not(.reveal-in) { transform: scale(0.92); }
+[data-reveal-ready] .reveal[data-reveal="blur"]:not(.reveal-in) { transform: translateY(18px); filter: blur(12px); }
+[data-reveal-ready] .reveal[data-reveal="slide-left"]:not(.reveal-in) { transform: translateX(48px); }
+[data-reveal-ready] .reveal[data-reveal="slide-right"]:not(.reveal-in) { transform: translateX(-48px); }
+/* "fade" needs only the opacity rule above. */
+
+/* Stagger container: direct children fade-rise with an incremental delay. */
+.reveal-stagger > * {
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-reveal-ready] .reveal-stagger:not(.reveal-in) > * { opacity: 0; transform: translateY(24px); }
+.reveal-stagger.reveal-in > *:nth-child(1) { transition-delay: calc(var(--reveal-delay, 0s) + 0s); }
+.reveal-stagger.reveal-in > *:nth-child(2) { transition-delay: calc(var(--reveal-delay, 0s) + 0.08s); }
+.reveal-stagger.reveal-in > *:nth-child(3) { transition-delay: calc(var(--reveal-delay, 0s) + 0.16s); }
+.reveal-stagger.reveal-in > *:nth-child(4) { transition-delay: calc(var(--reveal-delay, 0s) + 0.24s); }
+.reveal-stagger.reveal-in > *:nth-child(5) { transition-delay: calc(var(--reveal-delay, 0s) + 0.32s); }
+.reveal-stagger.reveal-in > *:nth-child(6) { transition-delay: calc(var(--reveal-delay, 0s) + 0.40s); }
+.reveal-stagger.reveal-in > *:nth-child(n + 7) { transition-delay: calc(var(--reveal-delay, 0s) + 0.48s); }
+
+/* TextReveal — per-word slide up out of an overflow-clip line. */
+.textreveal__line { display: inline-block; overflow: hidden; padding-bottom: 0.08em; vertical-align: bottom; }
+.textreveal__word {
+  display: inline-block;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--reveal-delay, 0s) + var(--i, 0) * 0.055s);
+}
+[data-reveal-ready] .textreveal:not(.reveal-in) .textreveal__word { transform: translateY(110%) rotate(4deg); }
+
+/*
+ * Delayed-hydration floor. If the boot script ran (attribute set) but this
+ * element's IntersectionObserver never attached — very slow or failed
+ * hydration — reveal it anyway after 2.6s so it can never stay hidden. Once the
+ * observer adds .reveal-in the :not() selector stops matching and the normal
+ * transition takes over, so the floor is invisible in the healthy case.
+ */
+@keyframes reveal-floor { to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal-ready] .reveal:not(.reveal-in),
+  [data-reveal-ready] .reveal-stagger:not(.reveal-in) > *,
+  [data-reveal-ready] .textreveal:not(.reveal-in) .textreveal__word {
+    animation: reveal-floor 0.5s ease 2.6s forwards;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  /* Reveal wrappers must never hide under reduced motion — show them outright. */
+  [data-reveal-ready] .reveal,
+  [data-reveal-ready] .reveal-stagger > *,
+  [data-reveal-ready] .textreveal .textreveal__word {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+  }
+  /*
+   * Not `animation: none` — that would leave the element at its from-state on
+   * browsers that compute the class before the reset. Land it on the end state.
+   */
+  .anim-page-enter { animation: none; opacity: 1; transform: none; }
+  /* Hero entrance: land on the visible end state, no fade/rise, no delay gap. */
+  .hero-tile, .hero-enter { animation: none !important; opacity: 1 !important; transform: none !important; }
   .anim-breathe, .anim-blink, .anim-ear, .anim-head,
   .anim-tail, .anim-float, .anim-swing, .anim-pulse-soft,
   .anim-sway, .anim-drift, .anim-ray, .anim-marquee, .anim-scroll-hint,
@@ -450,6 +567,16 @@ html.lenis, html.lenis body { height: auto; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    /*
+     * Without the iteration-count reset this catch-all made things WORSE for
+     * the users it exists to protect: an `infinite` animation kept iterating,
+     * now with a 0.01ms cycle, so anything not caught by the explicit
+     * `animation: none` lists above strobed at the refresh rate instead of
+     * stopping. `1` plus `forwards` runs each animation once and parks it on
+     * its end state — the standard reduced-motion reset.
+     */
+    animation-iteration-count: 1 !important;
+    animation-fill-mode: forwards !important;
   }
   /* Settle the alternating CTA on one message instead of strobing it. */
   .adopt-cta { animation: none !important; background-position: 0% 50%; }

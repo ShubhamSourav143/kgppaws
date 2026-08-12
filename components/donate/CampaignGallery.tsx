@@ -189,8 +189,11 @@ export function CampaignGallery({
                   onClick={() => go(i, i > index ? 1 : -1)}
                   aria-label={`Go to photo ${i + 1}`}
                   aria-current={i === index}
+                  // The visual dot stays 6px tall; before: extends the tap
+                  // target to 44px tall / 16px wide so it is reachable with a
+                  // thumb (a 6×6px target fails WCAG 2.5.5 and misses often).
                   className={cn(
-                    "h-1.5 rounded-full transition-all duration-300",
+                    "relative h-1.5 rounded-full transition-all duration-300 before:absolute before:left-1/2 before:top-1/2 before:h-11 before:w-4 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
                     i === index ? "w-6 bg-ivory" : "w-1.5 bg-ivory/50 hover:bg-ivory/80"
                   )}
                 />

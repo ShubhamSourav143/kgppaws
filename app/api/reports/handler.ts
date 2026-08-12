@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabase, createServiceSupabase } from "@/lib/supabase/server";
+import { generateCode } from "@/lib/submissions";
 
 /**
  * POST /api/reports
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const reportCode = generateReportCode();
+  const reportCode = generateCode("PAWS-RESCUE");
 
   const insertPayload = {
     report_code: reportCode,
@@ -73,7 +74,10 @@ export async function POST(request: NextRequest) {
 
   const { error } = await supabase.from("rescue_reports").insert(insertPayload);
   if (error) {
-    return NextResponse.json({ error: "insert_failed", details: error.message }, { status: 500 });
+    // Logged, not echoed — a Postgres error names tables, columns and
+    // constraints, and this endpoint answers anonymous callers.
+    console.error("[api/reports] insert failed:", error.message);
+    return NextResponse.json({ error: "insert_failed" }, { status: 500 });
   }
 
   // Best-effort outbox write via service role so it isn't blocked by RLS on notifications.
@@ -92,10 +96,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ reportCode }, { status: 201 });
-}
-
-function generateReportCode(): string {
-  const year = new Date().getUTCFullYear();
-  const rand = Math.floor(Math.random() * 100000).toString().padStart(5, "0");
-  return `PAWS-RESCUE-${year}-${rand}`;
 }

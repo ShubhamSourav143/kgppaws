@@ -56,8 +56,15 @@ self.addEventListener("fetch", (event) => {
         (hit) =>
           hit ??
           fetch(request).then((res) => {
-            const copy = res.clone();
-            caches.open(ASSET_CACHE).then((c) => c.put(request, copy));
+            // Same rule as navigations, plus: never cache a 206 Partial
+            // Content. The hero and story .mp4 files are served as ranged
+            // requests, and Cache.put() rejects on a 206 — the unhandled
+            // rejection was silent, but it also meant a partial response could
+            // never be usefully stored. Skipping them is the correct outcome.
+            if (res.ok && res.status !== 206 && res.type === "basic") {
+              const copy = res.clone();
+              caches.open(ASSET_CACHE).then((c) => c.put(request, copy));
+            }
             return res;
           })
       )
@@ -70,8 +77,15 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(PAGE_CACHE).then((c) => c.put(request, copy));
+          // Only cache a page that actually rendered. Previously EVERY
+          // navigation response was stored, so one 500 during a bad deploy —
+          // or a 404 — was written into PAGE_CACHE and then served back from
+          // the fallback branch below on the user's next offline visit. A
+          // cached error page outlives the incident that produced it.
+          if (res.ok && res.type === "basic") {
+            const copy = res.clone();
+            caches.open(PAGE_CACHE).then((c) => c.put(request, copy));
+          }
           return res;
         })
         .catch(async () => {

@@ -22,6 +22,7 @@ export function AnimalPortrait({
   photoUrl,
   photos,
   fit = "cover",
+  priority = false,
 }: {
   animal: Pick<Animal, "name" | "species" | "portrait">;
   /** enable subtle blink/head-tilt idle animation */
@@ -48,6 +49,21 @@ export function AnimalPortrait({
    * "cover" inside a landscape-ish box was cropping heads and legs.
    */
   fit?: "cover" | "contain";
+  /**
+   * Emit a preload hint for this portrait. Off by default.
+   *
+   * This used to be unconditionally on. AnimalPortrait renders in ten places —
+   * card grids, the map popover, the mission collage, the scan story — and
+   * almost all of them are below the fold, so the homepage alone emitted six
+   * competing `<link rel=preload>` hints for images nobody was about to see.
+   * The browser said as much in the console: "preloaded but not used within a
+   * few seconds from the window's load event". They were taking bandwidth from
+   * the actual LCP.
+   *
+   * Turn it on only where the portrait IS the page's largest above-the-fold
+   * image — e.g. the profile hero on an animal page.
+   */
+  priority?: boolean;
 }) {
   const p = animal.portrait;
   const isCat = animal.species === "cat";
@@ -111,7 +127,8 @@ export function AnimalPortrait({
           fill
           sizes="(min-width: 1024px) 28rem, 90vw"
           className={fit === "contain" ? "object-contain" : "object-cover"}
-          priority
+          priority={priority}
+          loading={priority ? undefined : "lazy"}
         />
       </div>
     );

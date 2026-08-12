@@ -85,6 +85,35 @@ export function Header({ items }: { items?: HeaderNavItem[] } = {}) {
     };
   }, [open]);
 
+  /**
+   * Close the overlay when the viewport grows past the lg breakpoint.
+   *
+   * The overlay is `lg:hidden`, but `open` is plain React state — rotating a
+   * phone to landscape or widening a desktop window with the menu open hid the
+   * menu while leaving `open === true`, so the effect above kept
+   * documentElement.overflow pinned to "hidden". The result was a page that
+   * could not be scrolled and no visible menu to close.
+   */
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      if (mq.matches) setOpen(false);
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  /** Escape closes the overlay — expected of anything with role="dialog". */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   const dashboardHref =
     user?.role === "admin" || user?.role === "super_admin"
       ? "/admin"

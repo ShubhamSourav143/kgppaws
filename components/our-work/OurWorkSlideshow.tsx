@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AutoplayVideo } from "@/components/media/AutoplayVideo";
 import { cn } from "@/lib/utils";
 
 export interface SlidePhoto {
@@ -119,13 +120,9 @@ export function OurWorkSlideshow({
               transition={{ duration: reduced ? 0 : 0.7, ease: [0.16, 1, 0.3, 1] }}
             >
               {isVideo ? (
-                <video
+                <AutoplayVideo
                   src={active.src}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="absolute inset-0 h-full w-full object-contain"
+                  className="absolute inset-0 object-contain"
                 />
               ) : (
                 <Image
@@ -194,8 +191,9 @@ export function OurWorkSlideshow({
                       }}
                       aria-label={`Go to photo ${i + 1}`}
                       aria-current={i === index}
+                      // before: extends the 6px dot to a 44px-tall tap target.
                       className={cn(
-                        "h-1.5 rounded-full transition-all duration-300",
+                        "relative h-1.5 rounded-full transition-all duration-300 before:absolute before:left-1/2 before:top-1/2 before:h-11 before:w-4 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
                         i === index ? "w-6 bg-ivory" : "w-1.5 bg-ivory/50 hover:bg-ivory/80"
                       )}
                     />

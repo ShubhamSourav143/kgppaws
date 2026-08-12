@@ -1,18 +1,20 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-
-const MOTION_TAGS = {
-  h1: motion.h1,
-  h2: motion.h2,
-  h3: motion.h3,
-  p: motion.p,
-  span: motion.span,
-} as const;
+import type { CSSProperties } from "react";
+import { cn } from "@/lib/utils";
+import { useReveal } from "./use-reveal";
 
 /**
  * Editorial word-by-word reveal for display headlines.
- * Renders a plain element for reduced-motion users.
+ *
+ * Rendered as normal text in SSR. The per-word slide-up is CSS gated on
+ * html[data-reveal-ready] (see globals.css `.textreveal`), so if JavaScript
+ * never runs the headline is simply visible rather than blank — the
+ * framer-motion version server-rendered each word translated 110% off its clip,
+ * which left every display headline invisible on a failed/slow bundle.
+ *
+ * The stagger is a per-word `--i` custom property consumed by the CSS
+ * transition-delay, so it works for any word count without JS.
  */
 export function TextReveal({
   text,
@@ -27,36 +29,24 @@ export function TextReveal({
   delay?: number;
   once?: boolean;
 }) {
-  const reduced = useReducedMotion();
-  if (reduced) return <Tag className={className}>{text}</Tag>;
-
+  const ref = useReveal<HTMLHeadingElement>({ once, amount: 0.6 });
   const words = text.split(" ");
-  const MotionTag = MOTION_TAGS[Tag];
 
   return (
-    <MotionTag
-      className={className}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, amount: 0.6 }}
-      transition={{ staggerChildren: 0.055, delayChildren: delay }}
+    <Tag
+      ref={ref}
+      className={cn("textreveal", className)}
+      style={{ "--reveal-delay": `${delay}s` } as CSSProperties}
       aria-label={text}
     >
       {words.map((word, i) => (
-        <span key={i} className="inline-block overflow-hidden pb-[0.08em] align-bottom" aria-hidden="true">
-          <motion.span
-            className="inline-block"
-            variants={{
-              hidden: { y: "110%", rotate: 4 },
-              show: { y: 0, rotate: 0 },
-            }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          >
+        <span key={i} className="textreveal__line" aria-hidden="true">
+          <span className="textreveal__word" style={{ "--i": i } as CSSProperties}>
             {word}
             {i < words.length - 1 ? " " : ""}
-          </motion.span>
+          </span>
         </span>
       ))}
-    </MotionTag>
+    </Tag>
   );
 }
