@@ -6,6 +6,7 @@ import {
   KnowledgeCentreSection,
   OurWorkFooterCta,
 } from "@/components/our-work/OurWorkSections";
+import { PawPrint } from "lucide-react";
 import { StoryCard } from "@/components/stories/StoryCard";
 import { Reveal } from "@/components/motion/Reveal";
 import { resolveOurWorkPhotos } from "@/lib/our-work/photos";
@@ -57,6 +58,9 @@ export default async function OurWorkPage() {
         <section id="stories" className="border-t border-line bg-cream py-20 sm:py-28">
           <div className="container-page">
             <Reveal>
+              <span className="mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember ring-4 ring-saffron/10">
+                <PawPrint className="h-8 w-8" strokeWidth={2.25} aria-hidden="true" />
+              </span>
               <p className="eyebrow mb-4 text-saffron-deep">Rescue stories</p>
               <h2 className="max-w-2xl text-balance font-display text-3xl font-bold leading-tight text-forest-deep sm:text-4xl">
                 The animals behind the work.

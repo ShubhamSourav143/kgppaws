@@ -4,7 +4,23 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, HandHeart, HeartHandshake, Users, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUpRight,
+  BookOpen,
+  Bone,
+  HandHeart,
+  Heart,
+  HeartHandshake,
+  HeartPulse,
+  Home,
+  ShieldCheck,
+  Stethoscope,
+  Syringe,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { OurWorkSlideshow, type SlidePhoto } from "./OurWorkSlideshow";
 import { cn } from "@/lib/utils";
@@ -110,6 +126,34 @@ const TONES = {
   night: { bg: "bg-night", eye: "text-marigold", head: "text-ivory", body: "text-ivory/75", intro: "text-ivory/65" },
 } as const;
 
+/** One icon per programme, keyed by the section id from WORK_SECTIONS. */
+const SECTION_ICONS: Record<string, LucideIcon> = {
+  chemotherapy: HeartPulse,
+  sterilization: ShieldCheck,
+  rescue: HandHeart,
+  feeding: Bone,
+  vaccination: Syringe,
+  "daily-medical": Stethoscope,
+};
+
+/**
+ * Bold, brand-gradient icon badge that heads each section. Kept as one
+ * component so every Our Work section reads as part of the same set. The ring
+ * softens it on light tones and lifts it on the dark (night) tone.
+ */
+function SectionIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: keyof typeof TONES }) {
+  return (
+    <span
+      className={cn(
+        "mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember ring-4",
+        tone === "night" ? "ring-ivory/10" : "ring-saffron/10"
+      )}
+    >
+      <Icon className="h-8 w-8" strokeWidth={2.25} aria-hidden="true" />
+    </span>
+  );
+}
+
 export function WorkSection({
   id,
   eyebrow,
@@ -121,6 +165,7 @@ export function WorkSection({
   aspect = "wide",
 }: WorkSectionProps) {
   const t = TONES[tone];
+  const Icon = SECTION_ICONS[id];
 
   return (
     <section
@@ -131,6 +176,7 @@ export function WorkSection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
+            {Icon && <SectionIcon icon={Icon} tone={tone} />}
             <p className={`eyebrow mb-4 ${t.eye}`}>{eyebrow}</p>
             <h2
               id={`${id}-h`}
@@ -179,6 +225,7 @@ export function ShelterFamilySection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
+            <SectionIcon icon={Home} tone="parchment" />
             <p className="eyebrow mb-4 text-saffron-deep">The heart of the page</p>
             <h2
               id="shelter-h"
@@ -205,6 +252,9 @@ export function ShelterFamilySection({
           <div className="mt-20 sm:mt-24">
             <div className="mx-auto max-w-3xl text-center">
               <Reveal>
+                <span className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-moss/10 text-moss ring-4 ring-moss/5">
+                  <Heart className="h-7 w-7" strokeWidth={2.25} aria-hidden="true" />
+                </span>
                 <div className="flex items-center justify-center gap-4">
                   <span className="h-px w-12 bg-moss/40" aria-hidden="true" />
                   <p className="eyebrow text-moss">In loving memory</p>
@@ -349,6 +399,7 @@ export function KnowledgeCentreSection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
+            <SectionIcon icon={BookOpen} tone="cream" />
             <p className="eyebrow mb-4 text-saffron-deep">Knowledge Centre</p>
             <h2
               id="know-h"

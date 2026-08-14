@@ -4,13 +4,13 @@ import {
   ClipboardList,
   PhoneCall,
   Heart,
-  ArrowUpRight,
   ArrowRight,
 } from "lucide-react";
 import { AnimalPortrait } from "@/components/animals/Portrait";
 import { Reveal, Stagger, Item } from "@/components/fx/Reveal";
 import { TextReveal } from "@/components/fx/TextReveal";
 import { ShareButton } from "@/components/adopt/ShareButton";
+import { RescueStoryCard, type RescueStory } from "@/components/adopt/RescueStoryCard";
 import type { Animal, PortraitConfig } from "@/types";
 
 type Subject = Pick<Animal, "name" | "species" | "portrait">;
@@ -77,34 +77,38 @@ export function RescueStories({
    * it against the animals actually passed in, and fall back to the adopt
    * listing on this same page when she is not among them.
    */
-  const laika = animals.find((a) => a.slug === "laika");
-
-  const stories: {
-    name: string;
-    tag: string;
-    body: string;
-    href: string;
-    subjects: { subject: Subject; photo?: string }[];
-  }[] = [
+  const stories: RescueStory[] = [
     {
       name: "Romi",
       tag: "Labrador · rescued from neglect",
       body: "Years of neglect left Romi thin, frightened and alone. Rescued and treated by our volunteers, she's slowly learning that a raised hand can also mean a gentle one.",
-      href: "/stories",
+      fullStory: [
+        "When Romi first came to us she flinched at every sudden movement. Years of being ignored and shooed away had taught her that people meant trouble, and she had the thin frame and dull coat to show for it.",
+        "Our volunteers took it slowly — food left at a distance, then a little closer, then a hand held out palm-up until she chose to come. Alongside the patience came the practical care: deworming, a course of treatment for her skin, regular meals and the steady routine a frightened dog needs to feel safe.",
+        "She is a different dog now — brighter, heavier, and learning every day that not every raised hand is a threat. Romi is still waiting for the family who will give her the calm, gentle home she has earned.",
+      ],
       subjects: [{ subject: ROMI, photo: covers.romi }],
     },
     {
       name: "Odin",
       tag: "Breed dog · rescued from exploitation",
       body: "Bred for profit and discarded once he was no longer useful, Odin came to us anxious and unwell. Today he's healthy, safe and still waiting for the family he was always owed.",
-      href: "/stories",
+      fullStory: [
+        "Odin spent the first part of his life as a means to an end — bred for profit, kept only as long as he was useful, and abandoned the moment he was not. He arrived anxious, underweight and wary of everyone.",
+        "Rehabilitation for a dog like Odin is as much about trust as it is about medicine. Once he was healthy again, the work was patient and quiet: showing him that food comes reliably, that a lead means a walk and not a drag, and that human hands can be kind.",
+        "He has come through it a calm, affectionate companion who asks for very little. Odin is still waiting for the family he was always owed — one that will keep him for who he is, not for what he can give.",
+      ],
       subjects: [{ subject: ODIN, photo: covers.odin }],
     },
     {
       name: "Laika",
       tag: "Puppy · rescued after rains",
       body: "The sole survivor of a litter found behind Nalanda during the March rains. Bottle-fed by volunteers, she is now a confident, curious puppy ready for a family.",
-      href: laika ? `/animal/${laika.slug}` : "/adopt",
+      fullStory: [
+        "Laika was found behind Nalanda during the March rains — the only survivor of her litter, cold and barely bigger than a hand. For the first weeks she depended entirely on round-the-clock bottle feeds from a rota of volunteers.",
+        "She grew fast. The puppy who once needed warming against a water bottle is now first to every game, endlessly curious and completely convinced that every person she meets is a friend.",
+        "Vaccinated, dewormed and thriving, Laika is ready for a home of her own.",
+      ],
       subjects: [
         { subject: subjectFor(animals, "laika", ROMI), photo: covers.laika },
       ],
@@ -125,40 +129,10 @@ export function RescueStories({
           />
         </div>
 
-        <Stagger className="mt-12 grid gap-6 md:grid-cols-3">
+        <Stagger className="mt-12 grid items-start gap-6 md:grid-cols-3">
           {stories.map((s) => (
             <Item key={s.name}>
-              <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-glow">
-                <div className="relative flex aspect-[5/4] gap-0.5 overflow-hidden bg-mist">
-                  {s.subjects.map((x, i) => (
-                    <AnimalPortrait
-                      key={i}
-                      animal={x.subject}
-                      photoUrl={x.photo}
-                      className="h-full flex-1 rounded-none transition-transform duration-700 ease-out group-hover:scale-[1.05]"
-                    />
-                  ))}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-night/45 to-transparent" aria-hidden="true" />
-                </div>
-                <div className="flex flex-1 flex-col p-6">
-                  <h3 className="font-display text-2xl font-bold text-forest-deep">
-                    {s.name}
-                  </h3>
-                  <p className="mt-1 text-xs font-bold uppercase tracking-wider text-moss">
-                    {s.tag}
-                  </p>
-                  <p className="mt-3 text-sm leading-relaxed text-charcoal/70">
-                    {s.body}
-                  </p>
-                  <Link
-                    href={s.href}
-                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-saffron-deep transition-colors hover:text-saffron"
-                  >
-                    Read more
-                    <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
-                  </Link>
-                </div>
-              </article>
+              <RescueStoryCard story={s} />
             </Item>
           ))}
         </Stagger>
