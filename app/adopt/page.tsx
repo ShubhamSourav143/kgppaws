@@ -87,6 +87,16 @@ export default async function AdoptPage() {
   // card now shows only photography that belongs to that animal.
   const animalsWithPhotos: Animal[] = await withCoverPhotos(animals);
 
+  // Placeholder animals hidden from the adoptable grid at the society's
+  // request — only the real campus rescues are shown here. This is a display
+  // filter, not a data change: the rows still exist. To hide them everywhere
+  // (homepage, etc.) or remove them for good, set is_public = false on these
+  // rows in Supabase instead.
+  const HIDDEN_FROM_ADOPT = new Set(["mishti", "muesli", "percy", "simba"]);
+  const adoptableAnimals = animalsWithPhotos.filter(
+    (a) => !HIDDEN_FROM_ADOPT.has(a.slug)
+  );
+
   return (
     <div className="bg-cream">
       {/* 1 · Hero */}
@@ -159,7 +169,7 @@ export default async function AdoptPage() {
               </p>
             </Reveal>
           </div>
-          <AdoptExplorer animals={animalsWithPhotos} />
+          <AdoptExplorer animals={adoptableAnimals} />
         </div>
       </section>
 

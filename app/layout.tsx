@@ -82,6 +82,12 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
+      // The reveal-gate script in <head> sets data-reveal-ready on this element
+      // before React hydrates, so the hydrated <html> carries an attribute the
+      // server HTML did not — an expected, intentional mismatch. Suppressing it
+      // here is the same pattern theme scripts use; it only covers this
+      // element's own attributes, not its subtree.
+      suppressHydrationWarning
       className={`${manrope.variable} ${fraunces.variable} antialiased`}
     >
       <head>

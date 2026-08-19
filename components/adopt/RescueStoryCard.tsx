@@ -4,9 +4,17 @@ import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { AnimalPortrait } from "@/components/animals/Portrait";
+import { AutoplayVideo } from "@/components/media/AutoplayVideo";
 import type { Animal } from "@/types";
 
 type Subject = Pick<Animal, "name" | "species" | "portrait">;
+
+export interface RescuePhoto {
+  /** Corner label, e.g. "Before" / "After". */
+  label: string;
+  subject: Subject;
+  photo?: string;
+}
 
 export interface RescueStory {
   name: string;
@@ -14,7 +22,8 @@ export interface RescueStory {
   body: string;
   /** Full story, one string per paragraph, revealed on "Read more". */
   fullStory: string[];
-  subjects: { subject: Subject; photo?: string }[];
+  /** The media strip: a before/after pair, each rendered as one half. */
+  photos: RescuePhoto[];
 }
 
 /**
@@ -29,14 +38,27 @@ export function RescueStoryCard({ story }: { story: RescueStory }) {
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-glow">
-      <div className="relative flex aspect-[5/4] gap-0.5 overflow-hidden bg-mist">
-        {story.subjects.map((x, i) => (
-          <AnimalPortrait
-            key={i}
-            animal={x.subject}
-            photoUrl={x.photo}
-            className="h-full flex-1 rounded-none transition-transform duration-700 ease-out group-hover:scale-[1.05]"
-          />
+      {/* Before / after strip — one half per photo, split by a hairline gap. */}
+      <div className="relative flex aspect-[5/4] gap-1 overflow-hidden bg-mist">
+        {story.photos.map((p, i) => (
+          <div key={i} className="relative h-full flex-1 overflow-hidden">
+            {p.photo && /\.mp4($|\?)/i.test(p.photo) ? (
+              <AutoplayVideo
+                src={p.photo}
+                ariaLabel={`${p.label}: ${story.name}`}
+                className="absolute inset-0 object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+              />
+            ) : (
+              <AnimalPortrait
+                animal={p.subject}
+                photoUrl={p.photo}
+                className="h-full w-full rounded-none transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+              />
+            )}
+            <span className="absolute left-2 top-2 z-10 rounded-full bg-night/55 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ivory backdrop-blur-sm">
+              {p.label}
+            </span>
+          </div>
         ))}
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-night/45 to-transparent"
