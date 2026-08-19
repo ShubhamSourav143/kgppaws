@@ -86,9 +86,15 @@ export interface SheetDonor {
 export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
   if (!DONORS_CSV_URL) return null;
   try {
+    // Hard timeout: this runs during the /donate static build. A published
+    // Google Sheet CSV is occasionally slow, and without a cap the fetch hangs
+    // until Next's 60s prerender limit and fails the whole build (observed on
+    // Vercel). 8s is generous for a small CSV; on timeout we abort and fall
+    // back to the demo donor wall rather than blocking the deploy.
     const res = await fetch(DONORS_CSV_URL, {
       next: { revalidate: 300 },
       redirect: "follow",
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const text = await res.text();
