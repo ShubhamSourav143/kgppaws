@@ -286,7 +286,7 @@ export const WORK_SECTIONS: WorkSectionContent[] = [
       "story-11",
       "story-12",
       "odin",
-      "bunti",
+      "jimmy",
       "grid-01",
       "grid-02",
       "grid-08",
