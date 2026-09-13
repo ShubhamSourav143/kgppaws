@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type TargetAndTransition,
+  type Transition,
+} from "framer-motion";
 import {
   ArrowDown,
   ArrowUpRight,
@@ -137,20 +143,136 @@ const SECTION_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
+ * A gentle, looping idle motion per icon — each chosen to echo what the symbol
+ * means: the chemotherapy heart beats, the feeding bone wags, the shield stands
+ * guard, the book flutters its pages. Keyed by the same string as the badge
+ * (the WORK_SECTIONS id, or "shelter" / "knowledge" / "memoriam"). All are
+ * transform-only (GPU-cheap) and never run under prefers-reduced-motion.
+ */
+const ICON_MOTION: Record<
+  string,
+  { animate: TargetAndTransition; transition: Transition }
+> = {
+  // A double-thump heartbeat, then a rest — the cardiac rhythm.
+  chemotherapy: {
+    animate: { scale: [1, 1.18, 0.98, 1.12, 1] },
+    transition: { duration: 1.5, times: [0, 0.13, 0.26, 0.4, 0.7], repeat: Infinity, repeatDelay: 0.9, ease: "easeOut" },
+  },
+  // Shield keeping watch — a slow, steady sway.
+  sterilization: {
+    animate: { rotate: [0, -8, 8, -4, 0], scale: [1, 1.05, 1, 1.03, 1] },
+    transition: { duration: 4.2, repeat: Infinity, ease: "easeInOut" },
+  },
+  // A cupped hand lifting up, offering.
+  rescue: {
+    animate: { y: [0, -3.5, 0], scale: [1, 1.06, 1] },
+    transition: { duration: 2.6, repeat: Infinity, ease: "easeInOut" },
+  },
+  // Playful bone wag, like a tail.
+  feeding: {
+    animate: { rotate: [0, -12, 12, -8, 6, 0] },
+    transition: { duration: 2, repeat: Infinity, repeatDelay: 0.8, ease: "easeInOut" },
+  },
+  // A small, careful injecting nudge along the needle's axis.
+  vaccination: {
+    animate: { x: [0, 2.5, -1.5, 0], y: [0, -2.5, 1.5, 0], rotate: [0, -4, 2, 0] },
+    transition: { duration: 2.2, repeat: Infinity, repeatDelay: 0.6, ease: "easeInOut" },
+  },
+  // Stethoscope swinging softly.
+  "daily-medical": {
+    animate: { rotate: [0, 9, -9, 5, 0] },
+    transition: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
+  },
+  // The warm breathing of a home.
+  shelter: {
+    animate: { scale: [1, 1.08, 1], y: [0, -1.5, 0] },
+    transition: { duration: 2.8, repeat: Infinity, ease: "easeInOut" },
+  },
+  // A page turning open and settling back.
+  knowledge: {
+    animate: { rotateY: [0, 32, 0], y: [0, -1, 0] },
+    transition: { duration: 3.2, repeat: Infinity, repeatDelay: 0.9, ease: "easeInOut" },
+  },
+  // A slow, tender heartbeat for those remembered — softer than the rest.
+  memoriam: {
+    animate: { scale: [1, 1.09, 1] },
+    transition: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
+  },
+};
+
+/**
+ * Renders a Lucide icon with its meaning-matched idle motion. Under
+ * prefers-reduced-motion (or with no motion mapped) it renders the plain,
+ * static glyph. Self-contained so every badge can share it.
+ */
+function AnimatedGlyph({
+  icon: Icon,
+  motionKey,
+  className,
+}: {
+  icon: LucideIcon;
+  motionKey?: string;
+  className?: string;
+}) {
+  const reduced = useReducedMotion() ?? false;
+  const m = motionKey ? ICON_MOTION[motionKey] : undefined;
+  const glyph = <Icon className={className} strokeWidth={2.25} aria-hidden="true" />;
+  if (reduced || !m) return glyph;
+  return (
+    <motion.span
+      className="grid place-items-center"
+      style={{ transformPerspective: 500 }}
+      animate={m.animate}
+      transition={m.transition}
+    >
+      {glyph}
+    </motion.span>
+  );
+}
+
+/**
  * Bold, brand-gradient icon badge that heads each section. Kept as one
  * component so every Our Work section reads as part of the same set. The ring
- * softens it on light tones and lifts it on the dark (night) tone.
+ * softens it on light tones and lifts it on the dark (night) tone. The icon
+ * carries a looping, symbol-appropriate animation; a light streak periodically
+ * sweeps the gradient, and the badge lifts on hover. All motion is suppressed
+ * under prefers-reduced-motion.
  */
-function SectionIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: keyof typeof TONES }) {
+function SectionIcon({
+  icon,
+  tone,
+  motionKey,
+}: {
+  icon: LucideIcon;
+  tone: keyof typeof TONES;
+  motionKey?: string;
+}) {
+  const reduced = useReducedMotion() ?? false;
   return (
-    <span
+    <motion.span
       className={cn(
-        "mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember ring-4",
+        "relative mx-auto mb-5 grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember ring-4",
         tone === "night" ? "ring-ivory/10" : "ring-saffron/10"
       )}
+      whileHover={reduced ? undefined : { scale: 1.08, rotate: -3 }}
+      transition={{ type: "spring", stiffness: 300, damping: 16 }}
     >
-      <Icon className="h-8 w-8" strokeWidth={2.25} aria-hidden="true" />
-    </span>
+      {/* Light streak sweeping across the gradient — the premium "shine". */}
+      {!reduced && (
+        <motion.span
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-y-2 left-0 w-8 -skew-x-[20deg] bg-ivory/40 blur-[2px]"
+          initial={{ x: -40 }}
+          animate={{ x: [-40, 92] }}
+          transition={{ duration: 1.15, repeat: Infinity, repeatDelay: 3.4, ease: "easeInOut" }}
+        />
+      )}
+      <AnimatedGlyph
+        icon={icon}
+        motionKey={motionKey}
+        className="relative h-8 w-8"
+      />
+    </motion.span>
   );
 }
 
@@ -176,7 +298,7 @@ export function WorkSection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
-            {Icon && <SectionIcon icon={Icon} tone={tone} />}
+            {Icon && <SectionIcon icon={Icon} tone={tone} motionKey={id} />}
             <p className={`eyebrow mb-4 ${t.eye}`}>{eyebrow}</p>
             <h2
               id={`${id}-h`}
@@ -225,7 +347,7 @@ export function ShelterFamilySection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
-            <SectionIcon icon={Home} tone="parchment" />
+            <SectionIcon icon={Home} tone="parchment" motionKey="shelter" />
             <p className="eyebrow mb-4 text-saffron-deep">The heart of the page</p>
             <h2
               id="shelter-h"
@@ -253,7 +375,7 @@ export function ShelterFamilySection({
             <div className="mx-auto max-w-3xl text-center">
               <Reveal>
                 <span className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-moss/10 text-moss ring-4 ring-moss/5">
-                  <Heart className="h-7 w-7" strokeWidth={2.25} aria-hidden="true" />
+                  <AnimatedGlyph icon={Heart} motionKey="memoriam" className="h-7 w-7" />
                 </span>
                 <div className="flex items-center justify-center gap-4">
                   <span className="h-px w-12 bg-moss/40" aria-hidden="true" />
@@ -399,7 +521,7 @@ export function KnowledgeCentreSection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
-            <SectionIcon icon={BookOpen} tone="cream" />
+            <SectionIcon icon={BookOpen} tone="cream" motionKey="knowledge" />
             <p className="eyebrow mb-4 text-saffron-deep">Knowledge Centre</p>
             <h2
               id="know-h"
