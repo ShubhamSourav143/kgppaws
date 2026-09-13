@@ -44,6 +44,11 @@ export async function generateMetadata({
   const { slug } = await params;
   const animal = await getAnimal(slug);
   if (!animal) return { title: "Animal not found" };
+  // Share the animal's own photo so a shared profile shows the dog, not a
+  // generic logo. Setting openGraph replaces the root file-convention image,
+  // so without an explicit images entry the card was imageless. Falls back to
+  // the site OG image for animals shown only as illustrated portraits.
+  const ogImage = animal.photos.find((p) => p.url)?.url ?? "/opengraph-image.png";
   return {
     title: `${animal.name} · Digital Animal ID`,
     description: `${animal.name} (${animal.pawsId}) — ${animal.tagline} ${animal.ageLabel}, ${zoneName(animal.zoneId)}, IIT Kharagpur.`,
@@ -52,6 +57,13 @@ export async function generateMetadata({
       title: `${animal.name} — ${SITE.name} Digital Animal ID`,
       description: animal.tagline,
       type: "profile",
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${animal.name} — ${SITE.name}`,
+      description: animal.tagline,
+      images: [ogImage],
     },
   };
 }

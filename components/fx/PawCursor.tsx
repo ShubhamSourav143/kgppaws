@@ -58,7 +58,9 @@ const DIR_EASE = 0.15; // heading smoothing
  * wants.
  */
 const MORPH_TAU_SECTION = 177;
-const MORPH_TAU_HOVER = 65;
+// Snappier collapse to the single click-ready paw (~150ms to settle) so hover
+// feedback lands the instant the paw reaches a button.
+const MORPH_TAU_HOVER = 50;
 /** Longest frame to integrate over, so a throttled tab doesn't snap on return. */
 const MAX_FRAME_MS = 64;
 const ALONG = 9 * SCALE; // stride length: fore/aft swing per paw (px)
@@ -226,6 +228,16 @@ export function PawCursor() {
     let hovering = false;
     // over site chrome: same collapse to one paw, but no highlight
     let solo = false;
+    // The hover state is the OR of two hit-tests: the true pointer hotspot
+    // (from the mouseover event) and the paw cluster's visual centre. The paws
+    // sit offset down-right of the pointer, so testing only the hotspot meant a
+    // button did not read as clickable until the visible paw had already slid
+    // past it. Testing the paw centre too makes hovering the *paw* over any
+    // button trigger the click-ready state, which is what it looks like it
+    // should do. `pointer*` holds the hotspot result between mouse moves.
+    let pointerHover = false;
+    let pointerSolo = false;
+    let hoverDirty = false; // a re-test is queued; the frame loop runs it once
     // whether the in-flight morph was triggered by hover (fast) or by
     // crossing a section boundary (slow)
     let morphFast = false;
@@ -357,21 +369,49 @@ export function PawCursor() {
           cy = lcy = ty;
         }
       }
+      // The paw centre moved with the pointer, so its hit-test may have changed
+      // even when the pointer stayed over the same element (no mouseover fired).
+      hoverDirty = true;
       resolve();
     };
     const onEnter = () => started && root.classList.add("is-visible");
     const onLeave = () => root.classList.remove("is-visible");
-    const onOver = (e: Event) => {
-      const t = e.target as Element | null;
-      const nextHover = !!t?.closest?.(INTERACTIVE);
-      const nextSolo = !!t?.closest?.(SOLO_ZONE);
-      // fires for every node crossed; only act on an actual change
+    // Last paw-centre hit-test result, refreshed once per frame by the loop.
+    let pawHover = false;
+    let pawSolo = false;
+
+    /** Apply the OR of the pointer-hotspot and paw-centre hit-tests. */
+    const applyHoverState = () => {
+      const nextHover = pointerHover || pawHover;
+      const nextSolo = pointerSolo || pawSolo;
       if (nextHover === hovering && nextSolo === solo) return;
       hovering = nextHover;
       solo = nextSolo;
       root.classList.toggle("is-hover", hovering);
       morphFast = true;
       applyTarget();
+    };
+
+    const onOver = (e: Event) => {
+      const t = e.target as Element | null;
+      pointerHover = !!t?.closest?.(INTERACTIVE);
+      pointerSolo = !!t?.closest?.(SOLO_ZONE);
+      applyHoverState(); // pointer hotspot is instant, no frame of latency
+      hoverDirty = true; // and refresh the paw-centre test next frame
+    };
+
+    /**
+     * Refresh the paw-centre hit-test and re-apply. Run from the frame loop
+     * (coalesced via hoverDirty) so elementFromPoint is called at most once per
+     * frame rather than on every mousemove. The cursor root is
+     * pointer-events:none, so elementFromPoint returns the content beneath it.
+     */
+    const recomputeHover = () => {
+      hoverDirty = false;
+      const el = document.elementFromPoint(tx + OFFSET_X, ty + OFFSET_Y);
+      pawHover = !!el?.closest?.(INTERACTIVE);
+      pawSolo = !!el?.closest?.(SOLO_ZONE);
+      applyHoverState();
     };
     const onDown = () => {
       root.classList.add("is-down");
@@ -471,6 +511,11 @@ export function PawCursor() {
 
       writePaw(pawA, 1, 0, angle, activity);
       writePaw(pawB, -1, Math.PI, angle, activity);
+
+      // One hover hit-test per frame, only when something moved. Placed after
+      // the paw writes so it reads settled layout, and coalesced so a burst of
+      // mousemove events still costs a single elementFromPoint per frame.
+      if (hoverDirty) recomputeHover();
 
       lcx = cx;
       lcy = cy;

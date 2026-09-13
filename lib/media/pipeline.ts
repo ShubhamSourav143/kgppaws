@@ -11,8 +11,15 @@
  * EXIF/GPS is stripped by sharp on load — nothing sensitive survives.
  */
 
-import sharp, { Sharp } from "sharp";
+import type { Sharp } from "sharp";
 import { encode as encodeBlurhash } from "blurhash";
+
+// sharp is imported lazily (inside processImage) rather than at module top:
+// this module is pulled into the single /api serverless function, and a
+// top-level import of sharp fails to LOAD when its native binary is missing at
+// runtime (ERR_DLOPEN), which would 500 every API route. Media ingest — the
+// only caller — genuinely needs sharp, so loading it there surfaces a clear
+// failure only for that cron path instead of breaking the whole function.
 
 export const VARIANT_SIZES = [3200, 1600, 800, 400] as const;
 export const VARIANT_FORMATS = ["avif", "webp", "jpeg"] as const;
@@ -72,6 +79,7 @@ export async function processImage(args: {
   folder: string;
   basename: string;
 }): Promise<PipelineResult> {
+  const sharp = (await import("sharp")).default;
   const rotated = sharp(args.buffer).rotate();
   const meta = await rotated.metadata();
   const originalWidth = meta.width ?? 0;

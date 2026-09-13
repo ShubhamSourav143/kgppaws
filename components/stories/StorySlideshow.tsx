@@ -175,8 +175,9 @@ export function StorySlideshow({
                         onClick={() => go(i, i > index ? 1 : -1)}
                         aria-label={`Go to photo ${i + 1}`}
                         aria-current={i === index}
+                        // before: extends the 6px dot to a 44px-tall tap target.
                         className={cn(
-                          "h-1.5 rounded-full transition-all duration-300",
+                          "relative h-1.5 rounded-full transition-all duration-300 before:absolute before:left-1/2 before:top-1/2 before:h-11 before:w-4 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']",
                           i === index ? "w-6 bg-ivory" : "w-1.5 bg-ivory/50 hover:bg-ivory/80"
                         )}
                       />

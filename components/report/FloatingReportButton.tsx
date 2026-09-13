@@ -117,7 +117,9 @@ export function FloatingReportButton() {
       photoName: photoName ?? undefined,
       updates: [
         {
-          id: `u-${Date.now()}`,
+          // Reuses `now` rather than a second clock read: same instant, and it
+          // keeps the React Compiler's purity check happy without a suppression.
+          id: `u-${now}`,
           date: now,
           status: "reported",
           note: "Report received. Thank you for helping.",
@@ -303,11 +305,19 @@ export function FloatingReportButton() {
                         <button
                           type="button"
                           onClick={() => {
+                            // Clearing photoFile is the part that matters:
+                            // onSubmit reads it, so without this the photo the
+                            // reporter just removed was still uploaded to the
+                            // public bucket while the saved record claimed
+                            // there was no photo. (Same defect as the one in
+                            // ReportForm.tsx — this is the second copy of the
+                            // rescue form, mounted site-wide via SiteChrome.)
+                            setPhotoFile(null);
                             setPhotoName(null);
                             if (fileRef.current) fileRef.current.value = "";
                           }}
                           aria-label="Remove photo"
-                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-moss hover:bg-mist"
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-moss hover:bg-mist"
                         >
                           <X className="h-4 w-4" aria-hidden="true" />
                         </button>

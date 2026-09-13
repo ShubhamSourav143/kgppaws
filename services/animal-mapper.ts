@@ -79,5 +79,36 @@ export function mapAnimalRow(row: any): Animal {
   };
 }
 
+/**
+ * Columns the public animal pages may read. Enumerated rather than `*`.
+ *
+ * `*` used to be fine on the assumption that the column-level
+ * `revoke select (internal_note) …` statements in migration 0001 kept the
+ * staff-only columns out of an anon read. They do not: a column-level REVOKE
+ * cannot subtract from a table-level GRANT — a fact this schema documents at
+ * 0001_initial_schema.sql:706 and works around correctly for INSERT, but not
+ * for SELECT. So every visitor's page payload carried `animals.internal_note`
+ * ("volunteers/admins only") and `animal_medical_events.internal_note`
+ * ("never exposed publicly"), whether or not the UI rendered them.
+ *
+ * mapAnimalRow() never reads either column, so listing columns explicitly is
+ * behaviour-preserving. Migration 0014 closes the same hole at the database
+ * level; this is the half that does not depend on a migration being applied.
+ *
+ * Adding a column to `animals` that the public pages need? Add it here too.
+ */
+const ANIMAL_PUBLIC_COLUMNS = [
+  "id", "paws_id", "slug", "name", "species", "sex", "age_label", "color",
+  "size", "zone_id", "tagline", "personality", "bio", "friendliness",
+  "vaccinated", "sterilized", "health_status", "health_note",
+  "last_health_update", "adoption_status", "good_with_people",
+  "good_with_animals", "special_care", "emergency_note", "portrait",
+  "is_public", "created_at", "updated_at",
+].join(", ");
+
+/** Public timeline entries. `internal_note` and `created_by` are staff-only. */
+const MEDICAL_EVENT_PUBLIC_COLUMNS =
+  "id, animal_id, event_date, event_type, title, public_note, created_at";
+
 export const PUBLIC_ANIMAL_SELECT =
-  "*, animal_photos(*), animal_medical_events(*), animal_vaccinations(*), animal_sterilizations(*), animal_sightings(*), qr_tags(token, active)";
+  `${ANIMAL_PUBLIC_COLUMNS}, animal_photos(*), animal_medical_events(${MEDICAL_EVENT_PUBLIC_COLUMNS}), animal_vaccinations(*), animal_sterilizations(*), animal_sightings(*), qr_tags(token, active)`;

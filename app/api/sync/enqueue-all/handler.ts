@@ -1,6 +1,34 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase, createServiceSupabase } from "@/lib/supabase/server";
 import { enqueueJob, listTabConfigs } from "@/lib/sync/queue";
+import { cronUnauthorized, isCronAuthorized } from "@/lib/api/cron-auth";
+
+/**
+ * GET /api/sync/enqueue-all — the nightly cron entry point.
+ *
+ * vercel.json schedules this path, and Vercel Cron issues a GET with no
+ * cookies. The POST below requires an interactive admin session, so the
+ * scheduled run could never have enqueued anything even once the routing and
+ * header mismatches were fixed. This variant authenticates with CRON_SECRET
+ * and enqueues through the service role instead.
+ *
+ * Same work, different caller: one job per enabled sheets_to_db tab.
+ */
+export async function GET(request: NextRequest) {
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
+  }
+
+  const service = createServiceSupabase();
+  if (!service) {
+    return NextResponse.json(
+      { enqueued: 0, configured: false, reason: "service role not configured" },
+      { status: 200 }
+    );
+  }
+
+  return enqueueAllTabs(service, null);
+}
 
 /**
  * POST /api/sync/enqueue-all
@@ -27,6 +55,19 @@ export async function POST() {
   const service = createServiceSupabase();
   if (!service) return NextResponse.json({ error: "service role not configured" }, { status: 503 });
 
+  return enqueueAllTabs(service, userData.user.id);
+}
+
+/**
+ * Shared body for both entry points. `actorId` is the admin's user id for a
+ * dashboard-triggered run, or null for the cron — which is also what
+ * distinguishes 'admin' from 'cron' in sync_jobs.triggered_by, so the job
+ * history shows who asked for each sync.
+ */
+async function enqueueAllTabs(
+  service: NonNullable<ReturnType<typeof createServiceSupabase>>,
+  actorId: string | null
+) {
   const configs = await listTabConfigs(service);
   const enqueued: string[] = [];
   for (const c of configs) {
@@ -37,13 +78,16 @@ export async function POST() {
         tab: c.tab_name,
         direction: c.direction,
         scope: "incremental",
-        triggeredBy: "admin",
-        actorId: userData.user.id,
+        triggeredBy: actorId ? "admin" : "cron",
+        actorId,
       });
       enqueued.push(c.tab_name);
     } catch (e) {
       // continue — one tab's error mustn't block the rest
-      void e;
+      console.warn(
+        `[sync/enqueue-all] enqueue failed for tab '${c.tab_name}':`,
+        e instanceof Error ? e.message : e
+      );
     }
   }
 

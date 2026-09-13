@@ -31,7 +31,7 @@ const FALLBACK = [
     category: "Donation",
     question: "Where does the money go?",
     answer:
-      "Every rupee goes to the animal it was raised for. Each campaign's page shows a live expense ledger — vet bills, medicine, feed, boarding. Volunteers are unpaid; there are no salaries.",
+      "Every rupee goes to the animals it was raised for — vet bills, medicine, feed and boarding. Volunteers are unpaid; there are no salaries.",
   },
   {
     category: "Reporting",

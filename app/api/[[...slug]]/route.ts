@@ -12,7 +12,10 @@ import { POST as reports } from "@/app/api/reports/handler";
 import { GET as search } from "@/app/api/search/handler";
 import { POST as sheets } from "@/app/api/sheets/handler";
 import { POST as syncEnqueue } from "@/app/api/sync/enqueue/handler";
-import { POST as syncEnqueueAll } from "@/app/api/sync/enqueue-all/handler";
+import {
+  GET as syncEnqueueAllCron,
+  POST as syncEnqueueAll,
+} from "@/app/api/sync/enqueue-all/handler";
 import { POST as syncHousekeeping } from "@/app/api/sync/housekeeping/handler";
 import { POST as syncResolve } from "@/app/api/sync/resolve/handler";
 import { POST as syncRun } from "@/app/api/sync/run/handler";
@@ -35,9 +38,31 @@ import { POST as uploadSign } from "@/app/api/upload/sign/handler";
 
 type Handler = (req: NextRequest) => Promise<Response> | Response;
 
+/**
+ * A full sheet sync or a Drive media ingest does far more than the 10s
+ * default. 60s is the Vercel Hobby ceiling; the worker's own drain loop stops
+ * claiming new jobs well before it (see app/api/sync/worker/handler.ts).
+ */
+export const maxDuration = 60;
+
 const GET_ROUTES: Record<string, Handler> = {
   "search": search as unknown as Handler,
   "sync/status": syncStatus as unknown as Handler,
+
+  /**
+   * Cron entry points. Vercel Cron invokes the paths in vercel.json with an
+   * HTTP GET (https://vercel.com/docs/cron-jobs — "Vercel makes an HTTP GET
+   * request"), so registering these handlers only under POST meant every
+   * scheduled run 404'd: no nightly Sheets sync, no Drive media ingest, no
+   * outbox drain, no queue housekeeping, silently, since the crons were added.
+   * Each handler authenticates the caller itself via lib/api/cron-auth.
+   */
+  "sync/enqueue-all": syncEnqueueAllCron as unknown as Handler,
+  "sync/worker": syncWorker as unknown as Handler,
+  "sync/housekeeping": syncHousekeeping as unknown as Handler,
+  "media/ingest": mediaIngest as unknown as Handler,
+  "media/sweep": mediaSweep as unknown as Handler,
+  "notify/dispatch": notifyDispatch as unknown as Handler,
 };
 
 const POST_ROUTES: Record<string, Handler> = {

@@ -1,7 +1,30 @@
 import { readdir } from "fs/promises";
 import path from "path";
-import sharp from "sharp";
 import type { MediaCollection } from "@/lib/image-config";
+
+/**
+ * Lazily load sharp, tolerating a runtime where its native binary can't load.
+ *
+ * A top-level `import sharp from "sharp"` fails to even LOAD this module when
+ * sharp's libvips native binary is missing — which is exactly what happens in a
+ * Vercel serverless function (ERR_DLOPEN: libvips-cpp.so not found). Any DYNAMIC
+ * page that transitively imports listMedia (e.g. /animal/[slug], which is
+ * request-time rendered because it reads searchParams) then 500s. Sharp is only
+ * needed to derive image dimensions and the blur placeholder, both of which are
+ * nice-to-haves; deferring the import and returning null on failure lets those
+ * pages render the photo without a blur-up instead of crashing. At build time,
+ * where sharp loads fine, everything works exactly as before.
+ */
+type SharpModule = typeof import("sharp");
+let sharpPromise: Promise<SharpModule["default"] | null> | undefined;
+function loadSharp(): Promise<SharpModule["default"] | null> {
+  if (!sharpPromise) {
+    sharpPromise = import("sharp")
+      .then((m) => m.default)
+      .catch(() => null);
+  }
+  return sharpPromise;
+}
 
 /**
  * Filesystem-backed media manifest (server/build-time only).
@@ -56,17 +79,25 @@ export async function listMedia(collection: MediaCollection): Promise<MediaAsset
     return [];
   }
 
+  const sharp = await loadSharp();
+
   const assets = await Promise.all(
     files.sort().map(async (file): Promise<MediaAsset | null> => {
+      const ext = path.extname(file).toLowerCase();
+      const src = `/images/${collection}/${file}`;
+      const alt = captionFromFilename(file);
+
+      if (VIDEO_EXTENSIONS.has(ext)) {
+        return { src, alt, width: 1280, height: 720, blurDataURL: "", collection };
+      }
+
+      // Sharp unavailable at runtime (serverless): still surface the photo,
+      // just without measured dimensions or a blur placeholder.
+      if (!sharp) {
+        return { src, alt, width: 1200, height: 800, blurDataURL: "", collection };
+      }
+
       try {
-        const ext = path.extname(file).toLowerCase();
-        const src = `/images/${collection}/${file}`;
-        const alt = captionFromFilename(file);
-
-        if (VIDEO_EXTENSIONS.has(ext)) {
-          return { src, alt, width: 1280, height: 720, blurDataURL: "", collection };
-        }
-
         const abs = path.join(dir, file);
         const image = sharp(abs);
         const meta = await image.metadata();
@@ -84,7 +115,8 @@ export async function listMedia(collection: MediaCollection): Promise<MediaAsset
           collection,
         };
       } catch {
-        return null;
+        // A single unreadable file shouldn't drop the photo — surface it plain.
+        return { src, alt, width: 1200, height: 800, blurDataURL: "", collection };
       }
     })
   );

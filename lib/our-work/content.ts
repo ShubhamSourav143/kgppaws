@@ -32,6 +32,9 @@ export interface KnowledgeArticle {
   title: string;
   category: string;
   summary: string;
+  /** Full article, one string per paragraph. Rendered in the reader dialog
+   *  opened by the card's "Read more" button. */
+  body: string[];
   /** Preferred filename stem for the article cover. */
   photoKey: string;
   href?: string;
@@ -283,7 +286,7 @@ export const WORK_SECTIONS: WorkSectionContent[] = [
       "story-11",
       "story-12",
       "odin",
-      "bunti",
+      "jimmy",
       "grid-01",
       "grid-02",
       "grid-08",
@@ -301,6 +304,13 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "Sterilization is not about fewer dogs — it is about fewer dogs born into hunger and disease. Here is why it is the single most humane thing we do.",
     photoKey: "ster-01",
+    body: [
+      "A single unsterilized female dog and her offspring can, in theory, lead to hundreds of puppies over a few years. On a campus like IIT Kharagpur, that does not mean hundreds of happy dogs — it means litters born under staircases and in drains during the monsoon, most of whom will not survive their first few months. The ones who do survive compete for the same scarce food, and the cycle repeats.",
+      "Sterilization breaks that cycle humanely. It is a one-time surgical procedure — spaying for females, neutering for males — after which the animal can no longer reproduce. It does not change who the dog is. A friendly dog stays friendly; a shy dog stays shy. What changes is that no more puppies are born into a life of hunger and disease.",
+      "The health benefits are real and well documented. Spaying a female before her first few heat cycles dramatically reduces the risk of mammary tumours and eliminates the risk of pyometra, a life-threatening uterine infection that is common and often fatal in unspayed street dogs. Neutered males roam less, fight less over mates, and are far less likely to be hit by vehicles or injured in territorial fights.",
+      "There is a community benefit too. A stable, sterilized dog population is a calmer one. Sterilized dogs hold their territory quietly instead of a constant churn of new, unvaccinated animals moving through. This is the basis of the Animal Birth Control (ABC) programme recommended across India: sterilize, vaccinate, and return the animal to the exact place it came from.",
+      "Over the years, KGP PAWS has helped complete more than 400 sterilizations. Every week, volunteers safely transport campus dogs for surgery and post-operative care. It is not dramatic work and it rarely makes a good photograph — but it prevents more suffering than anything else we do.",
+    ],
   },
   {
     slug: "why-vaccination-is-important",
@@ -309,6 +319,13 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "A single anti-rabies vaccine protects the animal and every person sharing the road with them. Simple, cheap, and one of the highest-impact things we do all year.",
     photoKey: "vacc-04",
+    body: [
+      "Rabies is almost always fatal once symptoms appear — in both animals and humans. India accounts for a large share of the world's human rabies deaths, and the overwhelming majority of those cases begin with a dog bite. The tragedy is that rabies is entirely preventable with a vaccine that costs very little.",
+      "Vaccinating campus dogs protects them, but it protects people just as much. A vaccinated dog cannot carry and transmit rabies. When a high enough proportion of the dog population is vaccinated, the disease simply cannot spread — this is herd immunity, and it is the single most effective way to make a campus genuinely safe from rabies.",
+      "Anti-rabies is the priority, but it is not the only vaccine that matters. Canine distemper — the disease that partially paralysed Nami before she recovered — attacks the nervous system and kills many young dogs every year. Parvovirus causes severe, often fatal, gastrointestinal illness in puppies. Both are preventable.",
+      "KGP PAWS runs vaccination drives throughout the year. A dog that has been vaccinated by us often wears a PAWS collar tag; scanning the QR code on that tag shows its vaccination history. If you feed or care for a particular campus dog and are not sure whether it has been vaccinated, use the report form to let us know — we will add it to the next drive.",
+      "If you are ever bitten or scratched by any animal, wash the wound with soap under running water for fifteen minutes and see a doctor the same day for post-exposure treatment. Do not wait for symptoms. With rabies, prevention is the only cure.",
+    ],
   },
   {
     slug: "basic-first-aid-before-help-arrives",
@@ -317,6 +334,14 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "What you can safely do in the first ten minutes after finding an injured animal, and what to avoid so you do not make things worse for the animal or yourself.",
     photoKey: "medical-01",
+    body: [
+      "An injured animal is a frightened animal, and a frightened animal may bite or scratch even someone trying to help — not out of aggression, but out of pain and fear. Your first responsibility is your own safety. You cannot help anyone if you are hurt yourself.",
+      "Start by keeping calm and quiet. Approach slowly from the side rather than head-on, crouch to look less threatening, and speak in a low, steady voice. Give the animal a moment to understand that you are not a threat. If it growls, snaps, or tries to move away, stop — back off and call for trained help instead.",
+      "If the animal is bleeding, gentle, steady pressure with a clean cloth is the single most useful thing you can do. Do not remove any object that has pierced the body — stabilise it in place and leave it for the vet. Do not apply turmeric, oil, chilli, or home remedies to open wounds; they contaminate the wound and make professional treatment harder.",
+      "Do not give food, water, or any medicine to a seriously injured animal. If it needs surgery, food in the stomach is dangerous under anaesthesia. Human painkillers such as paracetamol and ibuprofen are toxic to dogs and cats and can kill them — never give them.",
+      "If the animal is in shock — cold, limp, unresponsive — keep it warm with a cloth or blanket and minimise movement. For a suspected fracture or spinal injury, slide a flat, rigid surface underneath and move the whole body as one unit rather than lifting by the limbs.",
+      "Then get help on the way. Note the exact location, take a photo if it is safe to do so, and use the Report button on this site. The most valuable thing you can provide is an accurate location and an honest description — that is what lets a volunteer reach the animal quickly.",
+    ],
   },
   {
     slug: "what-to-do-if-you-find-an-injured-dog",
@@ -325,6 +350,14 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "Step by step: approach carefully, keep distance if the animal is in pain, note the location precisely, and use the report form to get help on the way.",
     photoKey: "story-05",
+    body: [
+      "Finding an injured dog can be distressing, and the instinct is to rush in. A calm, methodical response helps the animal far more than a panicked one. Here is the sequence that works.",
+      "First, observe from a short distance. Is the dog alert or unconscious? Bleeding, limping, or unable to stand? Is it on a road or somewhere safe? A dog that is alert and moving away from you does not want to be touched, and chasing it will only cause more harm — for that dog, a clear report is more useful than a rescue attempt.",
+      "Second, keep yourself and traffic safe. If the dog is on a busy road, warn oncoming vehicles before you do anything else. Do not put yourself in the path of traffic.",
+      "Third, note the location as precisely as you can — the nearest hall, department, gate, or landmark, and a Google Maps pin if possible. On a campus this large, \"near the main building\" can mean a fifteen-minute search. A precise pin can be the difference between a volunteer arriving in time or not.",
+      "Fourth, submit a report using the Report button on this site. Add a photo if it is safe to take one, describe what you see plainly, and share a contact number if you are willing to guide the volunteer to the spot. For emergencies, a volunteer is paged immediately.",
+      "Finally, if it is safe and the dog is calm, stay nearby until help arrives so you can point out where it went. If it is not safe, your report has already done the most important part. You do not need to handle a severely injured animal yourself — that is what our rescue team is trained and equipped for.",
+    ],
   },
   {
     slug: "understanding-campus-dogs",
@@ -333,6 +366,13 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "Campus dogs are not strays passing through — they are residents. How they behave, why territory matters to them, and how to share a lane peacefully.",
     photoKey: "grid-01",
+    body: [
+      "The dogs on the IIT Kharagpur campus are not lost or passing through. They were born here, they know these lanes better than most students do, and many have lived alongside the same halls and departments for years. Understanding them makes sharing the campus easier for everyone.",
+      "Campus dogs are territorial, and that is the key to almost everything they do. A dog barks at a cyclist or a stranger not because it is aggressive, but because it is announcing a boundary. Once you belong to a place in its eyes — because you walk that lane every day, or because you have fed it calmly a few times — the same dog will usually greet you rather than warn you.",
+      "Most conflict comes from misreading fear as aggression. A dog that is stiff, staring, with a low tail and raised hackles is asking for space, not a fight. The right response is to give it space: slow down, avoid direct eye contact, and do not run. Running triggers a chase instinct in even a friendly dog.",
+      "Night-time barking and the occasional scuffle are usually territorial disputes between dogs, not a threat to people. A stable, sterilized population settles these boundaries and grows quieter over time — which is one more reason the sterilization programme matters.",
+      "If a particular dog seems unwell, unusually aggressive, or is being fed in an unsafe place like a busy road, the best thing you can do is tell us through the report form rather than confronting the situation yourself. These are our neighbours, and a little patience on both sides goes a long way.",
+    ],
   },
   {
     slug: "responsible-feeding-guidelines",
@@ -341,6 +381,14 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "What is safe to share, what is genuinely harmful, and why the where and when of feeding matters as much as the what.",
     photoKey: "feed-01",
+    body: [
+      "Feeding a hungry campus dog is a kind thing to do, and during vacations — when students leave and regular food sources disappear — it can be lifesaving. But how and where you feed matters as much as whether you feed.",
+      "Plain, simple food is best: cooked rice mixed with a little curd, boiled egg, plain chicken or dog biscuits, and always clean water alongside. Dogs do well on unspiced, unsalted food. What they need most is consistency and clean water, not variety.",
+      "Some common foods are genuinely dangerous. Chocolate, onions, garlic, grapes and raisins are toxic to dogs. Cooked bones splinter and can pierce the gut — never give them. Heavily spiced, oily, or salty leftovers cause stomach upsets and, over time, real harm. When in doubt, keep it plain.",
+      "Where you feed is just as important. Never feed a dog on or beside a road — it teaches the animal to wait there for food and puts it directly in the path of traffic. Choose a safe, quiet spot away from vehicles and building entrances. Feed at a consistent time and place so the dogs learn the routine and are not left anxious.",
+      "Clean up after every feed. Leftover food and disposable plates attract pests and give people a reason to resent the animals. A tidy feeding spot keeps both the dogs and the community on good terms.",
+      "If you feed a dog regularly, you are in the best position to notice when something is wrong — a limp, a wound, weight loss, or a female who may be pregnant. That early notice, sent to us through the report form, often makes the difference in treatment.",
+    ],
   },
   {
     slug: "puppy-care-basics",
@@ -349,6 +397,14 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "Feeding, warmth, deworming and the vaccine schedule that gets a puppy through the first year. Simple guidance for anyone finding a litter on campus.",
     photoKey: "story-11",
+    body: [
+      "Finding a litter of puppies on campus is common, especially after the monsoon. Before you do anything, pause and observe from a distance. If the puppies look clean, warm, and settled, the mother is very likely nearby and simply out finding food. Puppies almost always do best with their mother — removing them is rarely the right call and often a fatal one.",
+      "Step in when the signs are clear: a puppy that is cold, crying continuously, visibly injured or sick, or in immediate danger from traffic or the weather, with no mother returning over several hours. In that case, report it to us — orphaned neonatal puppies need specialised, round-the-clock care that is hard to provide alone.",
+      "Warmth is the first priority for a young puppy — more urgent than food. A puppy cannot regulate its own temperature, and a cold puppy will not digest food safely. Keep it warm and dry against a covered warm-water bottle or a warm cloth before anything else.",
+      "Very young puppies need their mother's milk. If the mother is truly absent, they require a proper puppy milk replacer fed every few hours — never cow's or buffalo milk, which causes severe diarrhoea and can kill a young puppy. From around four weeks, softened puppy food can gradually be introduced.",
+      "Deworming and vaccination follow a schedule. Puppies are typically dewormed from about two weeks of age and repeated regularly, with core vaccinations beginning around six to eight weeks and boosters after that, including anti-rabies. Getting this schedule right is what carries a puppy safely through its vulnerable first year — and it is exactly the kind of thing our team can guide you through.",
+      "If you find a litter that needs help, the report form is the fastest way to reach us. Tell us the location, how many puppies, whether a mother is around, and their condition.",
+    ],
   },
   {
     slug: "common-myths-about-street-dogs",
@@ -357,6 +413,14 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "Not all street dogs are aggressive. Not all are unwell. Clearing up the ideas that cause the most trouble for the animals and the people around them.",
     photoKey: "grid-08",
+    body: [
+      "A few persistent myths cause more trouble for campus dogs — and the people around them — than anything the dogs actually do. Clearing them up makes everyday life on campus calmer.",
+      "\"Street dogs are naturally aggressive.\" They are not. The vast majority are shy and want nothing more than to be left alone. What looks like aggression is almost always fear or the defence of territory. A dog that is fed and treated calmly by the people it sees every day is a friendly neighbour, not a threat.",
+      "\"Every street dog carries rabies.\" A vaccinated dog cannot transmit rabies, and vaccinating the campus population is exactly what our drives are for. A dog wearing a PAWS collar tag has been vaccinated — you can scan its QR tag to check. The way to make a campus rabies-safe is to vaccinate the dogs, not to fear them.",
+      "\"Relocating the dogs will solve the problem.\" It does the opposite. Removing dogs from an area simply empties a territory that new, unvaccinated, unsterilized dogs move into — often more of them, and less settled. It is also illegal under Indian law. The proven approach is sterilize, vaccinate, and return the same animal to the same place.",
+      "\"Feeding street dogs makes them dangerous.\" Responsible feeding, done in a safe and quiet spot, makes dogs calmer and more trusting, not more aggressive. Problems come from feeding on roads or leaving mess behind — not from the kindness itself.",
+      "\"A dog that had puppies will be aggressive forever.\" A nursing mother is protective for a few weeks, which is natural. Give her space during that time and she returns to her usual self. Sterilization, once the pups are weaned, ends the cycle gently.",
+    ],
   },
   {
     slug: "adoption-vs-buying-a-pet",
@@ -365,5 +429,13 @@ export const KNOWLEDGE_ARTICLES: Omit<KnowledgeArticle, "photo">[] = [
     summary:
       "Where the animals sold in shops actually come from, and why adopting a healthy campus dog gives you the same companion at a fraction of the cost.",
     photoKey: "simba",
+    body: [
+      "When you decide to bring a dog into your life, the choice between adopting and buying is bigger than it first appears. It shapes an entire industry — and it decides whether an animal already waiting for a home gets one.",
+      "Most pet-shop and breeder puppies come from commercial breeding operations where profit comes before welfare. Breeding females are often kept in poor conditions and bred repeatedly; puppies are frequently separated from their mothers too early and sold before their first vaccinations. The pedigree on paper says nothing about the animal's health or how it was raised.",
+      "Buying also fuels demand. Every puppy bought from a breeder is a slot filled that an adoptable dog could have taken — while healthy, gentle dogs on this very campus wait for a family. Adoption does not just give one dog a home; it quietly reduces the demand that keeps breeding mills running.",
+      "An adopted campus dog is, in every way that matters, the same companion — loyal, affectionate, and endlessly grateful. Indian street dogs, sometimes called Indies, are naturally hardy, well adapted to the local climate, and typically healthier and longer-lived than many heavily inbred pedigree breeds.",
+      "KGP PAWS makes adoption straightforward and honest. There is no adoption fee — we only ask for a genuine commitment to lifetime care. Every adoptable animal is already vaccinated and sterilized, and a volunteer reviews each request personally to make sure the match is right for both the animal and the adopter.",
+      "If you are ready, the Adopt page is the place to start. Meet the dogs and cats currently looking for homes, read their stories, and fill in the short application. Somewhere on that page may be the friend you have been looking for.",
+    ],
   },
 ];

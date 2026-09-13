@@ -1,9 +1,32 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowDown, ArrowUpRight, HandHeart, HeartHandshake, Users } from "lucide-react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type TargetAndTransition,
+  type Transition,
+} from "framer-motion";
+import {
+  ArrowDown,
+  ArrowUpRight,
+  BookOpen,
+  Bone,
+  HandHeart,
+  Heart,
+  HeartHandshake,
+  HeartPulse,
+  Home,
+  ShieldCheck,
+  Stethoscope,
+  Syringe,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { OurWorkSlideshow, type SlidePhoto } from "./OurWorkSlideshow";
 import { cn } from "@/lib/utils";
@@ -109,6 +132,150 @@ const TONES = {
   night: { bg: "bg-night", eye: "text-marigold", head: "text-ivory", body: "text-ivory/75", intro: "text-ivory/65" },
 } as const;
 
+/** One icon per programme, keyed by the section id from WORK_SECTIONS. */
+const SECTION_ICONS: Record<string, LucideIcon> = {
+  chemotherapy: HeartPulse,
+  sterilization: ShieldCheck,
+  rescue: HandHeart,
+  feeding: Bone,
+  vaccination: Syringe,
+  "daily-medical": Stethoscope,
+};
+
+/**
+ * A gentle, looping idle motion per icon — each chosen to echo what the symbol
+ * means: the chemotherapy heart beats, the feeding bone wags, the shield stands
+ * guard, the book flutters its pages. Keyed by the same string as the badge
+ * (the WORK_SECTIONS id, or "shelter" / "knowledge" / "memoriam"). All are
+ * transform-only (GPU-cheap) and never run under prefers-reduced-motion.
+ */
+const ICON_MOTION: Record<
+  string,
+  { animate: TargetAndTransition; transition: Transition }
+> = {
+  // A double-thump heartbeat, then a rest — the cardiac rhythm.
+  chemotherapy: {
+    animate: { scale: [1, 1.18, 0.98, 1.12, 1] },
+    transition: { duration: 1.5, times: [0, 0.13, 0.26, 0.4, 0.7], repeat: Infinity, repeatDelay: 0.9, ease: "easeOut" },
+  },
+  // Shield keeping watch — a slow, steady sway.
+  sterilization: {
+    animate: { rotate: [0, -8, 8, -4, 0], scale: [1, 1.05, 1, 1.03, 1] },
+    transition: { duration: 4.2, repeat: Infinity, ease: "easeInOut" },
+  },
+  // A cupped hand lifting up, offering.
+  rescue: {
+    animate: { y: [0, -3.5, 0], scale: [1, 1.06, 1] },
+    transition: { duration: 2.6, repeat: Infinity, ease: "easeInOut" },
+  },
+  // Playful bone wag, like a tail.
+  feeding: {
+    animate: { rotate: [0, -12, 12, -8, 6, 0] },
+    transition: { duration: 2, repeat: Infinity, repeatDelay: 0.8, ease: "easeInOut" },
+  },
+  // A small, careful injecting nudge along the needle's axis.
+  vaccination: {
+    animate: { x: [0, 2.5, -1.5, 0], y: [0, -2.5, 1.5, 0], rotate: [0, -4, 2, 0] },
+    transition: { duration: 2.2, repeat: Infinity, repeatDelay: 0.6, ease: "easeInOut" },
+  },
+  // Stethoscope swinging softly.
+  "daily-medical": {
+    animate: { rotate: [0, 9, -9, 5, 0] },
+    transition: { duration: 3.8, repeat: Infinity, ease: "easeInOut" },
+  },
+  // The warm breathing of a home.
+  shelter: {
+    animate: { scale: [1, 1.08, 1], y: [0, -1.5, 0] },
+    transition: { duration: 2.8, repeat: Infinity, ease: "easeInOut" },
+  },
+  // A page turning open and settling back.
+  knowledge: {
+    animate: { rotateY: [0, 32, 0], y: [0, -1, 0] },
+    transition: { duration: 3.2, repeat: Infinity, repeatDelay: 0.9, ease: "easeInOut" },
+  },
+  // A slow, tender heartbeat for those remembered — softer than the rest.
+  memoriam: {
+    animate: { scale: [1, 1.09, 1] },
+    transition: { duration: 3.4, repeat: Infinity, ease: "easeInOut" },
+  },
+};
+
+/**
+ * Renders a Lucide icon with its meaning-matched idle motion. Under
+ * prefers-reduced-motion (or with no motion mapped) it renders the plain,
+ * static glyph. Self-contained so every badge can share it.
+ */
+function AnimatedGlyph({
+  icon: Icon,
+  motionKey,
+  className,
+}: {
+  icon: LucideIcon;
+  motionKey?: string;
+  className?: string;
+}) {
+  const reduced = useReducedMotion() ?? false;
+  const m = motionKey ? ICON_MOTION[motionKey] : undefined;
+  const glyph = <Icon className={className} strokeWidth={2.25} aria-hidden="true" />;
+  if (reduced || !m) return glyph;
+  return (
+    <motion.span
+      className="grid place-items-center"
+      style={{ transformPerspective: 500 }}
+      animate={m.animate}
+      transition={m.transition}
+    >
+      {glyph}
+    </motion.span>
+  );
+}
+
+/**
+ * Bold, brand-gradient icon badge that heads each section. Kept as one
+ * component so every Our Work section reads as part of the same set. The ring
+ * softens it on light tones and lifts it on the dark (night) tone. The icon
+ * carries a looping, symbol-appropriate animation; a light streak periodically
+ * sweeps the gradient, and the badge lifts on hover. All motion is suppressed
+ * under prefers-reduced-motion.
+ */
+function SectionIcon({
+  icon,
+  tone,
+  motionKey,
+}: {
+  icon: LucideIcon;
+  tone: keyof typeof TONES;
+  motionKey?: string;
+}) {
+  const reduced = useReducedMotion() ?? false;
+  return (
+    <motion.span
+      className={cn(
+        "relative mx-auto mb-5 grid h-16 w-16 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-saffron-deep to-saffron text-ivory shadow-ember ring-4",
+        tone === "night" ? "ring-ivory/10" : "ring-saffron/10"
+      )}
+      whileHover={reduced ? undefined : { scale: 1.08, rotate: -3 }}
+      transition={{ type: "spring", stiffness: 300, damping: 16 }}
+    >
+      {/* Light streak sweeping across the gradient — the premium "shine". */}
+      {!reduced && (
+        <motion.span
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-y-2 left-0 w-8 -skew-x-[20deg] bg-ivory/40 blur-[2px]"
+          initial={{ x: -40 }}
+          animate={{ x: [-40, 92] }}
+          transition={{ duration: 1.15, repeat: Infinity, repeatDelay: 3.4, ease: "easeInOut" }}
+        />
+      )}
+      <AnimatedGlyph
+        icon={icon}
+        motionKey={motionKey}
+        className="relative h-8 w-8"
+      />
+    </motion.span>
+  );
+}
+
 export function WorkSection({
   id,
   eyebrow,
@@ -120,6 +287,7 @@ export function WorkSection({
   aspect = "wide",
 }: WorkSectionProps) {
   const t = TONES[tone];
+  const Icon = SECTION_ICONS[id];
 
   return (
     <section
@@ -130,6 +298,7 @@ export function WorkSection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
+            {Icon && <SectionIcon icon={Icon} tone={tone} motionKey={id} />}
             <p className={`eyebrow mb-4 ${t.eye}`}>{eyebrow}</p>
             <h2
               id={`${id}-h`}
@@ -178,6 +347,7 @@ export function ShelterFamilySection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
+            <SectionIcon icon={Home} tone="parchment" motionKey="shelter" />
             <p className="eyebrow mb-4 text-saffron-deep">The heart of the page</p>
             <h2
               id="shelter-h"
@@ -204,6 +374,9 @@ export function ShelterFamilySection({
           <div className="mt-20 sm:mt-24">
             <div className="mx-auto max-w-3xl text-center">
               <Reveal>
+                <span className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-moss/10 text-moss ring-4 ring-moss/5">
+                  <AnimatedGlyph icon={Heart} motionKey="memoriam" className="h-7 w-7" />
+                </span>
                 <div className="flex items-center justify-center gap-4">
                   <span className="h-px w-12 bg-moss/40" aria-hidden="true" />
                   <p className="eyebrow text-moss">In loving memory</p>
@@ -333,6 +506,12 @@ export function KnowledgeCentreSection({
 }: {
   articles: KnowledgeArticle[];
 }) {
+  // The open article, read by the reader dialog. "Read more" used to be a
+  // <Link href="#knowledge-centre"> — a link to the very section it sits in, so
+  // clicking it scrolled a few pixels and showed nothing. It now opens the full
+  // article here.
+  const [active, setActive] = useState<KnowledgeArticle | null>(null);
+
   return (
     <section
       id="knowledge-centre"
@@ -342,6 +521,7 @@ export function KnowledgeCentreSection({
       <div className="container-page">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
+            <SectionIcon icon={BookOpen} tone="cream" motionKey="knowledge" />
             <p className="eyebrow mb-4 text-saffron-deep">Knowledge Centre</p>
             <h2
               id="know-h"
@@ -359,20 +539,32 @@ export function KnowledgeCentreSection({
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((a, i) => (
             <Reveal key={a.slug} delay={Math.min(i * 0.06, 0.24)}>
-              <ArticleCard article={a} />
+              <ArticleCard article={a} onOpen={() => setActive(a)} />
             </Reveal>
           ))}
         </div>
       </div>
+
+      <ArticleReader article={active} onClose={() => setActive(null)} />
     </section>
   );
 }
 
-function ArticleCard({ article }: { article: KnowledgeArticle }) {
-  const href = article.href ?? "#knowledge-centre";
+function ArticleCard({
+  article,
+  onOpen,
+}: {
+  article: KnowledgeArticle;
+  onOpen: () => void;
+}) {
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-glow">
-      <div className="relative aspect-[16/10] overflow-hidden bg-sand-light">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Read the full guide: ${article.title}`}
+        className="relative block aspect-[16/10] w-full overflow-hidden bg-sand-light text-left"
+      >
         {article.photo && (
           <Image
             src={article.photo.src}
@@ -387,7 +579,7 @@ function ArticleCard({ article }: { article: KnowledgeArticle }) {
         <span className="absolute left-3 top-3 rounded-full bg-ivory/95 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-saffron-deep shadow-soft backdrop-blur-sm">
           {article.category}
         </span>
-      </div>
+      </button>
 
       <div className="flex flex-1 flex-col p-6">
         <h3 className="font-display text-lg font-bold leading-snug text-forest-deep sm:text-xl">
@@ -396,18 +588,125 @@ function ArticleCard({ article }: { article: KnowledgeArticle }) {
         <p className="mt-2.5 flex-1 text-sm leading-relaxed text-charcoal/70">
           {article.summary}
         </p>
-        <Link
-          href={href}
-          className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-saffron-deep transition-colors hover:text-forest"
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Read the full guide: ${article.title}`}
+          className="mt-5 inline-flex items-center gap-1.5 self-start text-sm font-bold text-saffron-deep transition-colors hover:text-forest"
         >
           Read more
           <ArrowUpRight
             className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
             aria-hidden="true"
           />
-        </Link>
+        </button>
       </div>
     </article>
+  );
+}
+
+/**
+ * Full-article reader. A focused, accessible dialog rather than a new route or
+ * an inline expand — it keeps the three-column grid intact and gives the full
+ * guide room to be read. Handles Escape, backdrop dismiss, body scroll lock and
+ * focus management; reduced motion skips the transition.
+ */
+function ArticleReader({
+  article,
+  onClose,
+}: {
+  article: KnowledgeArticle | null;
+  onClose: () => void;
+}) {
+  const reduced = useReducedMotion() ?? false;
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const open = article !== null;
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    // Move focus into the dialog so keyboard and screen-reader users land here.
+    const id = requestAnimationFrame(() => closeRef.current?.focus());
+    return () => {
+      document.documentElement.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+      cancelAnimationFrame(id);
+    };
+  }, [open, onClose]);
+
+  return (
+    <AnimatePresence>
+      {article && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-night/70 p-4 backdrop-blur-sm sm:items-center sm:p-6"
+          data-lenis-prevent
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduced ? 0 : 0.2 }}
+        >
+          <motion.article
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="article-reader-title"
+            onClick={(e) => e.stopPropagation()}
+            className="relative my-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-cream shadow-lift"
+            initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ duration: reduced ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {article.photo && (
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-sand-light">
+                <Image
+                  src={article.photo.src}
+                  alt={article.photo.alt}
+                  fill
+                  sizes="(min-width: 768px) 42rem, 92vw"
+                  placeholder={article.photo.blurDataURL ? "blur" : undefined}
+                  blurDataURL={article.photo.blurDataURL}
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-night/30 to-transparent" />
+              </div>
+            )}
+
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full bg-night/40 text-ivory backdrop-blur-sm transition-colors hover:bg-night/70"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-7 sm:px-10 sm:py-9" data-lenis-prevent>
+              <p className="eyebrow text-saffron-deep">{article.category}</p>
+              <h2
+                id="article-reader-title"
+                className="mt-2 text-balance font-display text-2xl font-bold leading-tight text-forest-deep sm:text-3xl"
+              >
+                {article.title}
+              </h2>
+              <div className="mt-5 space-y-4">
+                {article.body.map((para, i) => (
+                  <p key={i} className="text-[15px] leading-relaxed text-charcoal/80 sm:text-base">
+                    {para}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </motion.article>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

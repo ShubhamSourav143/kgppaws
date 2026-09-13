@@ -1,9 +1,15 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { useReveal } from "@/components/fx/use-reveal";
 
-/** Fade-up scroll reveal. Respects prefers-reduced-motion. */
+/**
+ * Fade-up scroll reveal. Rendered visible in SSR; the hidden pre-reveal state
+ * is CSS gated on html[data-reveal-ready], so content is never invisible when
+ * JavaScript is absent or slow (the framer-motion version server-rendered
+ * opacity:0). Reduced motion is honoured by the CSS, not a JS branch.
+ */
 export function Reveal({
   children,
   delay = 0,
@@ -15,16 +21,17 @@ export function Reveal({
   className?: string;
   y?: number;
 }) {
-  const reduce = useReducedMotion();
+  const ref = useReveal<HTMLDivElement>({ once: true, amount: 0.2 });
   return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+    <div
+      ref={ref}
+      className={cn("reveal", className)}
+      data-reveal="rise"
+      style={
+        { "--reveal-y": `${y}px`, "--reveal-delay": `${delay}s` } as CSSProperties
+      }
     >
       {children}
-    </motion.div>
+    </div>
   );
 }

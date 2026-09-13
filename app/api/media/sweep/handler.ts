@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceSupabase } from "@/lib/supabase/server";
+import { cronUnauthorized, isCronAuthorized } from "@/lib/api/cron-auth";
 
 /**
  * POST /api/media/sweep
@@ -13,8 +14,8 @@ import { createServiceSupabase } from "@/lib/supabase/server";
  * once a re-ingest fixes it.
  */
 export async function POST(request: NextRequest) {
-  if (request.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return cronUnauthorized();
   }
 
   const supabase = createServiceSupabase();
@@ -34,10 +35,8 @@ export async function POST(request: NextRequest) {
     .from("animal_photos")
     .select("id, animal_id, storage_path, broken_at");
   if (error) {
-    return NextResponse.json(
-      { ran: false, error: `photos_query_failed: ${error.message}` },
-      { status: 500 }
-    );
+    console.error("[media/sweep] photos query failed:", error.message);
+    return NextResponse.json({ ran: false, error: "photos_query_failed" }, { status: 500 });
   }
 
   for (const p of photos ?? []) {

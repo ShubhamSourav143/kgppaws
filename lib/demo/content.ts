@@ -149,6 +149,9 @@ export const DEMO_FOOTER: FooterItem[] = [
   { id: "demo-f4", section: "quick_link", displayOrder: 0, label: "Adopt a Paw", url: "/adopt", icon: null, value: null },
   { id: "demo-f5", section: "quick_link", displayOrder: 1, label: "Our Work", url: "/stories", icon: null, value: null },
   { id: "demo-f7", section: "quick_link", displayOrder: 2, label: "About KGP PAWS", url: "/about", icon: null, value: null },
+  // /faq is a dedicated, categorised FAQ page that was otherwise unreachable —
+  // no nav or footer link pointed at it. Surfacing it here resolves the orphan.
+  { id: "demo-f11", section: "quick_link", displayOrder: 3, label: "FAQ", url: "/faq", icon: null, value: null },
   { id: "demo-f8", section: "contact", displayOrder: 0, label: "Report an Animal", url: "/report", icon: null, value: null },
   { id: "demo-f9", section: "contact", displayOrder: 1, label: "Donate", url: "/donate", icon: null, value: null },
   { id: "demo-f10", section: "contact", displayOrder: 2, label: "Volunteer", url: "/volunteer", icon: null, value: null },

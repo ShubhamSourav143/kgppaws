@@ -18,7 +18,7 @@ import {
 import { Input, Textarea, FieldWrap } from "@/components/ui/Field";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { PROBLEM_LABELS, SEVERITY_LABELS } from "@/lib/demo/reports";
-import { nextReportId, saveLocalReport } from "@/lib/local-store";
+import { nextReportId, saveLocalReport, updateLocalReportId } from "@/lib/local-store";
 import { isSupabaseConfigured } from "@/lib/config";
 import { uploadAll, type FileToUpload } from "@/lib/client/upload";
 import { cn } from "@/lib/utils";
@@ -95,6 +95,7 @@ export function ReportForm() {
   const [uploading, setUploading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [geo, setGeo] = useState<"idle" | "asking" | "captured" | "denied">("idle");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -132,11 +133,24 @@ export function ReportForm() {
     setPhotoName(file.name);
   };
 
+  /**
+   * The captured position used to be thrown away — the success callback only
+   * flipped the badge to "captured" while the UI told the reporter their
+   * coordinates were attached, and nothing was ever sent. For an injured
+   * animal on a 2,100-acre campus that is the difference between a volunteer
+   * finding it and not.
+   */
   const captureLocation = () => {
     if (!("geolocation" in navigator)) return;
     setGeo("asking");
     navigator.geolocation.getCurrentPosition(
-      () => setGeo("captured"),
+      (position) => {
+        setCoords({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setGeo("captured");
+      },
       () => setGeo("denied"),
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -164,7 +178,7 @@ export function ReportForm() {
       status: "reported",
       updates: [
         {
-          id: `u-${Date.now()}`,
+          id: `u-${now}`,
           date: now,
           status: "reported",
           note: "Report received. Thank you for helping.",
@@ -194,6 +208,16 @@ export function ReportForm() {
             description: v.description,
             contact: v.contact,
             zoneId: "unknown",
+            // Only present when the reporter tapped "use my location" and the
+            // browser granted it. A Maps link is far more actionable for a
+            // volunteer on a bike than a decimal pair.
+            ...(coords
+              ? {
+                  lat: String(coords.lat),
+                  lng: String(coords.lng),
+                  mapsLink: `https://www.google.com/maps?q=${coords.lat},${coords.lng}`,
+                }
+              : {}),
           },
           attachments,
         }),
@@ -204,7 +228,14 @@ export function ReportForm() {
         throw new Error(body?.error ?? "Submission failed");
       }
 
-      setSubmittedId(id);
+      // The server mints the authoritative report_code — that is what the
+      // database, the spreadsheet and the volunteers' email all carry. Show
+      // and track under that, so a reporter quoting their reference can
+      // actually be found. Falls back to the local id in demo mode.
+      const body = await res.json().catch(() => null);
+      const serverCode: string | undefined = body?.code;
+      if (serverCode) updateLocalReportId(id, serverCode);
+      setSubmittedId(serverCode ?? id);
     } catch (err) {
       setSubmitError(
         err instanceof Error
@@ -271,7 +302,12 @@ export function ReportForm() {
             <button
               type="button"
               onClick={() => {
+                // Clearing the *file* matters, not just the label: onSubmit
+                // reads photoFile, so a photo the reporter removed was still
+                // being uploaded to the public submissions bucket.
+                setPhotoFile(null);
                 setPhotoName(null);
+                setPhotoError(null);
                 if (fileRef.current) fileRef.current.value = "";
               }}
               aria-label="Remove photo"

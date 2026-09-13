@@ -1,4 +1,5 @@
 import { SmartImage } from "@/components/media/SmartImage";
+import { AutoplayVideo } from "@/components/media/AutoplayVideo";
 import { cn } from "@/lib/utils";
 import type { SlidePhoto } from "@/components/our-work/OurWorkSlideshow";
 
@@ -21,14 +22,10 @@ export function CardMedia({
 
   if (photo.src.endsWith(".mp4")) {
     return (
-      <video
+      <AutoplayVideo
         src={photo.src}
-        autoPlay
-        loop
-        muted
-        playsInline
-        aria-label={photo.alt || undefined}
-        className={cn("absolute inset-0 h-full w-full object-cover", imgClassName)}
+        ariaLabel={photo.alt || undefined}
+        className={cn("absolute inset-0 object-cover", imgClassName)}
       />
     );
   }

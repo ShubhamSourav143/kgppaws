@@ -4,13 +4,13 @@ import {
   ClipboardList,
   PhoneCall,
   Heart,
-  ArrowUpRight,
   ArrowRight,
 } from "lucide-react";
 import { AnimalPortrait } from "@/components/animals/Portrait";
 import { Reveal, Stagger, Item } from "@/components/fx/Reveal";
 import { TextReveal } from "@/components/fx/TextReveal";
 import { ShareButton } from "@/components/adopt/ShareButton";
+import { RescueStoryCard, type RescueStory } from "@/components/adopt/RescueStoryCard";
 import type { Animal, PortraitConfig } from "@/types";
 
 type Subject = Pick<Animal, "name" | "species" | "portrait">;
@@ -68,35 +68,53 @@ export function RescueStories({
   animals: Animal[];
   covers?: Covers;
 }) {
-  const stories: {
-    name: string;
-    tag: string;
-    body: string;
-    href: string;
-    subjects: { subject: Subject; photo?: string }[];
-  }[] = [
+  /**
+   * Each card shows a before/after pair. Drop the real photos into
+   * public/images/adopt/ named <slug>-before.jpg and <slug>-after.jpg
+   * (e.g. romi-before.jpg, romi-after.jpg) — same filename-stem convention as
+   * every other cover, so no code change is needed once they exist. Until then
+   * each half falls back to the animal's single cover photo, and finally to the
+   * illustrated portrait, so nothing ever looks broken.
+   */
+  const beforeAfter = (slug: string, subject: Subject): RescueStory["photos"] => [
+    { label: "Before", subject, photo: covers[`${slug}-before`] ?? covers[slug] },
+    { label: "After", subject, photo: covers[`${slug}-after`] ?? covers[slug] },
+  ];
+
+  const stories: RescueStory[] = [
     {
       name: "Romi",
-      tag: "Labrador · rescued from neglect",
-      body: "Years of neglect left Romi thin, frightened and alone. Rescued and treated by our volunteers, she's slowly learning that a raised hand can also mean a gentle one.",
-      href: "/stories",
-      subjects: [{ subject: ROMI, photo: covers.romi }],
+      tag: "Chocolate Labrador · rescued from a breeder",
+      body: "Romi, a chocolate Labrador, was rescued from a breeder in Habra, where she had been kept in a terrible condition and repeatedly bred because of her rare and beautiful coat colour.",
+      fullStory: [
+        "When Romi came to us, she was so ill and weak that we were not sure she would survive. Her condition was so poor that we could barely tell what colour her coat was beneath the neglect. Our volunteers brought her to a temporary shelter, where she received treatment, proper food, rest, and most importantly, the care she had been denied for so long.",
+        "Slowly, Romi recovered. As her health returned, so did her spirit. We watched her transform from a frightened, severely neglected dog into the happy, confident girl she was meant to be.",
+        "Then came the ending we had hoped for. A wonderful couple from Kolkata adopted Romi and gave her the loving home she deserved. Today, she is living happily with her family and recently, she even won a prize at a dog show in Kolkata.",
+        "From a breeder's cage to a loving home, Romi's story is a reminder that rescue can change a life completely.",
+      ],
+      photos: beforeAfter("romi", ROMI),
     },
     {
       name: "Odin",
       tag: "Breed dog · rescued from exploitation",
       body: "Bred for profit and discarded once he was no longer useful, Odin came to us anxious and unwell. Today he's healthy, safe and still waiting for the family he was always owed.",
-      href: "/stories",
-      subjects: [{ subject: ODIN, photo: covers.odin }],
+      fullStory: [
+        "Odin spent the first part of his life as a means to an end — bred for profit, kept only as long as he was useful, and abandoned the moment he was not. He arrived anxious, underweight and wary of everyone.",
+        "Rehabilitation for a dog like Odin is as much about trust as it is about medicine. Once he was healthy again, the work was patient and quiet: showing him that food comes reliably, that a lead means a walk and not a drag, and that human hands can be kind.",
+        "He has come through it a calm, affectionate companion who asks for very little. Odin is still waiting for the family he was always owed — one that will keep him for who he is, not for what he can give.",
+      ],
+      photos: beforeAfter("odin", ODIN),
     },
     {
       name: "Laika",
       tag: "Puppy · rescued after rains",
       body: "The sole survivor of a litter found behind Nalanda during the March rains. Bottle-fed by volunteers, she is now a confident, curious puppy ready for a family.",
-      href: "/animal/laika",
-      subjects: [
-        { subject: subjectFor(animals, "laika", ROMI), photo: covers.laika },
+      fullStory: [
+        "Laika was found behind Nalanda during the March rains — the only survivor of her litter, cold and barely bigger than a hand. For the first weeks she depended entirely on round-the-clock bottle feeds from a rota of volunteers.",
+        "She grew fast. The puppy who once needed warming against a water bottle is now first to every game, endlessly curious and completely convinced that every person she meets is a friend.",
+        "Vaccinated, dewormed and thriving, Laika is ready for a home of her own.",
       ],
+      photos: beforeAfter("laika", subjectFor(animals, "laika", ROMI)),
     },
   ];
 
@@ -114,40 +132,10 @@ export function RescueStories({
           />
         </div>
 
-        <Stagger className="mt-12 grid gap-6 md:grid-cols-3">
+        <Stagger className="mt-12 grid items-start gap-6 md:grid-cols-3">
           {stories.map((s) => (
             <Item key={s.name}>
-              <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] bg-ivory shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:shadow-glow">
-                <div className="relative flex aspect-[5/4] gap-0.5 overflow-hidden bg-mist">
-                  {s.subjects.map((x, i) => (
-                    <AnimalPortrait
-                      key={i}
-                      animal={x.subject}
-                      photoUrl={x.photo}
-                      className="h-full flex-1 rounded-none transition-transform duration-700 ease-out group-hover:scale-[1.05]"
-                    />
-                  ))}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-night/45 to-transparent" aria-hidden="true" />
-                </div>
-                <div className="flex flex-1 flex-col p-6">
-                  <h3 className="font-display text-2xl font-bold text-forest-deep">
-                    {s.name}
-                  </h3>
-                  <p className="mt-1 text-xs font-bold uppercase tracking-wider text-moss">
-                    {s.tag}
-                  </p>
-                  <p className="mt-3 text-sm leading-relaxed text-charcoal/70">
-                    {s.body}
-                  </p>
-                  <Link
-                    href={s.href}
-                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-saffron-deep transition-colors hover:text-saffron"
-                  >
-                    Read more
-                    <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
-                  </Link>
-                </div>
-              </article>
+              <RescueStoryCard story={s} />
             </Item>
           ))}
         </Stagger>
@@ -283,15 +271,15 @@ export function FinalCta({
         <Stagger className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-3 sm:gap-4">
           {tiles.map((t, i) => (
             <Item key={i}>
+              {/* Photo only — the name caption was removed at the society's
+                  request. The animal's name still reaches screen readers
+                  through the portrait's alt text. */}
               <figure className="overflow-hidden rounded-2xl bg-ivory/5 ring-1 ring-ivory/10">
                 <AnimalPortrait
                   animal={t.subject}
                   photoUrl={covers[t.slug]}
                   className="aspect-square w-full rounded-none"
                 />
-                <figcaption className="px-2 py-2 text-center text-xs font-bold text-ivory/70">
-                  {t.subject.name}
-                </figcaption>
               </figure>
             </Item>
           ))}

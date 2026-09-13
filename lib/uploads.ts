@@ -103,6 +103,25 @@ export function safeExtension(filename: string): string {
 }
 
 /**
+ * Turn a client-supplied slot name into a single safe path segment.
+ *
+ * `slot` arrives verbatim from the browser and used to be interpolated
+ * straight into the storage path, so a slot of `../../../avatars/admin`
+ * walked the upload out of its submission folder. Everything outside
+ * [a-z0-9-] is collapsed, which removes `.` and `/` and therefore any
+ * traversal sequence; an empty result falls back to "file" so the leaf is
+ * never just a bare UUID.
+ */
+export function safeSlot(slot: string): string {
+  const cleaned = (slot ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return cleaned || "file";
+}
+
+/**
  * Build a storage path for one uploaded file.
  *
  * Layout: <form-kind>/<YYYY>/<MM>/<submissionId>/<slot>-<uuid><ext>
@@ -111,6 +130,11 @@ export function safeExtension(filename: string): string {
  * thousands of reports. Including the slot in the leaf makes any
  * download unambiguously "the wound photo from that submission" without
  * needing to consult the DB.
+ *
+ * Every interpolated segment is constrained: formKind is checked against
+ * FORM_KINDS by the caller, submissionId against a UUID regex, slot by
+ * safeSlot() and the extension by safeExtension(). Nothing user-controlled
+ * reaches the path unfiltered.
  */
 export function buildStoragePath(
   formKind: FormKind,
@@ -122,7 +146,7 @@ export function buildStoragePath(
   const yyyy = now.getUTCFullYear();
   const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
   const ext = safeExtension(filename);
-  const leaf = `${slot}-${crypto.randomUUID()}${ext}`;
+  const leaf = `${safeSlot(slot)}-${crypto.randomUUID()}${ext}`;
   return `${formKind}/${yyyy}/${mm}/${submissionId}/${leaf}`;
 }
 

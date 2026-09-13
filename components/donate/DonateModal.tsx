@@ -104,6 +104,7 @@ export function DonateModal() {
       {open && (
         <motion.div
           key="donate-modal"
+          data-lenis-prevent
           className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6"
           role="dialog"
           aria-modal="true"
@@ -133,9 +134,9 @@ export function DonateModal() {
                 type="button"
                 onClick={close}
                 aria-label="Close"
-                className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full text-ivory/80 transition-colors hover:bg-ivory/10 hover:text-ivory"
+                className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full text-ivory/80 transition-colors hover:bg-ivory/10 hover:text-ivory"
               >
-                <X className="h-4 w-4" aria-hidden="true" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
               <p className="eyebrow inline-flex items-center gap-1.5 text-marigold">
                 <HandHeart className="h-3.5 w-3.5" aria-hidden="true" />
@@ -212,8 +213,10 @@ export function DonateModal() {
                 <p className="text-xs font-bold uppercase tracking-wider text-moss">
                   Choose an amount <span className="font-normal text-moss/70">(for app buttons below)</span>
                 </p>
+                {/* 3 columns on phones so each amount is a comfortable tap
+                    target (5-across was ~51x32px); 5 across from sm up. */}
                 <div
-                  className="mt-2.5 grid grid-cols-5 gap-1.5"
+                  className="mt-2.5 grid grid-cols-3 gap-1.5 sm:grid-cols-5"
                   role="group"
                   aria-label="Donation amount"
                 >
@@ -227,7 +230,7 @@ export function DonateModal() {
                       }}
                       aria-pressed={!custom && amount === p}
                       className={cn(
-                        "rounded-xl py-2 text-xs font-bold transition-colors sm:text-sm",
+                        "rounded-xl py-2.5 text-sm font-bold transition-colors",
                         !custom && amount === p
                           ? "bg-forest text-cream"
                           : "border border-line bg-ivory text-forest hover:bg-mist"

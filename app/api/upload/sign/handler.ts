@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceSupabase } from "@/lib/supabase/server";
+import { clientKey, rateLimit, tooManyRequests } from "@/lib/api/rate-limit";
 import {
   FORM_KINDS,
   SUBMISSIONS_BUCKET,
@@ -44,7 +45,22 @@ function isUuid(s: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 }
 
+/**
+ * 5 signing requests per minute, 30 per hour, per IP. Each request can carry
+ * 10 files x 10 MB, so without a cap one client could mint 100 MB of signed
+ * writes into a public CDN bucket per request, unbounded — free file hosting
+ * on the society's Supabase quota. A real reporter attaches a handful of
+ * photos once.
+ */
+const BURST = { limit: 5, windowMs: 60_000 };
+const SUSTAINED = { limit: 30, windowMs: 60 * 60_000 };
+
 export async function POST(req: NextRequest) {
+  const burst = rateLimit(clientKey(req, "sign"), BURST.limit, BURST.windowMs);
+  if (!burst.ok) return tooManyRequests(burst.retryAfter);
+  const sustained = rateLimit(clientKey(req, "sign:h"), SUSTAINED.limit, SUSTAINED.windowMs);
+  if (!sustained.ok) return tooManyRequests(sustained.retryAfter);
+
   const supabase = createServiceSupabase();
   if (!supabase) {
     return NextResponse.json(

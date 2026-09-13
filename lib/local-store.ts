@@ -70,6 +70,28 @@ export function nextReportId(): string {
   return `PAWS-RESCUE-2026-${String(n).padStart(5, "0")}`;
 }
 
+/**
+ * Re-key a locally stored report once the server has told us the real code.
+ *
+ * The report is written to localStorage *before* the network call, so the
+ * tracking page works even if the submit fails halfway. That provisional id
+ * comes from nextReportId() — a per-browser counter. The server mints its own
+ * `report_code`, and that is what lands in the database, the volunteers'
+ * spreadsheet and the notification email. Without this, the reporter was shown
+ * (and tracked under) an id nobody on the volunteer side could look up.
+ *
+ * No-ops when the ids already match or the provisional row is gone.
+ */
+export function updateLocalReportId(oldId: string, newId: string) {
+  if (!oldId || !newId || oldId === newId) return;
+  const reports = getLocalReports();
+  if (!reports.some((r) => r.id === oldId)) return;
+  write(
+    "reports",
+    reports.map((r) => (r.id === oldId ? { ...r, id: newId } : r))
+  );
+}
+
 /* --------------------------- Adoption applications --------------------------- */
 
 export function getLocalApplications(): AdoptionApplication[] {

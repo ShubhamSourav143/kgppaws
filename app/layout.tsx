@@ -82,8 +82,35 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
+      // The reveal-gate script in <head> sets data-reveal-ready on this element
+      // before React hydrates, so the hydrated <html> carries an attribute the
+      // server HTML did not — an expected, intentional mismatch. Suppressing it
+      // here is the same pattern theme scripts use; it only covers this
+      // element's own attributes, not its subtree.
+      suppressHydrationWarning
       className={`${manrope.variable} ${fraunces.variable} antialiased`}
     >
+      <head>
+        {/*
+          Scroll-reveal gate. This runs synchronously during head parse —
+          before the body paints and independent of React hydration — and marks
+          the document as JS-capable. The reveal wrappers (fx/Reveal,
+          motion/Reveal, fx/TextReveal) render VISIBLE by default; their hidden
+          pre-reveal state in globals.css applies only under this attribute. So
+          if the bundle never loads or fails, the attribute is absent and all
+          content stays visible instead of being stuck at opacity:0. See
+          components/fx/use-reveal.ts for the reveal-on-scroll half.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.setAttribute('data-reveal-ready','')`,
+          }}
+        />
+        {/* Belt-and-braces for any remaining framer-motion initial={{opacity:0}} wrappers. */}
+        <noscript>
+          <style>{`[style*="opacity:0"]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
+      </head>
       <body className="flex min-h-screen flex-col">
         <a
           href="#main-content"
